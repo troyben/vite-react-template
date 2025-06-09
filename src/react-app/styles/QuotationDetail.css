@@ -1,0 +1,177 @@
+.quotation-detail-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.refined-quotation-card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(72, 84, 159, 0.1);
+}
+
+.refined-client-info-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.refined-client-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.client-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.client-title {
+  font-size: 14px;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.refined-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.refined-client-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.refined-client-email, .refined-client-date {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.refined-items-section {
+  margin-top: 40px;
+}
+
+.refined-items-header-row {
+  margin-bottom: 24px;
+}
+
+.refined-items-header-row h3 {
+  font-size: 18px;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table th {
+  text-align: left;
+  padding: 16px;
+  background-color: #F9FAFE;
+  color: var(--text-light);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.modern-table th:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.modern-table th:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.modern-table td {
+  padding: 16px;
+  border-bottom: 1px solid #DFE3FA;
+  color: var(--text-color);
+}
+
+.refined-total-row td {
+  border-bottom: none;
+  padding-top: 24px;
+}
+
+.refined-total-label {
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.refined-total-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+  .quotation-detail-page {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .detail-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .refined-quotation-card {
+    padding: 24px;
+  }
+
+  .refined-client-info-row {
+    gap: 24px;
+  }
+
+  .modern-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modern-table th,
+  .modern-table td {
+    white-space: nowrap;
+    min-width: 120px;
+  }
+
+  .modern-table th:first-child,
+  .modern-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+  }
+}

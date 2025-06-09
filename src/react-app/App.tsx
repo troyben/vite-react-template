@@ -1,65 +1,62 @@
-// src/App.tsx
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import QuotationList from './components/QuotationList';
+import QuotationForm from './components/QuotationForm';
+import QuotationDetail from './components/QuotationDetail';
+import Dashboard from './components/Dashboard';
+import Navbar from './components/Navbar';
+import Clients from './components/Clients';
+import Settings from './components/Settings';
+import Login from './components/Login';
+import Users from './components/Users';
+import './styles/variables.css';
+import './styles/base.css';
+import { useAuth } from './contexts/AuthContext';
+import type { ReactElement } from 'react';
 
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import cloudflareLogo from "./assets/Cloudflare_Logo.svg";
-import honoLogo from "./assets/hono.svg";
-import "./App.css";
+function PrivateRoute({ children }: { children: ReactElement }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  return children;
+}
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [name, setName] = useState("unknown");
+function AppContent() {
+  const location = useLocation();
+  // Add all auth page paths here
+  const hideNavbar = location.pathname === '/login';
+  const { user } = useAuth();
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-        <a href="https://hono.dev/" target="_blank">
-          <img src={honoLogo} className="logo cloudflare" alt="Hono logo" />
-        </a>
-        <a href="https://workers.cloudflare.com/" target="_blank">
-          <img
-            src={cloudflareLogo}
-            className="logo cloudflare"
-            alt="Cloudflare logo"
-          />
-        </a>
+    <div className="app">
+      {!hideNavbar && <Navbar />}
+      <div className="main-content" style={hideNavbar ? { marginLeft: 0, width: '100%' } : {}}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/quotations" element={<PrivateRoute><QuotationList /></PrivateRoute>} />
+          <Route path="/quotations/new" element={<PrivateRoute><QuotationForm /></PrivateRoute>} />
+          <Route path="/quotations/edit/:id" element={<PrivateRoute><QuotationForm /></PrivateRoute>} />
+          <Route path="/quotations/:id" element={<PrivateRoute><QuotationDetail /></PrivateRoute>} />
+          <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+          <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} />
+          {/* Catch-all route for undefined paths */}
+          <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+        </Routes>
       </div>
-      <h1>Vite + React + Hono + Cloudflare</h1>
-      <div className="card">
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          aria-label="increment"
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <div className="card">
-        <button
-          onClick={() => {
-            fetch("/api/")
-              .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name));
-          }}
-          aria-label="get name"
-        >
-          Name from API is: {name}
-        </button>
-        <p>
-          Edit <code>worker/index.ts</code> to change the name
-        </p>
-      </div>
-      <p className="read-the-docs">Click on the logos to learn more</p>
-    </>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+      <ToastContainer />
+    </Router>
   );
 }
 

@@ -1,0 +1,10 @@
+// src/App.tsx
+
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}
+
+export default App;
