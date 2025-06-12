@@ -58,6 +58,11 @@
   color: #373b53;
 }
 
+.approved-icon {
+  background-color: rgba(51, 214, 159, 0.1);
+  color: #33d69f;
+}
+
 .stat-content {
   flex-grow: 1;
 }
@@ -136,21 +141,155 @@
 
 .chart-bar {
   position: relative;
-  height: 60px;
+  height: 48px;
   background-color: #F9FAFE;
-  border-radius: 12px;
+  border-radius: 8px;
   margin-bottom: 16px;
-  padding: 16px;
+  padding: 12px 16px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.chart-bar:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(72, 84, 159, 0.1);
+.chart-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  transition: width 0.3s ease;
+  opacity: 0.1;
+  z-index: 1;
+}
+
+.chart-label {
+  position: relative;
+  z-index: 2;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.chart-value {
+  position: relative;
+  z-index: 2;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Status colors matching pills */
+.chart-fill.draft {
+  background-color: #858585;
+}
+
+.chart-bar:has(.chart-fill.draft) {
+  color: #858585;
+}
+
+.chart-fill.sent {
+  background-color: #7C5DFA;
+}
+
+.chart-bar:has(.chart-fill.sent) {
+  color: #7C5DFA;
+}
+
+.chart-fill.approved {
+  background-color: #33D69F;
+}
+
+.chart-bar:has(.chart-fill.approved) {
+  color: #33D69F;
+}
+
+.chart-fill.rejected {
+  background-color: #FF4949;
+}
+
+.chart-bar:has(.chart-fill.rejected) {
+  color: #FF4949;
+}
+
+.chart-fill.paid {
+  background-color: #028A0F;
+}
+
+.chart-bar:has(.chart-fill.paid) {
+  color: #028A0F;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.view-all-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  background-color: #7c5dfa1a;
+  color: #7c5dfa;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.view-all-button:hover {
+  background-color: #7c5dfa33;
+  transform: translateY(-1px);
+}
+
+.view-all-button svg {
+  transition: transform 0.2s ease;
+}
+
+.view-all-button:hover svg {
+  transform: translateX(2px);
+}
+
+.quotation-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-circle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.quotation-status.status-draft {
+  background-color: #f4f4f4;
+  color: #858585;
+}
+
+.quotation-status.status-sent {
+  background-color: #7c5dfa1a;
+  color: #7C5DFA;
+}
+
+.quotation-status.status-approved {
+  background-color: #33d69f1a;
+  color: #33D69F;
+}
+
+.quotation-status.status-rejected {
+  background-color: #ff49491a;
+  color: #FF4949;
+}
+
+.quotation-status.status-paid {
+  background-color: #028a0f1a;
+  color: #028A0F;
 }
 
 @media (max-width: 992px) {

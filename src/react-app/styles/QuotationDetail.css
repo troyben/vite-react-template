@@ -131,6 +131,69 @@
   color: var(--text-color);
 }
 
+.status-select {
+  min-width: 120px;
+  background-color: white;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #7c5dfa;
+  box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.1);
+}
+
+/* Status Colors */
+.status-draft {
+  background-color: #f4f4f4;
+  color: #858585;
+}
+
+.status-sent {
+  background-color: #7c5dfa1a;
+  color: #7C5DFA;
+}
+
+.status-approved {
+  background-color: #33d69f1a;
+  color: #33D69F;
+}
+
+.status-rejected {
+  background-color: #ff49491a;
+  color: #FF4949;
+}
+
+.status-paid {
+  background-color: #028a0f1a;
+  color: #028A0F;
+}
+
+/* Status Select Styles */
+.status-select.status-draft {
+  border-color: #858585;
+  background-color: #f4f4f4;
+}
+
+.status-select.status-sent {
+  border-color: #7C5DFA;
+  background-color: #7c5dfa1a;
+}
+
+.status-select.status-approved {
+  border-color: #33D69F;
+  background-color: #33d69f1a;
+}
+
+.status-select.status-rejected {
+  border-color: #FF4949;
+  background-color: #ff49491a;
+}
+
+.status-select.status-paid {
+  border-color: #028A0F;
+  background-color: #028a0f1a;
+}
+
 @media (max-width: 768px) {
   .quotation-detail-page {
     padding: 16px;

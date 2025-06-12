@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import BaseDataTable from './BaseDataTable';
 import type { ColumnDef } from '@tanstack/react-table';
-import * as authApi from '../api/authApi';
+import * as userService from '../services/userService'; // New import
 import { useAuth } from '../contexts/AuthContext';
 import { notify, confirm, alert } from '../utils/notifications';
 
@@ -38,9 +38,12 @@ const Users = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await authApi.getUsers();
-      // Hide the current user from the list
-      setUsers(data.filter((u: User) => u.id !== currentUser.id));
+      // Replace authApi.getUsers() with userService.getAllUsers()
+      const response = await userService.getAllUsers();
+      if (response.data.success) {
+        // Hide the current user from the list
+        setUsers(response.data.data.filter((u: User) => u.id !== currentUser.id));
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch users');
     } finally {
@@ -73,7 +76,7 @@ const Users = () => {
       setLoading(true);
       setError(null);
       try {
-        await authApi.deleteUser(userId);
+        await userService.deleteUser(userId);
         await fetchUsers();
         notify.success('User deleted successfully');
       } catch (err: any) {
@@ -98,7 +101,7 @@ const Users = () => {
     if (willReset) {
       setLoading(true);
       try {
-        await authApi.resetUserPassword(userId);
+        await userService.resetUserPassword(userId);
         await alert({
           title: 'Password Reset',
           text: 'Password has been reset successfully. The user will receive an email with the new password.',
@@ -129,11 +132,11 @@ const Users = () => {
       };
 
       if (editingUser) {
-        await authApi.updateUser(editingUser.id, formValues);
+        await userService.updateUser(editingUser.id, formValues);
         notify.success('User updated successfully');
       } else {
         const password = formData.get('password') as string;
-        await authApi.createUser({ ...formValues, password });
+        await userService.createUser({ ...formValues, password });
         notify.success('User created successfully');
       }
       

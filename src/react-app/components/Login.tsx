@@ -59,6 +59,9 @@ const Login = () => {
 
   return (
     <div className="login-page" style={{ maxWidth: 400, margin: '60px auto', background: 'white', borderRadius: 12, boxShadow: '0 4px 24px rgba(72,84,159,0.08)', padding: 32 }}>
+      <div className="login-logo">
+        <img src="/logo.jpg" alt="Logo" />
+      </div>
       <h2 style={{ fontWeight: 700, fontSize: 24, marginBottom: 24, textAlign: 'center' }}>Sign In</h2>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
         <button

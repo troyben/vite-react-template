@@ -413,8 +413,15 @@
 }
 
 .sketch-details {
+  flex: 1;
+  min-width: 0; /* Add this to prevent text overflow */
   font-size: 14px;
-  color: var(--text-light);
+  padding-left: 20px
+}
+
+.sketch-details p {
+  margin: 4px 0;
+  word-wrap: break-word; /* Allow long text to wrap */
 }
 
 .preview-items {
@@ -480,6 +487,91 @@
 
 .text-right {
   text-align: right;
+}
+
+.sketch-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+}
+
+.sketch-modal > div {
+  background: white;
+  border-radius: 8px;
+  width: 100%;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.sketch-preview-container {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: #f9fafe;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  min-width: 0; /* Add this to prevent flex item overflow */
+}
+
+.sketch-mini-preview {
+  flex: 0 0 auto; /* Prevent shrinking and growing */
+  border: 1px solid #DFE3FA;
+  padding: 4px;
+  background: white;
+  border-radius: 4px;
+}
+
+.product-frame.mini {
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sketch-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-danger {
+  background: rgba(236, 87, 87, 0.1);
+  color: #EC5757;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: rgba(236, 87, 87, 0.15);
+}
+
+.preview-sketch {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  background: #f9fafe;
+  border-radius: 4px;
+}
+
+.preview-sketch-mini {
+  flex-shrink: 0;
+  padding: 4px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #DFE3FA;
+}
+
+.preview-sketch-details {
+  font-size: 12px;
+  color: var(--text-light);
 }
 
 @media (max-width: 992px) {

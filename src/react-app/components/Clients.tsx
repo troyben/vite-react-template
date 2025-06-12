@@ -1,113 +1,130 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import BaseDataTable from './BaseDataTable';
 import type { ColumnDef } from '@tanstack/react-table';
 import '../styles/Clients.css';
-
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-}
+import * as clientApi from '../services/clientService';
+import type { Client } from '../services/clientService';
+import { notify } from '../utils/notifications';
 
 const Clients = () => {
-  const [clients, setClients] = useState<Client[]>([
-    // Sample data - replace with actual data from your backend
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1 234 567 890',
-      company: 'Acme Inc'
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+1 234 567 891',
-      company: 'XYZ Corp'
-    }
-  ]);
-
-  const [searchTerm, setSearchTerm] = useState('');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const itemsPerPage = 10;
 
-  // Filter clients based on search term
-  const filteredClients = useMemo(() => 
-    clients.filter(client => 
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-    [clients, searchTerm]
-  );
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const paginatedClients = useMemo(() => 
-    filteredClients.slice(
-      (currentPage - 1) * itemsPerPage,
-      currentPage * itemsPerPage
-    ),
-    [filteredClients, currentPage]
-  );
+  const fetchClients = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await clientApi.getAllClients();
+      setClients(response.data.success ? response.data.data : []);
+    } catch (err: any) {
+      if (!clientApi.isAuthError(err)) {
+        setError(err.message || 'Failed to fetch clients');
+        notify.error(err.message || 'Failed to fetch clients');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = async (client: Client) => {
     setEditingClient(client);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (clientId: string) => {
-    // Add delete confirmation and API call
-    setClients(clients.filter(client => client.id !== clientId));
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Add form submission logic here
-    setIsFormOpen(false);
-    setEditingClient(null);
+    const formData = new FormData(e.currentTarget);
+    
+    // Get form values with proper type checking
+    const name = formData.get('name') as string;
+    const address = formData.get('address') as string;
+    
+    if (!name || !address) {
+      notify.error('Name and address are required');
+      return;
+    }
+
+    const clientData = {
+      name,                                          // Required
+      address,                                       // Required
+      email: formData.get('email') as string || undefined,
+      phone: formData.get('phone') as string || undefined,
+      company: formData.get('company') as string || undefined,
+    };
+
+    try {
+      if (editingClient) {
+        const response = await clientApi.updateClient(editingClient.id, clientData);
+        if (response.data.success) {
+          notify.success('Client updated successfully');
+        }
+      } else {
+        const response = await clientApi.createClient(clientData);
+        if (response.data.success) {
+          notify.success('Client created successfully');
+        }
+      }
+      setIsFormOpen(false);
+      setEditingClient(null);
+      fetchClients();
+    } catch (err: any) {
+      notify.error(err.message || 'Failed to save client');
+    }
   };
 
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setCurrentPage(1); // Reset to first page when searching
+  const handleDelete = async (clientId: number) => {
+    if (!confirm('Are you sure you want to delete this client?')) return;
+    
+    try {
+      const response = await clientApi.deleteClient(clientId);
+      if (response.data.success) {
+        notify.success('Client deleted successfully');
+        fetchClients(); // Refresh the list
+      }
+    } catch (err: any) {
+      notify.error(err.message || 'Failed to delete client');
+    }
   };
 
   const columns = useMemo<ColumnDef<Client, any>[]>(() => [
     {
       accessorKey: 'name',
       header: 'Name',
-      cell: info => info.getValue(),
     },
     {
       accessorKey: 'company',
       header: 'Company',
-      cell: info => info.getValue(),
     },
     {
       accessorKey: 'email',
       header: 'Email',
-      cell: info => info.getValue(),
     },
     {
       accessorKey: 'phone',
       header: 'Phone',
-      cell: info => info.getValue(),
+    },
+    {
+      accessorKey: 'address',
+      header: 'Address',
     },
     {
       id: 'actions',
       header: 'Actions',
       cell: info => (
-        <div className="actions" style={{ display: 'flex', gap: 8 }}>
+        <div className="actions">
           <button className="btn-icon" title="Edit" onClick={() => handleEdit(info.row.original)}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14.5 2.5L17.5 5.5M2.5 17.5V14.5L12.5 4.5L15.5 7.5L5.5 17.5H2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -121,9 +138,8 @@ const Clients = () => {
         </div>
       ),
     },
-  ], [clients]);
+  ], []);
 
-  // Use pagination and search in the table
   return (
     <div className="clients-container">
       <div className="page-header">
@@ -138,24 +154,21 @@ const Clients = () => {
           Add New Client
         </button>
       </div>
-
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search clients..."
-          value={searchTerm}
-          onChange={handleSearch}
-          className="search-input"
-        />
-      </div>
       
-      <BaseDataTable
-        columns={columns}
-        data={paginatedClients}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
+      {loading ? (
+        <div className="loading">Loading...</div>
+      ) : error ? (
+        <div className="error">{error}</div>
+      ) : (
+        <BaseDataTable
+          columns={columns}
+          data={clients} // Pass all clients, let BaseDataTable handle filtering
+          globalFilterPlaceholder='Search by name, email, or phone'
+          currentPage={currentPage}
+          totalPages={Math.ceil(clients.length / itemsPerPage)}
+          onPageChange={handlePageChange}
+        />
+      )}
 
       {isFormOpen && (
         <div className="modal-overlay">
@@ -164,9 +177,10 @@ const Clients = () => {
               <h2>{editingClient ? 'Edit Client' : 'Add New Client'}</h2>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Name</label>
+                  <label className="form-label">Name *</label>
                   <input
                     type="text"
+                    name="name"
                     className="form-control"
                     defaultValue={editingClient?.name}
                     required
@@ -176,9 +190,9 @@ const Clients = () => {
                   <label className="form-label">Company</label>
                   <input
                     type="text"
+                    name="company"
                     className="form-control"
                     defaultValue={editingClient?.company}
-                    required
                   />
                 </div>
               </div>
@@ -187,20 +201,31 @@ const Clients = () => {
                   <label className="form-label">Email</label>
                   <input
                     type="email"
+                    name="email"
                     className="form-control"
                     defaultValue={editingClient?.email}
-                    required
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Phone</label>
+                  <label className="form-label">Phone *</label>
                   <input
                     type="tel"
+                    name="phone"
                     className="form-control"
                     defaultValue={editingClient?.phone}
                     required
                   />
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Address *</label>
+                <textarea
+                  name="address"
+                  className="form-control"
+                  defaultValue={editingClient?.address}
+                  required
+                  rows={3}
+                />
               </div>
               <div className="form-actions">
                 <button

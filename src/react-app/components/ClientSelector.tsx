@@ -1,21 +1,14 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { getAllClients, createClient, Client } from '../services/clientService';
 import '../styles/ClientSelector.css';
-
-interface Client {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-}
 
 interface ClientSelectorProps {
   onSelect: (client: Client) => void;
   selectedClient: Client | null;
+  onClose: () => void;  // Add onClose prop
 }
 
-const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClient }) => {
+const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClient, onClose }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientForm, setShowNewClientForm] = useState(false);
@@ -23,7 +16,8 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
     name: '',
     email: '',
     phone: '',
-    company: ''
+    company: '',
+    address: '' // Add address field
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,11 +26,13 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
     const fetchClients = async () => {
       try {
         setLoading(true);
-        const data = await api.getClients();
-        setClients(data);
+        const response = await getAllClients();
+        setClients(response.data.success ? response.data.data : []);
       } catch (err) {
-        console.error('Error fetching clients:', err);
-        setError('Failed to fetch clients. Please try again later.');
+        if (!isAuthError(err)) {
+          console.error('Error fetching clients:', err);
+          setError('Failed to fetch clients. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }
@@ -47,29 +43,44 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
 
   const filteredClients = clients.filter(client => 
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
     (client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
   const handleNewClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const createdClient = await api.createClient(newClient as Client);
-      setClients([...clients, createdClient]);
-      setShowNewClientForm(false);
-      setNewClient({
-        name: '',
-        email: '',
-        phone: '',
-        company: ''
-      });
+      if (!newClient.name || !newClient.phone || !newClient.address) {
+        throw new Error('Name, phone and address are required');
+      }
+      
+      const clientData = {
+        name: newClient.name,
+        address: newClient.address,
+        phone: newClient.phone,
+        email: newClient.email || undefined,
+        company: newClient.company || undefined
+      } as Omit<Client, 'id' | 'createdAt' | 'updatedAt'>;
+
+      const response = await createClient(clientData);
+      if (response.data.success) {
+        setClients(prev => [...prev, response.data.data]);
+        setShowNewClientForm(false);
+        setNewClient({
+          name: '',
+          email: '',
+          phone: '',
+          company: '',
+          address: '' // Add address field reset
+        });
+      }
     } catch (err) {
       console.error('Error creating client:', err);
-      setError('Failed to create client. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create client. Please try again.');
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewClient(prev => ({
       ...prev,
@@ -85,6 +96,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
       <div className="client-selector">
         <div className="client-selector-header">
           <h2>Select Client</h2>
+          <button className="close-button" onClick={onClose}>✕</button>
         </div>
 
         <div className="client-search">
@@ -105,7 +117,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
             >
               <h4>{client.name}</h4>
               {client.company && <p><strong>Company:</strong> {client.company}</p>}
-              <p><strong>Email:</strong> {client.email}</p>
+              {client.email && <p><strong>Email:</strong> {client.email}</p>}
               {client.phone && <p><strong>Phone:</strong> {client.phone}</p>}
             </div>
           )) : (
@@ -137,12 +149,12 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="email">Email *</label>
+                <label htmlFor="phone">Phone *</label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={newClient.email}
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={newClient.phone}
                   onChange={handleInputChange}
                   required
                 />
@@ -151,12 +163,12 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="phone">Phone</label>
+                <label htmlFor="email">Email</label>
                 <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={newClient.phone}
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={newClient.email}
                   onChange={handleInputChange}
                 />
               </div>
@@ -168,6 +180,20 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
                   name="company"
                   value={newClient.company}
                   onChange={handleInputChange}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label htmlFor="address">Address *</label>
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  value={newClient.address}
+                  onChange={handleInputChange}
+                  required
                 />
               </div>
             </div>

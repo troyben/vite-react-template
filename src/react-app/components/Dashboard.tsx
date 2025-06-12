@@ -1,37 +1,53 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api, { type Quotation } from '../services/api';
+import { getAllQuotations, type Quotation } from '../services/quotationService';
+import { getAllClients, type Client } from '../services/clientService';
 import '../styles/variables.css';
 import '../styles/Dashboard.css';
 
 const statusMap = {
   'draft': 'Draft',
   'sent': 'Pending',
-  'approved': 'Paid',
-  'rejected': 'Rejected'
+  'approved': 'Approved',
+  'rejected': 'Rejected',
+  'paid': 'Paid'
 };
 
 const Dashboard = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [clients, setClients] = useState<Record<number, Client>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchQuotations = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await api.getQuotations();
-        setQuotations(data);
+        const [quotationsRes, clientsRes] = await Promise.all([
+          getAllQuotations(),
+          getAllClients()
+        ]);
+        
+        // Correctly access the nested data property
+        setQuotations(quotationsRes.data.success ? quotationsRes.data.data : []);
+        
+        // Create a map of clientId to client for easy lookup
+        const clientMap = (clientsRes.data.success ? clientsRes.data.data : []).reduce((acc, client) => {
+          acc[client.id] = client;
+          return acc;
+        }, {} as Record<number, Client>);
+        
+        setClients(clientMap);
         setError(null);
       } catch (err) {
-        console.error('Error fetching quotations:', err);
+        console.error('Error fetching data:', err);
         setError('Failed to fetch data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchQuotations();
+    fetchData();
   }, []);
 
   const getStatusClass = (status: string) => {
@@ -48,22 +64,42 @@ const Dashboard = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `£${amount.toFixed(2)}`;
+  const formatCurrency = (amount: any): string => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
   };
 
-  // Calculate statistics
+  // Calculate statistics with amounts
   const totalQuotations = quotations.length;
-  const paidQuotations = quotations.filter(q => q.status === 'accepted');
-  const paidAmount = paidQuotations.reduce((sum, quotation) => sum + quotation.total_amount, 0);
+  
+  const calculateAmount = (quotations: Quotation[]) => {
+    return quotations.reduce((sum, quotation) => {
+      const amount = typeof quotation.total_amount === 'string' 
+        ? parseFloat(quotation.total_amount) 
+        : Number(quotation.total_amount);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+  };
+
+  const paidQuotations = quotations.filter(q => q.status === 'paid');
+  const paidAmount = calculateAmount(paidQuotations);
+
   const pendingQuotations = quotations.filter(q => q.status === 'sent');
-  const pendingAmount = pendingQuotations.reduce((sum, quotation) => sum + quotation.total_amount, 0);
+  const pendingAmount = calculateAmount(pendingQuotations);
+
+  const approvedQuotations = quotations.filter(q => q.status === 'approved');
+  const approvedAmount = calculateAmount(approvedQuotations);
+
+  const rejectedQuotations = quotations.filter(q => q.status === 'rejected');
+  const rejectedAmount = calculateAmount(rejectedQuotations);
+
   const draftQuotations = quotations.filter(q => q.status === 'draft');
+  const draftAmount = calculateAmount(draftQuotations);
 
   // Get recent quotations (last 5)
   const recentQuotations = [...quotations]
     .sort((a, b) => {
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     })
     .slice(0, 5);
 
@@ -89,21 +125,6 @@ const Dashboard = () => {
       </header>
 
       <div className="dashboard-stats">
-        <div className="stat-card">
-          <div className="stat-icon total-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17 0H3C1.3 0 0 1.3 0 3V17C0 18.7 1.3 20 3 20H17C18.7 20 20 18.7 20 17V3C20 1.3 18.7 0 17 0ZM3 2H17C17.6 2 18 2.4 18 3V17C18 17.6 17.6 18 17 18H3C2.4 18 2 17.6 2 17V3C2 2.4 2.4 2 3 2Z" fill="currentColor"/>
-              <path d="M5 6H15V8H5V6Z" fill="currentColor"/>
-              <path d="M5 10H15V12H5V10Z" fill="currentColor"/>
-              <path d="M5 14H11V16H5V14Z" fill="currentColor"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <h3>Total Quotations</h3>
-            <p className="stat-value">{totalQuotations}</p>
-          </div>
-        </div>
-
         <div className="stat-card">
           <div className="stat-icon paid-icon">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -134,6 +155,20 @@ const Dashboard = () => {
         </div>
 
         <div className="stat-card">
+          <div className="stat-icon approved-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 20C15.5228 20 20 15.5228 20 10C20 4.47715 15.5228 0 10 0C4.47715 0 0 4.47715 0 10C0 15.5228 4.47715 20 10 20Z" fill="currentColor" fillOpacity="0.2"/>
+              <path d="M7 10L9 12L13 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <h3>Approved</h3>
+            <p className="stat-value">{formatCurrency(approvedAmount)}</p>
+            <p className="stat-subtext">{approvedQuotations.length} quotations</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
           <div className="stat-icon draft-icon">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M13 3H7C5.9 3 5 3.9 5 5V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V9L13 3Z" stroke="currentColor" strokeWidth="1.5"/>
@@ -144,14 +179,24 @@ const Dashboard = () => {
           </div>
           <div className="stat-content">
             <h3>Drafts</h3>
-            <p className="stat-value">{draftQuotations.length}</p>
+            <p className="stat-value">{formatCurrency(draftAmount)}</p>
+            <p className="stat-subtext">{draftQuotations.length} quotations</p>
           </div>
         </div>
       </div>
 
       <div className="dashboard-sections">
         <div className="recent-quotations">
-          <h2>Recent Quotations</h2>
+          <div className="section-header">
+            <h2>Recent Quotations</h2>
+            <Link to="/quotations" className="view-all-button">
+              View All Quotations
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.16666 10H15.8333" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M10.8333 5L15.8333 10L10.8333 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+          </div>
           {recentQuotations.length === 0 ? (
             <p>No quotations found.</p>
           ) : (
@@ -160,10 +205,10 @@ const Dashboard = () => {
                 <Link to={`/quotations/${quotation.id}`} key={quotation.id} className="recent-quotation-item">
                   <div className="quotation-item-left">
                     <div className="quotation-id">
-                      <span>#</span>{quotation.id?.toString().padStart(6, '0')}
+                      <span>#</span>{quotation.id.toString().padStart(6, '0')}
                     </div>
                     <div className="quotation-client">
-                      {quotation.client_name}
+                      {clients[quotation.clientId]?.name || 'Loading...'}
                     </div>
                   </div>
                   
@@ -178,12 +223,6 @@ const Dashboard = () => {
                   </div>
                 </Link>
               ))}
-              <Link to="/quotations" className="view-all-link">
-                View all quotations
-                <svg width="7" height="10" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1 1l4 4-4 4" stroke="#7C5DFA" strokeWidth="2" fill="none" fillRule="evenodd" />
-                </svg>
-              </Link>
             </div>
           )}
         </div>
@@ -197,9 +236,16 @@ const Dashboard = () => {
                 style={{width: `${totalQuotations ? (paidQuotations.length / totalQuotations) * 100 : 0}%`}}
               ></div>
               <span className="chart-label">Paid</span>
-              <span className="chart-value" data-percent={`${Math.round(totalQuotations ? (paidQuotations.length / totalQuotations) * 100 : 0)}%`}>
-                {paidQuotations.length}
-              </span>
+              <span className="chart-value">{paidQuotations.length}</span>
+            </div>
+            
+            <div className="chart-bar">
+              <div 
+                className="chart-fill approved" 
+                style={{width: `${totalQuotations ? (approvedQuotations.length / totalQuotations) * 100 : 0}%`}}
+              ></div>
+              <span className="chart-label">Approved</span>
+              <span className="chart-value">{approvedQuotations.length}</span>
             </div>
             
             <div className="chart-bar">
@@ -208,9 +254,16 @@ const Dashboard = () => {
                 style={{width: `${totalQuotations ? (pendingQuotations.length / totalQuotations) * 100 : 0}%`}}
               ></div>
               <span className="chart-label">Pending</span>
-              <span className="chart-value" data-percent={`${Math.round(totalQuotations ? (pendingQuotations.length / totalQuotations) * 100 : 0)}%`}>
-                {pendingQuotations.length}
-              </span>
+              <span className="chart-value">{pendingQuotations.length}</span>
+            </div>
+
+            <div className="chart-bar">
+              <div 
+                className="chart-fill rejected" 
+                style={{width: `${totalQuotations ? (rejectedQuotations.length / totalQuotations) * 100 : 0}%`}}
+              ></div>
+              <span className="chart-label">Rejected</span>
+              <span className="chart-value">{rejectedQuotations.length}</span>
             </div>
             
             <div className="chart-bar">
@@ -219,9 +272,7 @@ const Dashboard = () => {
                 style={{width: `${totalQuotations ? (draftQuotations.length / totalQuotations) * 100 : 0}%`}}
               ></div>
               <span className="chart-label">Draft</span>
-              <span className="chart-value" data-percent={`${Math.round(totalQuotations ? (draftQuotations.length / totalQuotations) * 100 : 0)}%`}>
-                {draftQuotations.length}
-              </span>
+              <span className="chart-value">{draftQuotations.length}</span>
             </div>
           </div>
         </div>
@@ -230,4 +281,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

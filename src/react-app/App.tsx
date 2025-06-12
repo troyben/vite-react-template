@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import QuotationList from './components/QuotationList';
@@ -12,8 +12,8 @@ import Login from './components/Login';
 import Users from './components/Users';
 import './styles/variables.css';
 import './styles/base.css';
-import { useAuth } from './contexts/AuthContext';
-import type { ReactElement } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import type { ReactElement, ReactNode } from 'react';
 
 function PrivateRoute({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
@@ -51,13 +51,24 @@ function AppContent() {
   );
 }
 
-function App() {
+const AuthWrapper = ({ children }: { children: ReactNode }) => {
+  const navigate = useNavigate();
+  return (
+    <AuthProvider onSessionExpired={() => navigate('/login')}>
+      {children}
+    </AuthProvider>
+  );
+};
+
+const App = () => {
   return (
     <Router>
-      <AppContent />
-      <ToastContainer />
+      <AuthWrapper>
+        <AppContent />
+        <ToastContainer />
+      </AuthWrapper>
     </Router>
   );
-}
+};
 
 export default App;

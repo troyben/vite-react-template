@@ -26,12 +26,32 @@
 .client-selector-header {
   padding: 24px;
   border-bottom: 1px solid #DFE3FA;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .client-selector-header h2 {
   font-size: 20px;
   color: var(--text-color);
   margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #7E88C3;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.close-button:hover {
+  color: #0C0E16;
 }
 
 .client-search {
@@ -161,6 +181,27 @@
 }
 
 .form-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.1);
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #DFE3FA;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.1);

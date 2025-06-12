@@ -123,8 +123,33 @@ const Navbar = () => {
           <div 
             className="user-avatar"
             onClick={() => setShowUserMenu(!showUserMenu)}
+            style={{ 
+              width: 40, 
+              height: 40, 
+              borderRadius: '50%',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#f3f3fb',
+              cursor: 'pointer'
+            }}
           >
-            <img src="/avatar.svg" alt="User Avatar" />
+            {user?.avatar ? (
+              <img 
+                src={user.avatar} 
+                alt={user.name} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <svg width="40" height="40" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="40" cy="40" r="40" fill="#edeaff" />
+                <circle cx="40" cy="32" r="14" fill="#7c5dfa" />
+                <path d="M20 62c0-10.5 13-16 20-16s20 5.5 20 16" fill="#d6d3fa" />
+                <circle cx="40" cy="32" r="10" fill="#edeaff" />
+                <path d="M30 60c0-5.5 6.5-8 10-8s10 2.5 10 8" fill="#edeaff" />
+              </svg>
+            )}
           </div>
           {showUserMenu && (
             <div className="user-menu">
@@ -146,4 +171,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

@@ -169,10 +169,7 @@ body {
   gap: 24px;
 }
 
-.form-row {
-  gap: 24px;
-  margin-bottom: 24px;
-}
+
 
 .form-actions {
   display: flex;
