@@ -22,6 +22,10 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isAuthError = (error: any): boolean => {
+    return error?.response?.status === 401 || error?.message?.toLowerCase().includes('unauthorized');
+  };
+
   useEffect(() => {
     const fetchClients = async () => {
       try {

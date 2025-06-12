@@ -7,12 +7,23 @@ import { notify, confirm, alert } from '../utils/notifications';
 
 import '../styles/Users.css';
 
+type UserRole = 'user' | 'client' | 'admin';
+
 interface User {
   id: number;
   name: string;
   email: string;
   mobile: string;
-  role: 'admin' | 'user' | 'client';
+  role: UserRole;
+}
+
+interface FormValues {
+  name: string;
+  email: string;
+  mobile: string;
+  role: UserRole;
+  status: 'active' | 'inactive';
+  password?: string;
 }
 
 const Users = () => {
@@ -123,11 +134,11 @@ const Users = () => {
     const formData = new FormData(form);
     
     try {
-      const formValues = {
+      const formValues: FormValues = {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         mobile: formData.get('mobile') as string,
-        role: formData.get('role') as string,
+        role: formData.get('role') as UserRole,
         status: formData.get('status') as 'active' | 'inactive'
       };
 

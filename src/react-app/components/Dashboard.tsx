@@ -90,11 +90,10 @@ const Dashboard = () => {
   const approvedQuotations = quotations.filter(q => q.status === 'approved');
   const approvedAmount = calculateAmount(approvedQuotations);
 
-  const rejectedQuotations = quotations.filter(q => q.status === 'rejected');
-  const rejectedAmount = calculateAmount(rejectedQuotations);
-
   const draftQuotations = quotations.filter(q => q.status === 'draft');
   const draftAmount = calculateAmount(draftQuotations);
+
+  const rejectedQuotations = quotations.filter(q => q.status === 'rejected');
 
   // Get recent quotations (last 5)
   const recentQuotations = [...quotations]

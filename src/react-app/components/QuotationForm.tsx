@@ -248,10 +248,6 @@ const QuotationForm = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleDownloadPDF = async () => {
     if (!formData || !selectedClient) {
       // notify.error('Please complete the quotation before generating PDF');
@@ -285,11 +281,6 @@ const QuotationForm = () => {
       console.error('Error generating PDF:', error);
       // notify.error('Failed to generate PDF');
     }
-  };
-
-  const handleSendEmail = () => {
-    alert('Email sending functionality would be implemented here');
-    // In a real app, this would send the quotation via email
   };
 
   const handleRemoveSketch = (index: number) => {
@@ -630,13 +621,6 @@ const QuotationForm = () => {
           <div className="preview-header">
             <h2 className="preview-title">Preview</h2>
             <div className="preview-actions">
-              {/* <button onClick={handleSendEmail} className="btn btn-primary">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
-                  <path d="M14 3H2C1.44772 3 1 3.44772 1 4V12C1 12.5523 1.44772 13 2 13H14C14.5523 13 15 12.5523 15 12V4C15 3.44772 14.5523 3 14 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M1 4L8 8.5L15 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Send
-              </button> */}
               <button onClick={handleDownloadPDF} className="btn btn-secondary">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
                   <path d="M8 1V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

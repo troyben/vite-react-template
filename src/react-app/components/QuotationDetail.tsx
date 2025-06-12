@@ -5,6 +5,8 @@ import { notify } from '../utils/notifications';
 import { exportQuotationToPDF } from '../utils/pdfExport';
 import '../styles/QuotationDetail.css';
 
+type QuotationStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
+
 const QuotationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -57,7 +59,7 @@ const QuotationDetail = () => {
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: QuotationStatus) => {
     if (!id || !quotation) return;
     
     try {
@@ -65,12 +67,12 @@ const QuotationDetail = () => {
       const response = await updateQuotation(parseInt(id), {
         ...quotation,
         status: newStatus,
-        // Ensure items is stringified if needed by the backend
-        items: typeof quotation.items === 'string' ? quotation.items : JSON.stringify(quotation.items)
+        // Parse items properly
+        items: Array.isArray(quotation.items) ? quotation.items : JSON.parse(quotation.items)
       });
       
       if (response.data.success) {
-        setQuotation((prev: any) => prev ? { ...prev, status: newStatus } : null);
+        setQuotation(prev => prev ? { ...prev, status: newStatus } : null);
         notify.success(`Quotation status updated to ${newStatus}`);
       }
     } catch (err) {
@@ -149,7 +151,7 @@ const QuotationDetail = () => {
           </button>
           <select 
             value={quotation?.status || 'draft'}
-            onChange={(e) => handleStatusChange(e.target.value)}
+            onChange={(e) => handleStatusChange(e.target.value as QuotationStatus)}
             className={`form-select status-select ${getStatusClass(quotation?.status || 'draft')}`}
             style={{
               padding: '8px 12px',
