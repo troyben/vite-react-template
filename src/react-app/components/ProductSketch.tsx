@@ -90,7 +90,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   );
 
   // New: panel division heights state
-  const [panelDivisionHeights, setPanelDivisionHeights] = useState<Array<{ panelIndex: number; rowHeights: number[] }>>(
+  const [panelDivisionHeights] = useState<Array<{ panelIndex: number; rowHeights: number[] }>>(
     initialData?.panelDivisionHeights || []
   );
 
@@ -353,7 +353,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
     );
   };
 
-  const renderOpeningDirectionSelector = (index) => {
+  const renderOpeningDirectionSelector = (index: any) => {
     // Only show relevant opening directions based on product type
     return (
       <div className="opening-direction-selector">
@@ -484,19 +484,6 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
       newWidths = syncPanelWidths(newWidths, width);
     }
     setPanelWidths(newWidths);
-  };
-
-  // New: handle division row height change
-  const handleDivisionRowHeightChange = (panelIndex: number, rowIndex: number, value: string) => {
-    const num = parseInt(value);
-    if (isNaN(num) || num <= 0) return;
-    setPanelDivisionHeights(prev =>
-      prev.map(h =>
-        h.panelIndex === panelIndex
-          ? { ...h, rowHeights: h.rowHeights.map((rh, i) => (i === rowIndex ? num : rh)) }
-          : h
-      )
-    );
   };
 
   // --- Dimension Lines for Preview ---

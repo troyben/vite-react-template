@@ -5,6 +5,8 @@ interface SketchPreviewMiniProps {
   data: ProductData;
   size?: 'tiny' | 'small' | 'medium';
   showDimensions?: boolean;
+  dimensionStyle?: React.CSSProperties;
+  style?: React.CSSProperties;
 }
 
 const SketchPreviewMini: React.FC<SketchPreviewMiniProps> = ({

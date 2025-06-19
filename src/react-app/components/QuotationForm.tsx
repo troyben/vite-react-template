@@ -1064,7 +1064,7 @@ const QuotationForm = () => {
                             onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
                             className="form-control"
                             required
-                            readOnly={item.rate !== undefined && item.productSketch}
+                            readOnly={(item.rate !== undefined && item.productSketch) ? true : false}
                             style={item.rate !== undefined && item.productSketch ? { background: '#f3f3f3', color: '#888' } : {}}
                           />
                           {item.rate !== undefined && item.productSketch && (

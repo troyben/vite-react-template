@@ -178,7 +178,7 @@ export async function exportQuotationToPDF(quotation: Quotation) {
       // Calculate total divisions
       let totalDivisions = 0;
       if (sketch?.panelDivisions) {
-        totalDivisions = sketch.panelDivisions.reduce((sum, panel) => {
+        totalDivisions = sketch.panelDivisions.reduce((sum: any, panel: any) => {
           return sum + (panel.horizontalCount * panel.verticalCount);
         }, 0);
       }
@@ -283,6 +283,7 @@ export async function exportQuotationToPDF(quotation: Quotation) {
     companyContacts.forEach((line, index) => {
       doc.text(line, pageWidth - margin, footerY + (index * 4), { align: 'right' });
     });
+
 
     // === Signatures Section ===
     const signatureY = footerY - 40;

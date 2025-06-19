@@ -16,6 +16,7 @@ export interface QuotationItem {
   quantity: number;          // Required
   price: number;            // Required
   total: number;           // Required
+  rate?: number;             // Optional, if applicable
   productSketch?: ProductData; // Optional
 }
 
@@ -43,6 +44,7 @@ export interface Quotation {
   client_address?: string;
   items: QuotationItem[];
   total_amount: number;
+  rate?: number; // Optional, if applicable
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
   notes?: string;
   created_at: string;

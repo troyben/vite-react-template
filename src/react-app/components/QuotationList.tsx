@@ -76,15 +76,6 @@ const QuotationList = () => {
     setCurrentPage(pageNumber);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'sent': return '#FF8F00';
-      case 'accepted': return '#33D69F';
-      case 'draft': return '#373B53';
-      default: return '#7E88C3';
-    }
-  };
-
   // Add this helper function
   const formatAmount = (amount: any): string => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -101,6 +92,12 @@ const QuotationList = () => {
       case 'paid': return 'status-paid';
       default: return '';
     }
+  };
+
+  // Add a helper to safely format status
+  const formatStatus = (status: string | undefined): string => {
+    if (!status) return '';
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   if (loading) return <div>Loading quotations...</div>;
@@ -206,7 +203,7 @@ const QuotationList = () => {
                         quotation.status === 'draft' ? 'Draft' :
                         quotation.status === 'rejected' ? 'Rejected' :
                         quotation.status === 'paid' ? 'Paid' :
-                        quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
+                        formatStatus(quotation.status)}
                     </span>
                   </div>
                   <div className="client-phone preview-client-detail">
