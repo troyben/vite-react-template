@@ -120,8 +120,6 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
               onClick={() => onSelect(client)}
             >
               <h4>{client.name}</h4>
-              {client.company && <p><strong>Company:</strong> {client.company}</p>}
-              {client.email && <p><strong>Email:</strong> {client.email}</p>}
               {client.phone && <p><strong>Phone:</strong> {client.phone}</p>}
             </div>
           )) : (
@@ -142,7 +140,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
           <form onSubmit={handleNewClientSubmit}>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="name">Name *</label>
+                <label htmlFor="name">Full Name *</label>
                 <input
                   type="text"
                   id="name"
@@ -161,29 +159,6 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
                   value={newClient.phone}
                   onChange={handleInputChange}
                   required
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={newClient.email}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="company">Company</label>
-                <input
-                  type="text"
-                  id="company"
-                  name="company"
-                  value={newClient.company}
-                  onChange={handleInputChange}
                 />
               </div>
             </div>

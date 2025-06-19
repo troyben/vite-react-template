@@ -137,11 +137,6 @@ body {
   pointer-events: none;
 }
 
-/* Form styles */
-.form-group {
-  margin-bottom: 24px;
-}
-
 .form-label {
   display: block;
   margin-bottom: 8px;

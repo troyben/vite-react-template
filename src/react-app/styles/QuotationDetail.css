@@ -194,6 +194,83 @@
   background-color: #028a0f1a;
 }
 
+.item-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sketch-preview-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 16px;
+  background: #F9FAFE;
+  border-radius: 8px;
+  border: 1px solid #DFE3FA;
+}
+
+.sketch-preview-specs {
+  flex: 1;
+  min-width: 0;
+}
+
+.sketch-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sketch-details-main {
+  margin-bottom: 8px;
+}
+
+.sketch-type {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.sketch-dimensions {
+  color: var(--text-light);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.sketch-details-specs {
+  display: grid;
+  gap: 8px;
+}
+
+.spec-item {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.spec-label {
+  color: var(--text-light);
+  min-width: 80px;
+}
+
+.spec-value {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.sketch-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-description {
+  color: var(--text-light);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
 @media (max-width: 768px) {
   .quotation-detail-page {
     padding: 16px;

@@ -101,20 +101,47 @@ const QuotationForm = () => {
     return items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
   };
 
-  const handleItemChange = (index: number, field: keyof QuotationItem, value: string | number) => {
+  // Helper: convert value to meters based on unit
+  const toMeters = (value: number, unit: string) => {
+    if (unit === 'm') return value;
+    if (unit === 'cm') return value / 100;
+    if (unit === 'mm') return value / 1000;
+    return value;
+  };
+
+  // --- Price Calculation with Rate ---
+  // Each item can have a 'rate' field, and price is calculated as L x W x Rate (L/W in meters)
+  const handleItemChange = (index: number, field: keyof QuotationItem | 'rate', value: string | number) => {
     const updatedItems = (formData.items as QuotationItem[]).map((item: QuotationItem, i: number) => {
       if (i !== index) return item;
-      
-      const updatedItem = { ...item, [field]: value };
-      
-      // Recalculate total if quantity or price changes
-      if (field === 'quantity' || field === 'price') {
+
+      // Add 'rate' field to item if changed
+      let updatedItem: any = { ...item, [field]: value };
+
+      // If productSketch exists and rate is set, calculate price
+      if (
+        updatedItem.productSketch &&
+        updatedItem.rate !== undefined &&
+        updatedItem.rate !== null &&
+        updatedItem.rate !== ''
+      ) {
+        const { width, height, unit } = updatedItem.productSketch;
+        const widthM = toMeters(Number(width), unit);
+        const heightM = toMeters(Number(height), unit);
+        const rate = Number(updatedItem.rate);
+        if (!isNaN(widthM) && !isNaN(heightM) && !isNaN(rate)) {
+          updatedItem.price = +(widthM * heightM * rate).toFixed(2);
+        }
+      }
+
+      // Recalculate total if quantity or price or rate changes
+      if (field === 'quantity' || field === 'price' || field === 'rate') {
         updatedItem.total = updatedItem.quantity * updatedItem.price;
       }
-      
+
       return updatedItem;
     });
-    
+
     setFormData({
       ...formData,
       items: updatedItems,
@@ -215,9 +242,9 @@ const QuotationForm = () => {
           quantity: item.quantity,
           price: item.price,
           total: item.quantity * item.price,
+          rate: item.rate, // include rate if present
           productSketch: item.productSketch ? {
             ...item.productSketch,
-            // Only include the required fields from productSketch
             type: item.productSketch.type,
             width: item.productSketch.width,
             height: item.productSketch.height,
@@ -304,63 +331,546 @@ const QuotationForm = () => {
     return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
   };
 
-  // Add this helper function inside the component
+  // Improved mini preview for panels/openings: show open panels with more gap and better perspective
   const renderMiniPreviewPanel = (sketch: ProductData, panelIndex: number) => {
     const isOpening = sketch.openingPanels?.includes(panelIndex);
     const openingDirection = sketch.openingDirections?.[panelIndex];
     const division = sketch.panelDivisions?.find(d => d.panelIndex === panelIndex);
     const isSliding = sketch.type === 'door' && sketch.doorType === 'sliding';
 
+    const frameColor = sketch.frameColor || '#C0C0C0';
+    const glassColor =
+      sketch.glassType === 'clear'
+        ? 'rgba(200,200,255,0.3)'
+        : sketch.glassType === 'frosted'
+        ? 'rgba(255,255,255,0.8)'
+        : sketch.glassType === 'custom-tint'
+        ? `${sketch.customGlassTint || '#AEEEEE'}80`
+        : 'rgba(200,200,255,0.3)';
+    const divisionBorder =
+      frameColor === '#4F4F4F'
+        ? '#BDBDBD'
+        : frameColor === '#CD7F32'
+        ? '#A67C52'
+        : 'rgba(0,0,0,0.18)';
+    const openingHighlight = isOpening ? 'rgba(124, 93, 250, 0.18)' : glassColor;
+
+    // --- Opening transform and shadow for mini preview ---
     const getTransform = () => {
       if (!isOpening) return 'none';
       if (isSliding) {
-        return `translateX(${openingDirection === 'left' ? '-20%' : '20%'})`;
+        // Slide left/right with more gap
+        if (openingDirection === 'left') return 'translateX(-50%)';
+        if (openingDirection === 'right') return 'translateX(50%)';
+        return 'none';
       }
-      return `rotateY(${openingDirection === 'left' ? '-20deg' : '20deg'})`;
+      // Hinged: rotate with more perspective and gap
+      switch (openingDirection) {
+        case 'left':
+          return 'perspective(1200px) translateX(-24%) rotateY(-55deg) scaleX(0.97)';
+        case 'right':
+          return 'perspective(1200px) translateX(24%) rotateY(55deg) scaleX(0.97)';
+        case 'top':
+          return 'perspective(1200px) translateY(-16%) rotateX(50deg) scaleY(0.97)';
+        case 'bottom':
+          return 'perspective(1200px) translateY(16%) rotateX(-50deg) scaleY(0.97)';
+        default:
+          return 'none';
+      }
+    };
+    const getTransformOrigin = () => {
+      if (!isOpening) return 'center';
+      switch (openingDirection) {
+        case 'left': return 'left center';
+        case 'right': return 'right center';
+        case 'top': return 'center top';
+        case 'bottom': return 'center bottom';
+        default: return 'center';
+      }
+    };
+    const getBoxShadow = () => {
+      if (!isOpening) return 'none';
+      return '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
     };
 
+    // --- Division grid ---
+    if (division && (division.horizontalCount > 1 || division.verticalCount > 1)) {
+      const cells = [];
+      for (let row = 0; row < division.horizontalCount; row++) {
+        for (let col = 0; col < division.verticalCount; col++) {
+          const isPaneOpening =
+            sketch.openingPanes?.some(
+              (p) =>
+                p.panelIndex === panelIndex &&
+                p.rowIndex === row &&
+                p.colIndex === col
+            ) ?? false;
+          // Opening pane transform
+          let paneTransform = 'none';
+          let paneOrigin = 'center';
+          let paneShadow = 'none';
+          let marginStyle: React.CSSProperties = {};
+          if (isPaneOpening) {
+            const paneDir = sketch.openingPanes?.find(
+              (p) =>
+                p.panelIndex === panelIndex &&
+                p.rowIndex === row &&
+                p.colIndex === col
+            )?.openingDirection;
+            switch (paneDir) {
+              case 'left':
+                paneTransform = 'perspective(1200px) translateX(-18%) rotateY(-55deg) scaleX(0.97)';
+                paneOrigin = 'left center';
+                paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
+                marginStyle = { marginLeft: '16px' };
+                break;
+              case 'right':
+                paneTransform = 'perspective(1200px) translateX(18%) rotateY(55deg) scaleX(0.97)';
+                paneOrigin = 'right center';
+                paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
+                marginStyle = { marginRight: '16px' };
+                break;
+              case 'top':
+                paneTransform = 'perspective(1200px) translateY(-20%) rotateX(50deg) scaleY(0.97)';
+                paneOrigin = 'center top';
+                paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
+                marginStyle = { marginTop: '10px' };
+                break;
+              case 'bottom':
+                paneTransform = 'perspective(1200px) translateY(10%) rotateX(-50deg) scaleY(0.97)';
+                paneOrigin = 'center bottom';
+                paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
+                marginStyle = { marginBottom: '10px' };
+                break;
+              default:
+                break;
+            }
+          }
+          cells.push(
+            <div
+              key={`cell-${row}-${col}`}
+              style={{
+                border: `1px solid ${divisionBorder}`,
+                background: isPaneOpening
+                  ? 'rgba(124, 93, 250, 0.18)'
+                  : glassColor,
+                boxSizing: 'border-box',
+                width: '100%',
+                height: '100%',
+                borderRadius: 0,
+                transition: 'background 0.2s, transform 0.3s',
+                transform: paneTransform,
+                transformOrigin: paneOrigin,
+                boxShadow: paneShadow,
+                ...marginStyle,
+              }}
+            />
+          );
+        }
+      }
+      return (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${division.verticalCount}, 1fr)`,
+            gridTemplateRows: `repeat(${division.horizontalCount}, 1fr)`,
+            width: '100%',
+            height: '100%',
+            border: `1.5px solid ${frameColor}`,
+            borderRadius: 0,
+            background: '#f8fafd',
+            overflow: 'hidden',
+            minHeight: 60,
+            minWidth: 60,
+          }}
+        >
+          {cells}
+        </div>
+      );
+    }
+
+    // --- Single panel ---
     return (
       <div
-        key={panelIndex}
         style={{
-          border: `1px solid ${sketch.frameColor}`,
-          backgroundColor: sketch.glassType === 'clear' ? 'rgba(200,200,255,0.3)' :
-            sketch.glassType === 'tinted' ? 'rgba(100,100,100,0.5)' :
-            sketch.glassType === 'frosted' ? 'rgba(255,255,255,0.8)' :
-            sketch.glassType === 'reflective' ? 'rgba(200,200,200,0.7)' :
-            `${sketch.customGlassTint}80`,
-          position: 'relative',
+          width: '100%',
+          height: '100%',
+          border: `1.5px solid ${frameColor}`,
+          borderRadius: 0,
+          background: openingHighlight,
+          boxSizing: 'border-box',
+          minHeight: 60,
+          minWidth: 60,
           transform: getTransform(),
-          transformOrigin: openingDirection === 'left' ? 'left' : 'right',
-          transition: 'transform 0.3s ease',
-          display: division ? 'grid' : 'block',
-          gridTemplateColumns: division ? `repeat(${division.verticalCount}, 1fr)` : undefined,
-          gridTemplateRows: division ? `repeat(${division.horizontalCount}, 1fr)` : undefined,
-          gap: division ? '1px' : undefined,
+          transformOrigin: getTransformOrigin(),
+          transition: 'transform 0.3s, box-shadow 0.3s',
+          boxShadow: getBoxShadow(),
+          marginLeft: isOpening && openingDirection === 'left' ? '24px' : undefined,
+          marginRight: isOpening && openingDirection === 'right' ? '24px' : undefined,
+          marginTop: isOpening && openingDirection === 'top' ? '14px' : undefined,
+          marginBottom: isOpening && openingDirection === 'bottom' ? '14px' : undefined,
         }}
-      >
-        {division && Array.from({ length: division.horizontalCount * division.verticalCount }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              border: `1px solid ${sketch.frameColor}`,
-              backgroundColor: 'inherit'
-            }}
-          />
-        ))}
-        {isOpening && (
-          <div 
-            style={{
-              position: 'absolute',
-              [openingDirection === 'left' ? 'right' : 'left']: '2px',
-              top: '50%',
-              width: '2px',
-              height: '12px',
-              backgroundColor: sketch.frameColor,
-              transform: 'translateY(-50%)'
-            }}
-          />
-        )}
+      />
+    );
+  };
+
+  // --- Dimension lines for the preview ---
+  const renderMiniPreviewDimensionLines = (sketch: ProductData, widthPx: number, heightPx: number) => {
+    const { width, height, unit, panels, panelWidths } = sketch;
+    const frameWidth = widthPx;
+    const frameHeight = heightPx;
+    const offset = 10;
+
+    // Panel widths in px: always divide frameWidth equally, regardless of panelWidths values
+    const panelPixelWidths = Array(panels).fill(frameWidth / panels);
+
+    // Calculate x positions for panel boundaries (fixed equal parts)
+    let acc = 0;
+    const panelBoundaries = panelPixelWidths.map((w, i) => {
+      const start = acc;
+      acc += w;
+      return { start, end: acc, width: w, index: i };
+    });
+
+    return (
+      <>
+        {/* Panel widths dimension lines at the top */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: `-${offset + 5}px`,
+            transform: `translateX(-50%)`,
+            width: `${frameWidth}px`,
+            height: '24px',
+            pointerEvents: 'none',
+            zIndex: 11,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div style={{ position: 'relative', width: '100%', height: 0 }}>
+            {panelBoundaries.map((panel, i) => (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: `${panel.start}px`,
+                  top: "-5px",
+                  width: `${panel.width}px`,
+                  height: 0,
+                  pointerEvents: 'none',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    width: `${panel.width}px`,
+                    height: 0,
+                    borderTop: '1px dashed #BDBDBD',
+                    top: 0,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: -6,
+                    width: 0,
+                    height: 0,
+                    borderTop: '6px solid transparent',
+                    borderBottom: '6px solid transparent',
+                    borderRight: '7px solid #BDBDBD',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${panel.width - 7}px`,
+                    top: -6,
+                    width: 0,
+                    height: 0,
+                    borderTop: '6px solid transparent',
+                    borderBottom: '6px solid transparent',
+                    borderLeft: '7px solid #BDBDBD',
+                  }}
+                />
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: "-20px",
+                    transform: 'translateX(-50%)',
+                    background: '#fff',
+                    color: '#7E88C3',
+                    fontWeight: 500,
+                    fontSize: 10,
+                    padding: '0 8px',
+                    borderRadius: 3,
+                    border: '1px solid #DFE3FA',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {panelWidths ? panelWidths[i] : Math.round(width / panels)} {unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Bottom horizontal dimension (width) */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: `${frameHeight - 10}px`,
+            transform: `translateX(-50%)`,
+            width: `${frameWidth}px`,
+            height: '20px',
+            pointerEvents: 'none',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div style={{ position: 'relative', width: '100%', height: 0 }}>
+            <div
+              style={{
+                width: '100%',
+                height: 0,
+                borderTop: '1px solid #7E88C3',
+                position: 'absolute',
+                top: 10,
+                left: 0,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 2,
+                width: 0,
+                height: 0,
+                borderTop: '8px solid transparent',
+                borderBottom: '8px solid transparent',
+                borderRight: '10px solid #7E88C3',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 2,
+                width: 0,
+                height: 0,
+                borderTop: '8px solid transparent',
+                borderBottom: '8px solid transparent',
+                borderLeft: '10px solid #7E88C3',
+              }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: 16,
+                transform: 'translateX(-50%)',
+                background: '#fff',
+                color: '#7E88C3',
+                fontWeight: 600,
+                fontSize: 10,
+                padding: '0 8px',
+                borderRadius: 4,
+                border: '1px solid #DFE3FA',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {width} {unit}
+            </span>
+          </div>
+        </div>
+        {/* Left vertical dimension (height) */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `-${offset + 25}px`,
+            top: '50%',
+            transform: `translateY(-50%)`,
+            height: `${frameHeight}px`,
+            width: '32px',
+            pointerEvents: 'none',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div style={{ position: 'relative', height: '100%', width: 0 }}>
+            <div
+              style={{
+                height: '100%',
+                width: 0,
+                borderLeft: '1px solid #7E88C3',
+                position: 'absolute',
+                left: 10,
+                top: 0,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: 2,
+                top: 0,
+                width: 0,
+                height: 0,
+                borderLeft: '8px solid transparent',
+                borderRight: '8px solid transparent',
+                borderBottom: '10px solid #7E88C3',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: 2,
+                bottom: 0,
+                width: 0,
+                height: 0,
+                borderLeft: '8px solid transparent',
+                borderRight: '8px solid transparent',
+                borderTop: '10px solid #7E88C3',
+              }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                left: 25,
+                top: '50%',
+                transform: 'translate(-100%, -50%) rotate(-90deg)',
+                background: '#fff',
+                color: '#7E88C3',
+                fontWeight: 600,
+                fontSize: 10,
+                padding: '0 8px',
+                borderRadius: 4,
+                border: '1px solid #DFE3FA',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {height} {unit}
+            </span>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+
+  const MiniSketchPreview: React.FC<{ sketch?: ProductData }> = ({ sketch }) => {
+    if (!sketch) return null;
+    const panelCount = sketch.panels || 1;
+    const frameColor = sketch.frameColor || '#C0C0C0';
+    const widthPx = 320;
+    const heightPx = 160;
+
+    // Use panelWidths if available, else equal widths
+    const panelWidths =
+      sketch.panelWidths && sketch.panelWidths.length === panelCount
+        ? sketch.panelWidths
+        : Array(panelCount).fill(1);
+
+    // Normalize widths for flex
+    const total = panelWidths.reduce((a, b) => a + b, 0);
+    const flexes = panelWidths.map((w) => w / total);
+
+    return (
+      <div style={{ position: 'relative', width: widthPx, height: heightPx, margin: '0 auto' }}>
+        {/* Dimension lines */}
+        {renderMiniPreviewDimensionLines(sketch, widthPx, heightPx)}
+        {/* Panels */}
+        <div
+          style={{
+            display: 'flex',
+            width: widthPx,
+            height: heightPx,
+            border: `2px solid ${frameColor}`,
+            borderRadius: 0,
+            overflow: 'hidden',
+            background: '#f8fafd',
+            boxSizing: 'border-box',
+            position: 'relative',
+            zIndex: 2
+          }}
+        >
+          {Array.from({ length: panelCount }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                flex: flexes[i],
+                height: '100%',
+                minWidth: 0,
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'stretch',
+                justifyContent: 'stretch'
+              }}
+            >
+              {renderMiniPreviewPanel(sketch, i)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSketchDetails = (sketchData: ProductData) => {
+    const openingCount = sketchData.openingPanels?.length || 0;
+    const dividedPanelsCount = sketchData.panelDivisions?.length || 0;
+    const openingPanesCount = sketchData.openingPanes?.length || 0;
+
+    return (
+      <div className="sketch-details-grid">
+        <div className="sketch-details-main">
+          <div className="sketch-type">
+            {sketchData.type === 'door' ? `${sketchData.doorType} Door` : 'Window'}
+          </div>
+          <div className="sketch-dimensions">
+            {sketchData.width} × {sketchData.height} {sketchData.unit}
+          </div>
+        </div>
+        <div className="sketch-details-specs">
+          <div className="spec-item">
+            <span className="spec-label">Panels:</span>
+            <span className="spec-value">{sketchData.panels} total ({openingCount} opening)</span>
+          </div>
+          {dividedPanelsCount > 0 && (
+            <div className="spec-item">
+              <span className="spec-label">Divisions:</span>
+              <span className="spec-value">{dividedPanelsCount} panels with divisions</span>
+            </div>
+          )}
+          {openingPanesCount > 0 && (
+            <div className="spec-item">
+              <span className="spec-label">Opening Panes:</span>
+              <span className="spec-value">{openingPanesCount} panes</span>
+            </div>
+          )}
+          <div className="spec-item">
+            <span className="spec-label">Frame:</span>
+            <span className="spec-value">
+              {sketchData.frameColor === '#C0C0C0' ? 'Natural/Silver' :
+               sketchData.frameColor === '#4F4F4F' ? 'Charcoal Grey' :
+               sketchData.frameColor === '#CD7F32' ? 'Bronze' : 'Custom'}
+            </span>
+          </div>
+          <div className="spec-item">
+            <span className="spec-label">Glass:</span>
+            <span className="spec-value">{sketchData.glassType}</span>
+          </div>
+        </div>
       </div>
     );
   };
@@ -403,7 +913,6 @@ const QuotationForm = () => {
               {selectedClient && (
                 <div className="selected-client-summary" style={{ margin: '12px 0 20px 0', padding: '12px', background: '#f9fafe', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{selectedClient.name}</span>
-                  <span style={{ color: 'var(--text-light)', fontSize: '14px' }}>{selectedClient.email}</span>
                   {selectedClient.address && (
                     <span style={{ color: 'var(--text-light)', fontSize: '14px' }}>{selectedClient.address}</span>
                   )}
@@ -434,22 +943,52 @@ const QuotationForm = () => {
               
               <div className="items-list">
                 {(formData.items as QuotationItem[]).map((item, index) => (
-                  <div key={index} className="item-card">
-                    <div className="item-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="item-number">Item #{index + 1}</span>
+                  <div
+                    key={index}
+                    className="item-card"
+                    style={{
+                      background: '#F9FAFE',
+                      borderRadius: 12,
+                      marginBottom: 32,
+                      boxShadow: '0 2px 8px rgba(124,93,250,0.04)',
+                      border: '1.5px solid #DFE3FA',
+                      padding: 24,
+                      position: 'relative',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        height: '100%',
+                        width: 6,
+                        background: `linear-gradient(180deg, #7C5DFA 0%, #6247e0 100%)`,
+                        borderRadius: '12px 0 0 12px',
+                        opacity: 0.18,
+                      }}
+                    />
+                    <div className="item-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <span className="item-number" style={{ fontWeight: 700, color: '#7C5DFA', fontSize: 18 }}>
+                        Item #{index + 1}
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(index)}
                         className="btn-icon-round remove-item-btn"
                         disabled={(formData.items as QuotationItem[]).length <= 1}
                         title="Remove this item"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 1L13 13M1 13L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        {/* X icon */}
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                          <path d="M3 3L15 15M3 15L15 3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
                         </svg>
                       </button>
                     </div>
-                    
+                    <div style={{ marginBottom: 16, color: '#7E88C3', fontSize: 13 }}>
+                      <span>Item Details</span>
+                    </div>
                     <div className="item-fields">
                       <div className="form-row">
                         <div className="form-group">
@@ -490,16 +1029,49 @@ const QuotationForm = () => {
                         </div>
 
                         <div className="form-group">
+                          <label>Rate (per m²)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.rate ?? ''}
+                            onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value) || 0)}
+                            className="form-control"
+                            placeholder="Enter rate"
+                          />
+                          {item.productSketch && (
+                            <small style={{ color: '#7E88C3', fontSize: 12 }}>
+                              Area: {(() => {
+                                const { width, height, unit } = item.productSketch;
+                                const widthM = toMeters(Number(width), unit);
+                                const heightM = toMeters(Number(height), unit);
+                                if (!isNaN(widthM) && !isNaN(heightM)) {
+                                  return `${widthM.toFixed(2)}m × ${heightM.toFixed(2)}m = ${(widthM * heightM).toFixed(2)} m²`;
+                                }
+                                return '';
+                              })()}
+                            </small>
+                          )}
+                        </div>
+
+                        <div className="form-group">
                           <label>Price *</label>
                           <input
                             type="number"
                             min="0"
                             step="0.01"
                             value={item.price}
-                            onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
+                            onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
                             className="form-control"
                             required
+                            readOnly={item.rate !== undefined && item.productSketch}
+                            style={item.rate !== undefined && item.productSketch ? { background: '#f3f3f3', color: '#888' } : {}}
                           />
+                          {item.rate !== undefined && item.productSketch && (
+                            <small style={{ color: '#7E88C3', fontSize: 12 }}>
+                              Price = L × W × Rate
+                            </small>
+                          )}
                         </div>
 
                         <div className="form-group">
@@ -517,55 +1089,27 @@ const QuotationForm = () => {
                         {item.productSketch ? (
                           <div className="sketch-preview">
                             <div className="sketch-preview-container">
-                              <div className="sketch-mini-preview">
-                                <div 
-                                  className="product-frame mini"
-                                  style={{
-                                    backgroundColor: item.productSketch?.frameColor,
-                                    display: 'grid',
-                                    gridTemplateColumns: `repeat(${item.productSketch?.panels || 1}, 1fr)`,
-                                    gap: '1px',
-                                    padding: '1px',
-                                    border: `2px solid ${item.productSketch?.frameColor}`,
-                                    width: '60px',
-                                    height: '40px',
-                                    position: 'relative',
-                                    overflow: item.productSketch?.type === 'door' && item.productSketch?.doorType === 'sliding' ? 'hidden' : 'visible',
-                                    perspective: '400px'
-                                  }}
-                                >
-                                  {item.productSketch && Array.from({ length: item.productSketch.panels }).map((_, index) => 
-                                    renderMiniPreviewPanel(item.productSketch as ProductData, index)
-                                  )}
-                                </div>
+                              <div className="sketch-preview-specs">
+                                {renderSketchDetails(item.productSketch)}
                               </div>
-                              <div className="sketch-details">
-                                <p><strong>{item.productSketch.type === 'window' ? 'Window' : 'Door'}</strong>: {item.productSketch.width}cm × {item.productSketch.height}cm</p>
-                                <p>Panels: {item.productSketch.panels} (Opening: {(item.productSketch.openingPanels?.length || 0)})</p>
-                                {item.productSketch.type === 'door' && <p>Door Type: {item.productSketch.doorType}</p>}
-                                {item.productSketch.panelDivisions && item.productSketch.panelDivisions.length > 0 && (
-                                  <p>
-                                    Divided Panels: {item.productSketch.panelDivisions.map(div => 
-                                      `Panel ${div.panelIndex + 1} (${div.horizontalCount}×${div.verticalCount})`
-                                    ).join(', ')}
-                                  </p>
-                                )}
-                                <div className="sketch-actions">
-                                  <button 
-                                    type="button" 
-                                    className="btn btn-sm btn-secondary"
-                                    onClick={() => handleOpenSketch(index)}
-                                  >
-                                    Edit Sketch
-                                  </button>
-                                  <button 
-                                    type="button" 
-                                    className="btn btn-sm btn-danger"
-                                    onClick={() => handleRemoveSketch(index)}
-                                  >
-                                    Remove Sketch
-                                  </button>
-                                </div>
+                              <div style={{ minWidth: 120, minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <MiniSketchPreview sketch={item.productSketch} />
+                              </div>
+                              <div className="sketch-actions">
+                                <button 
+                                  type="button"
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => handleOpenSketch(index)}
+                                >
+                                  Edit Sketch
+                                </button>
+                                <button 
+                                  type="button"
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleRemoveSketch(index)}
+                                >
+                                  Clear Sketch
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -638,13 +1182,6 @@ const QuotationForm = () => {
               <div className="preview-client">
                 <div className="preview-client-name">{selectedClient?.name || 'Client Name'}</div>
                 
-                <div className="preview-client-detail">
-                  <svg className="preview-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 3H2C1.45 3 1 3.45 1 4V12C1 12.55 1.45 13 2 13H14C14.55 13 15 12.55 15 12V4C15 3.45 14.55 3 14 3ZM14 5L8 8.5L2 5V4L8 7.5L14 4V5Z" fill="currentColor"/>
-                  </svg>
-                  <div className="preview-client-email">{selectedClient?.email || 'client@example.com'}</div>
-                </div>
-                
                 {selectedClient?.phone && (
                   <div className="preview-client-detail">
                     <svg className="preview-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -685,33 +1222,19 @@ const QuotationForm = () => {
                         <br />
                         {item.productSketch && (
                           <div className="preview-sketch">
-                            <div className="preview-sketch-mini">
-                              <div 
-                                className="product-frame mini"
-                                style={{
-                                  backgroundColor: item.productSketch?.frameColor,
-                                  display: 'grid',
-                                  gridTemplateColumns: `repeat(${item.productSketch?.panels || 1}, 1fr)`,
-                                  gap: '1px',
-                                  padding: '1px',
-                                  border: `2px solid ${item.productSketch?.frameColor}`,
-                                  width: '60px',
-                                  height: '40px',
-                                  position: 'relative',
-                                  overflow: item.productSketch?.type === 'door' && item.productSketch?.doorType === 'sliding' ? 'hidden' : 'visible',
-                                  perspective: '400px'
-                                }}
-                              >
-                                {item.productSketch && Array.from({ length: item.productSketch.panels }).map((_, index) => 
-                                  renderMiniPreviewPanel(item.productSketch as ProductData, index)
-                                )}
+                            <div className="preview-sketch-container">
+                              <div className="preview-sketch-info">
+                                {renderSketchDetails(item.productSketch)}
+                              </div>
+                              <div className="preview-sketch-visual" style={{ minWidth: 120, minHeight: 60, marginTop: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <MiniSketchPreview sketch={item.productSketch} />
                               </div>
                             </div>
                           </div>
                         )}
                       </td>
                       <td>{item.quantity}</td>
-                      <td>£{item.price.toFixed(2)}</td>
+                      <td>${item.price.toFixed(2)}</td>
                       <td className="text-right">{formatAmount(item.total)}</td>
                     </tr>
                   ))}

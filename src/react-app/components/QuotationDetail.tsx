@@ -4,6 +4,7 @@ import { getQuotationById, deleteQuotation, updateQuotation, type Quotation, typ
 import { notify } from '../utils/notifications';
 import { exportQuotationToPDF } from '../utils/pdfExport';
 import '../styles/QuotationDetail.css';
+import SketchPreview from './SketchPreview';
 
 type QuotationStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
 
@@ -125,8 +126,86 @@ const QuotationDetail = () => {
     ? quotation.items 
     : [];
 
+  const renderSketchDetails = (sketchData: any) => {
+    const openingCount = sketchData.openingPanels?.length || 0;
+    const dividedPanelsCount = sketchData.panelDivisions?.length || 0;
+    const openingPanesCount = sketchData.openingPanes?.length || 0;
+
+    return (
+      <div className="sketch-details-grid">
+        <div className="sketch-details-main">
+          <div className="sketch-type">
+            {sketchData.type === 'door' ? `${sketchData.doorType} Door` : 'Window'}
+          </div>
+          <div className="sketch-dimensions">
+            {sketchData.width} × {sketchData.height} {sketchData.unit}
+          </div>
+        </div>
+        <div className="sketch-details-specs">
+          <div className="spec-item">
+            <span className="spec-label">Panels:</span>
+            <span className="spec-value">{sketchData.panels} total ({openingCount} opening)</span>
+          </div>
+          {dividedPanelsCount > 0 && (
+            <div className="spec-item">
+              <span className="spec-label">Divided Panels:</span>
+              <span className="spec-value">{dividedPanelsCount} panels with divisions</span>
+            </div>
+          )}
+          {openingPanesCount > 0 && (
+            <div className="spec-item">
+              <span className="spec-label">Opening Panes:</span>
+              <span className="spec-value">{openingPanesCount} panes</span>
+            </div>
+          )}
+          <div className="spec-item">
+            <span className="spec-label">Frame:</span>
+            <span className="spec-value">
+              {sketchData.frameColor === '#C0C0C0' ? 'Natural/Silver' :
+               sketchData.frameColor === '#4F4F4F' ? 'Charcoal Grey' :
+               sketchData.frameColor === '#CD7F32' ? 'Bronze' : 'Custom'}
+            </span>
+          </div>
+          <div className="spec-item">
+            <span className="spec-label">Glass:</span>
+            <span className="spec-value">{sketchData.glassType}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderItemWithSketch = (item: QuotationItem) => {
+    const sketchData = item.productSketch;
+
+    return (
+      <>
+        <td>
+          <div>{item.item}</div>
+          <div style={{ color: 'var(--text-light)', fontSize: '14px'}}>{item.description}</div>
+          <br />
+          {sketchData && (
+            <div className="preview-sketch">
+              <div className="sketch-preview-container">
+                <div className="sketch-preview-specs">
+                  {renderSketchDetails(sketchData)}
+                </div>
+                <div className="sketch-preview-visual" style={{ minWidth: 120, minHeight: 60, marginTop: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <SketchPreview data={sketchData} size="small" />
+                </div>
+              </div>
+            </div>
+          )}
+        </td>
+        <td>{item.quantity}</td>
+        <td>${item.price.toFixed(2)}</td>
+        <td className="text-right">${item.total.toFixed(2)}</td>
+      </>
+    );
+  };
+
   return (
-    <div className="quotation-detail-page">
+    <div className="quotation-detail-page" style={{ maxWidth: '100%', width: '100%' }}>
       <div className="page-header">
         <h1 className="page-title">Quotation Details</h1>
         <div className="detail-actions">
@@ -174,7 +253,7 @@ const QuotationDetail = () => {
         </div>
       </div>
 
-      <div className="quotation-card refined-quotation-card">
+      <div className="quotation-card refined-quotation-card" style={{ maxWidth: '100%', width: '100%' }}>
         <div className="client-info-row refined-client-info-row">
           <div className="client-info-block refined-client-info-block">
             <div className="client-info-header">
@@ -195,11 +274,10 @@ const QuotationDetail = () => {
           <div className="items-header-row refined-items-header-row">
             <h3>Items</h3>
           </div>
-          <table className="items-table modern-table refined-items-table">
+          <table className="items-table modern-table refined-items-table" style={{ width: '100%' }}>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Description</th>
+                <th>Item & Description</th>
                 <th>Quantity</th>
                 <th>Price</th>
                 <th className="text-right">Total</th>
@@ -208,17 +286,13 @@ const QuotationDetail = () => {
             <tbody>
               {items.map((item: QuotationItem, index: number) => (
                 <tr key={index}>
-                  <td>{item.item}</td>
-                  <td>{item.description}</td>
-                  <td>{item.quantity}</td>
-                  <td>${item.price.toFixed(2)}</td>
-                  <td className="text-right">${item.total.toFixed(2)}</td>
+                  {renderItemWithSketch(item)}
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="refined-total-row">
-                <td colSpan={4} className="text-right refined-total-label">Total:</td>
+                <td colSpan={3} className="text-right refined-total-label">Total:</td>
                 <td className="text-right refined-total-value">{formatAmount(quotation.total_amount)}</td>
               </tr>
             </tfoot>

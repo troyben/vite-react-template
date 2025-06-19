@@ -1,6 +1,9 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import type { Quotation, QuotationItem } from '../services/quotationService';
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import SketchPreviewMini from "../components/SketchPreviewMini";
+import ReactDOM from "react-dom/client";
+import React from "react";
+import type { Quotation } from '../services/quotationService';
 import { notify } from '../utils/notifications';
 
 // Color scheme
@@ -32,9 +35,9 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
   });
 };
 
-export const exportQuotationToPDF = async (quotation: Quotation) => {
+export async function exportQuotationToPDF(quotation: Quotation) {
   try {
-    const doc : any = new jsPDF({
+    const doc: any = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
@@ -59,160 +62,235 @@ export const exportQuotationToPDF = async (quotation: Quotation) => {
     // === Header Section ===
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
-    
+    let currentY = 15;
+
     // Logo
     if (logoBase64) {
-      doc.addImage(logoBase64, 'PNG', margin, 15, 40, 15);
+      doc.addImage(logoBase64, 'PNG', margin, currentY, 40, 15);
     }
-    
+    currentY += 10;
+
     // Company name in header - dark color
     doc.setFontSize(16);
     doc.setTextColor(...COLORS.dark);
     doc.setFont(undefined, 'bold');
-    doc.text('Malonic Aluminium & Glass', pageWidth - margin, 25, { align: 'right' });
+    doc.text('Malonic Aluminium & Glass', pageWidth - margin, currentY + 10, { align: 'right' });
     doc.setFont(undefined, 'normal');
+    currentY += 20;
 
     // === Quotation Title Section ===
     doc.setFontSize(24);
     doc.setTextColor(...COLORS.primary);
-    doc.text('QUOTATION', margin, 50);
-    
+    doc.text('QUOTATION', margin, currentY + 15);
+    currentY += 15;
+
     // === Quotation Info Section ===
     doc.setFontSize(10);
     doc.setTextColor(...COLORS.text);
-    
+
     const quotationDate = new Date(quotation.createdAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-    
+
     const quotationInfo = [
       { label: 'Quotation #', value: quotation.id },
       { label: 'Date', value: quotationDate },
-      { label: 'Valid Until', value: '30 days' }
     ];
-    
-    // Right-aligned quotation info
-    const infoStartY = 45;
+
+    const infoStartY = currentY + 5;
     quotationInfo.forEach((info, index) => {
       doc.text(`${info.label}:`, pageWidth - margin - 30, infoStartY + (index * 5), { align: 'right' });
       doc.text(info.value.toString(), pageWidth - margin, infoStartY + (index * 5), { align: 'right' });
     });
+    currentY = infoStartY + quotationInfo.length * 5 + 5;
 
     // Divider line
     doc.setDrawColor(...COLORS.accent);
     doc.setLineWidth(0.5);
-    doc.line(margin, 62, pageWidth - margin, 62);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 8;
 
     // === Client Information Section ===
     doc.setFontSize(12);
     doc.setTextColor(...COLORS.primary);
-    doc.text('BILL TO:', margin, 70);
-    
+    doc.text('BILL TO:', margin, currentY + 5);
+
     doc.setFontSize(10);
     doc.setTextColor(...COLORS.text);
-    
+
     const clientInfo = [
       quotation.client_name,
       quotation.client_address || 'Address not specified',
       `Phone: ${quotation.client_phone || 'N/A'}`,
-      ...(quotation.client_email ? [`Email: ${quotation.client_email}`] : [])
     ];
-    
+
     clientInfo.forEach((line, index) => {
-      doc.text(line, margin, 75 + (index * 5));
+      doc.text(line, margin, currentY + 10 + (index * 5));
     });
+    currentY += 10 + clientInfo.length * 5 + 5;
 
-    // === Items Table ===
-    autoTable(doc, {
-      startY: 95,
-      head: [['#', 'Item', 'Description', 'Qty', 'Unit Price', 'Total']],
-      body: items.map((item: QuotationItem, index: number) => [
-        (index + 1).toString(),
-        item.item,
-        item.description || '-',
-        item.quantity.toString(),
-        `$${item.price.toFixed(2)}`,
-        `$${item.total.toFixed(2)}`
-      ]),
-      theme: 'grid',
-      styles: { 
-        fontSize: 9,
-        cellPadding: 3,
-        textColor: COLORS.text as any,
-        lineColor: [200, 200, 200],
-        lineWidth: 0.2
-      },
-      headStyles: {
-        fillColor: COLORS.primary as any,
-        textColor: 255,
-        fontSize: 10,
-        fontStyle: 'bold',
-        lineWidth: 0.2
-      },
-      alternateRowStyles: {
-        fillColor: COLORS.light as any
-      },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },  // #
-        1: { cellWidth: 30 },                   // Item
-        2: { cellWidth: 50 },                   // Description
-        3: { cellWidth: 15, halign: 'center' }, // Qty
-        4: { cellWidth: 25, halign: 'right' },  // Unit Price
-        5: { cellWidth: 25, halign: 'right' }   // Total
-      },
-      margin: { left: margin, right: margin }
-    });
+    // === Items Section ===
+    doc.setFontSize(13);
+    doc.setTextColor(...COLORS.primary);
+    doc.text('Items', margin, currentY + 2);
+    currentY += 6;
 
-    const finalY = (doc as any).lastAutoTable?.finalY || 120;
+    // For page break logic
+    const itemCardHeight = 95;
+    const minBottomSpace = 60;
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // === Simplified Totals Section ===
+    for (const [index, item] of items.entries()) {
+      // If not enough space for next item, add new page
+      if (currentY + itemCardHeight + minBottomSpace > pageHeight) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      // Draw item card background (larger to accommodate details)
+      doc.setFillColor(249, 250, 254); // #F9FAFE
+      doc.roundedRect(margin, currentY, pageWidth - margin * 2, itemCardHeight, 4, 4, 'F');
+
+      // Item title
+      doc.setFontSize(12);
+      doc.setTextColor(...COLORS.primary);
+      doc.text(`Item #${index + 1}: ${item.item}`, margin + 4, currentY + 8);
+
+      // Description
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.text);
+      if (item.description) {
+        doc.text(item.description, margin + 4, currentY + 14);
+      }
+
+      // === Product Details Section ===
+      const detailsLeft = margin + 4;
+      let detailsY = currentY + 22;
+
+      // Extract product sketch data
+      const sketch = item.productSketch;
+      const totalPanels = sketch?.panels || 0;
+      const openingPanels = sketch?.openingPanels?.length || 0;
+      const openingPanes = sketch?.openingPanes?.length || 0;
+
+      // Calculate total divisions
+      let totalDivisions = 0;
+      if (sketch?.panelDivisions) {
+        totalDivisions = sketch.panelDivisions.reduce((sum, panel) => {
+          return sum + (panel.horizontalCount * panel.verticalCount);
+        }, 0);
+      }
+
+      // Main dimensions
+      doc.text(`Window: ${sketch?.width || 0} × ${sketch?.height || 0} ${sketch?.unit || 'cm'}`, detailsLeft, detailsY);
+      detailsY += 6;
+
+      // Panels information
+      doc.text(`Panels: ${totalPanels} total (${openingPanels} opening)`, detailsLeft, detailsY);
+      detailsY += 6;
+
+      // Divisions
+      doc.text(`Divisions: ${totalDivisions} sections across panels`, detailsLeft, detailsY);
+      detailsY += 6;
+
+      // Opening panes
+      doc.text(`Opening Panes: ${openingPanes} panes`, detailsLeft, detailsY);
+      detailsY += 6;
+
+      // Frame and glass type
+      const frameColor = sketch?.frameColor === '#C0C0C0' ? 'Silver' :
+        sketch?.frameColor === 'natural' ? 'Natural' :
+          sketch?.frameColor || 'Not specified';
+      doc.text(`Frame: ${frameColor}`, detailsLeft, detailsY);
+      detailsY += 6;
+      doc.text(`Glass: ${sketch?.glassType || 'clear'}`, detailsLeft, detailsY);
+      detailsY += 6;
+
+      // === Quantity and Pricing Section (in a column) ===
+      let priceColY = currentY + 10;
+      const priceColX = pageWidth - margin - 60;
+      doc.setFontSize(11);
+      doc.setTextColor(...COLORS.text);
+      doc.text(`Quantity: ${item.quantity}`, priceColX, priceColY);
+      priceColY += 7;
+      doc.text(`Unit Price: $${item.price.toFixed(2)}`, priceColX, priceColY);
+      priceColY += 7;
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...COLORS.primary);
+      doc.text(`Item Total: $${item.total.toFixed(2)}`, priceColX, priceColY);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(...COLORS.text);
+
+      // === Sketch Preview Section ===
+      if (item.productSketch) {
+        const imgData = await renderSketchToImage(item.productSketch);
+        if (imgData) {
+          // Position sketch to the right - taking most of the available width
+          const sketchWidth = 100;
+          const sketchHeight = 50;
+          const sketchX = pageWidth - margin - sketchWidth - 5;
+          const sketchY = currentY + 35;
+
+          doc.addImage(
+            imgData,
+            "PNG",
+            sketchX,
+            sketchY,
+            sketchWidth,
+            sketchHeight
+          );
+
+          // Add border around sketch
+          doc.setDrawColor(...COLORS.accent);
+          doc.setLineWidth(0.2);
+          doc.rect(sketchX, sketchY, sketchWidth, sketchHeight);
+        }
+      }
+
+      currentY += itemCardHeight;
+    }
+
+    // === Total Section (always at the bottom of the last page) ===
+    // If not enough space, add a new page
+    if (currentY + 30 > doc.internal.pageSize.getHeight() - 40) {
+      doc.addPage();
+      currentY = 20;
+    }
     const total = Number(quotation.total_amount);
-    
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(...COLORS.primary);
-    doc.text('Total Amount:', pageWidth - margin - 50, finalY + 10, { align: 'right' });
-    doc.text(`$${total.toFixed(2)}`, pageWidth - margin, finalY + 10, { align: 'right' });
+    doc.text('Total Amount:', pageWidth - margin - 50, doc.internal.pageSize.getHeight() - 35, { align: 'right' });
+    doc.text(`$${total.toFixed(2)}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 35, { align: 'right' });
     doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
 
-    // === Notes Section ===
-    doc.setFontSize(9);
-    doc.setTextColor(...COLORS.subtle);
-    doc.text('Notes:', margin, finalY + 25);
-    doc.text('1. This quotation is valid for 30 days from the date of issue.', margin, finalY + 30);
-    doc.text('2. Prices are subject to change without prior notice.', margin, finalY + 35);
-
     // === Footer Section ===
     const footerY = doc.internal.pageSize.getHeight() - 20;
-    
-    // Company contact info
+
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.subtle);
     doc.text('Thank you for your business!', margin, footerY);
-    
+
     const companyContacts = [
       '315 Samora Machel Avenue, Eastlea, HARARE',
       'Phone: +263 867 719 4229 | Email: sales@malonicaluminium.co.zw',
       'Website: https://malonicaluminium.co.zw'
     ];
-    
+
     companyContacts.forEach((line, index) => {
       doc.text(line, pageWidth - margin, footerY + (index * 4), { align: 'right' });
     });
 
-    // Page number
-    doc.text(`Page 1 of 1`, pageWidth / 2, footerY + 8, { align: 'center' });
-
-    // === Enhanced Signatures Section ===
+    // === Signatures Section ===
     const signatureY = footerY - 40;
     const signatureLineLength = 60;
-    
+
     doc.setFontSize(10);
     doc.setTextColor(...COLORS.text);
-    
+
     // Left signature (Company)
     doc.text('Authorized Signature', margin, signatureY);
     doc.setDrawColor(...COLORS.subtle);
@@ -224,7 +302,7 @@ export const exportQuotationToPDF = async (quotation: Quotation) => {
     doc.line(margin, signatureY + 9, margin + signatureLineLength, signatureY + 9);
     doc.text('Date:', margin, signatureY + 16);
     doc.line(margin, signatureY + 17, margin + signatureLineLength, signatureY + 17);
-    
+
     // Right signature (Client)
     doc.setFontSize(10);
     doc.setTextColor(...COLORS.text);
@@ -239,10 +317,81 @@ export const exportQuotationToPDF = async (quotation: Quotation) => {
     doc.text('Date:', pageWidth - margin - signatureLineLength, signatureY + 16);
     doc.line(pageWidth - margin - signatureLineLength, signatureY + 17, pageWidth - margin, signatureY + 17);
 
-    doc.save(`Quotation-${quotation.id}.pdf`);
+    doc.save(`Malonic-Aluminium-Quotation-${quotation.id}.pdf`);
     notify.success('PDF generated successfully');
   } catch (error) {
     console.error('PDF Generation Error:', error);
     notify.error('Failed to generate PDF');
   }
 };
+
+async function renderSketchToImage(sketchData: any): Promise<string | null> {
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "800px";
+  container.style.height = "500px";
+  container.style.backgroundColor = "#ffffff";
+  document.body.appendChild(container);
+
+  const root = ReactDOM.createRoot(container);
+  root.render(
+    React.createElement(
+      "div",
+      {
+        style: {
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "20px",
+          boxSizing: "border-box"
+        }
+      },
+      React.createElement(SketchPreviewMini, {
+        data: sketchData,
+        showDimensions: true,
+        dimensionStyle: {
+          fontSize: "18px",
+          color: "#333333",
+          stroke: "#333333",
+          strokeWidth: 2,
+          background: "rgba(255,255,255,0.8)",
+          padding: "3px 6px",
+          borderRadius: "4px"
+        },
+        style: {
+          border: "1px solid #eeeeee",
+          backgroundColor: "#ffffff",
+          padding: "15px",
+          width: "100%",
+          height: "100%"
+        }
+      })
+    )
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  let dataUrl: string | null = null;
+  try {
+    const canvas = await html2canvas(container, {
+      backgroundColor: "#ffffff",
+      scale: 4,
+      logging: true,
+      useCORS: true,
+      allowTaint: true
+    });
+    dataUrl = canvas.toDataURL("image/png", 1.0);
+  } catch (e) {
+    console.error("Error rendering sketch:", e);
+    dataUrl = null;
+  }
+
+  root.unmount();
+  document.body.removeChild(container);
+
+  return dataUrl;
+}

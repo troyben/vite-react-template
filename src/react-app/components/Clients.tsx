@@ -105,14 +105,6 @@ const Clients = () => {
       header: 'Name',
     },
     {
-      accessorKey: 'company',
-      header: 'Company',
-    },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-    },
-    {
       accessorKey: 'phone',
       header: 'Phone',
     },
@@ -177,33 +169,13 @@ const Clients = () => {
               <h2>{editingClient ? 'Edit Client' : 'Add New Client'}</h2>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Name *</label>
+                  <label className="form-label">Full Name *</label>
                   <input
                     type="text"
                     name="name"
                     className="form-control"
                     defaultValue={editingClient?.name}
                     required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Company</label>
-                  <input
-                    type="text"
-                    name="company"
-                    className="form-control"
-                    defaultValue={editingClient?.company}
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    className="form-control"
-                    defaultValue={editingClient?.email}
                   />
                 </div>
                 <div className="form-group">

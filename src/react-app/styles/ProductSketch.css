@@ -10,11 +10,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-}
-
-.sketch-header {
-  margin-bottom: 24px;
+  padding: 16px 48px;
 }
 
 .sketch-header h2 {
@@ -38,12 +34,9 @@
   color: #555;
 }
 
-.control-group {
-  margin-bottom: 24px;
-}
 
 .control-group label {
-  display: block;
+  display: flex;
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 8px;
@@ -181,7 +174,6 @@
   background: white;
   border: 1px solid #DFE3FA;
   border-radius: 6px;
-  overflow: hidden;
 }
 
 .panel-division-option {
@@ -498,11 +490,6 @@
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.sketch-header {
-  padding: 24px;
-  border-bottom: 1px solid #DFE3FA;
-}
-
 .sketch-header h2 {
   margin: 0;
   font-size: 24px;
@@ -512,9 +499,58 @@
 .sketch-body {
   display: grid;
   grid-template-columns: 1fr 400px; /* Changed from 1fr 300px */
-  gap: 32px;
-  padding: 32px;
+  gap: 8px;
+  padding: 8px;
   height: 80%;
+}
+
+.sketch-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px 24px 32px;
+  border-top: 1px solid #DFE3FA;
+  background: #F9FAFE;
+  border-radius: 0 0 8px 8px;
+  margin-top: 24px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.button-primary,
+.button-secondary {
+  padding: 10px 28px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  outline: none;
+  min-width: 120px;
+  box-shadow: 0 1px 2px rgba(124, 93, 250, 0.04);
+  margin: 0;
+  display: inline-block;
+}
+
+.button-primary {
+  background: #7C5DFA;
+  color: #fff;
+  border: 1.5px solid #7C5DFA;
+}
+
+.button-primary:hover,
+.button-primary:focus {
+  background: #6247e0;
+  border-color: #6247e0;
+}
+
+.button-secondary {
+  background: #fff;
+  color: #7E88C3;
+  border: 1.5px solid #DFE3FA;
 }
 
 .product-preview {
@@ -526,6 +562,8 @@
   align-items: center;
   justify-content: center;
   min-height: 600px;
+  position: relative;
+  overflow: visible;
 }
 
 .product-frame {
@@ -543,11 +581,6 @@
   overflow-y: auto; /* Make controls section scrollable */
   padding-right: 16px; /* Add padding for scrollbar */
 }
-
-/* .control-group {
-  display: flex;
-  flex-direction: column;
-} */
 
 .control-group label {
   font-weight: 500;
@@ -579,49 +612,62 @@
 }
 
 .dimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #F8F8FB;
+  border-radius: 8px;
+}
+
+.dimensions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dimensions-header label {
+  font-weight: 500;
+  color: #252945;
+}
+
+.dimensions-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.sketch-footer {
-  padding: 24px;
-  border-top: 1px solid #DFE3FA;
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-}
-
-/* Input styles */
-.control-group input,
-.control-group select {
-  padding: 8px 12px;
+.unit-select {
+  appearance: none;
+  padding: 4px 24px 4px 12px;
   border: 1px solid #DFE3FA;
   border-radius: 4px;
+  background: white;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237E88C3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  color: #252945;
   font-size: 14px;
+  cursor: pointer;
+}
+
+.unit-select:focus {
+  outline: none;
+  border-color: #7C5DFA;
 }
 
 .dimension-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px;
   border: 1px solid #DFE3FA;
   border-radius: 4px;
   font-size: 14px;
-  color: var(--text-color);
-  background: white;
-  transition: all 0.2s ease;
 }
 
 .dimension-input:focus {
+  border-color: #7C5DFA;
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.1);
-}
-
-.dimension-input::-webkit-inner-spin-button,
-.dimension-input::-webkit-outer-spin-button {
-  opacity: 1;
-  height: 24px;
 }
 
 /* Panel styles */
@@ -682,92 +728,106 @@
 }
 
 .panel-opening-config {
-  background: white;
-  border: 1px solid #DFE3FA;
-  border-radius: 6px;
-  overflow: hidden;
+  padding: 16px;
+  background: #f8f8fb;
+  border-radius: 8px;
+  margin-bottom: 12px;
 }
 
 .panel-opening-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid transparent;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
 .panel-opening-title {
-  font-weight: 600;
-  color: var(--text-color);
-  font-size: 14px;
+  font-weight: 500;
+  color: #252945;
+  font-size: 15px;
 }
 
 .panel-opening-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  user-select: none;
+  padding: 4px;
 }
 
 .panel-opening-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 44px;
+  height: 24px;
+  background: #DFE3FA;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.toggle-label {
-  font-size: 13px;
-  color: var(--text-light);
+.panel-opening-toggle input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  background: white;
+  transition: transform 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.panel-opening-toggle input[type="checkbox"]:checked {
+  background: #7C5DFA;
+}
+
+.panel-opening-toggle input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
+}
+
+.panel-opening-toggle .toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #252945;
+}
+
+/* Optional: Add focus styles for accessibility */
+.panel-opening-toggle input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.2);
 }
 
 .opening-direction-selector {
   display: flex;
   gap: 8px;
-  padding: 12px 16px;
-  background: #FAFAFA;
+  justify-content: center;
+  padding-top: 8px;
+  border-top: 1px solid #DFE3FA;
 }
 
 .direction-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid #DFE3FA;
+  padding: 8px;
+  border: 2px solid #DFE3FA;
   border-radius: 4px;
   background: white;
-  color: var(--text-color);
-  font-size: 13px;
+  color: #7E88C3;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .direction-btn:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
+  border-color: #7C5DFA;
+  color: #7C5DFA;
 }
 
 .direction-btn.active {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
+  background: #7C5DFA;
+  border-color: #7C5DFA;
   color: white;
-}
-
-.direction-btn svg {
-  width: 16px;
-  height: 16px;
-  transition: all 0.2s ease;
-}
-
-.direction-btn.active svg {
-  color: white;
-}
-
-/* Panel Configuration */
-.panel-config-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   margin-top: 16px;
 }
@@ -803,6 +863,8 @@
 .mini-grid {
   width: 100%;
   height: 100%;
+  display: grid;
+  gap: 2px;
 }
 
 .mini-cell {
@@ -848,7 +910,7 @@
 
 .opening-panes-grid {
   border-top: 1px solid #DFE3FA;
-  padding-top: 12px; /* Reduced from 16px */
+  padding-top: 12px;
   margin-top: 8px;
 }
 
@@ -861,10 +923,10 @@
 
 .panes-grid {
   background: #F9FAFE;
-  padding: 4px; /* Reduced from 8px */
+  padding: 4px;
   border-radius: 4px;
   display: grid;
-  gap: 2px; /* Reduced from 4px */
+  gap: 2px;
 }
 
 .pane-toggle {
@@ -909,6 +971,293 @@
   font-style: italic;
 }
 
+.pane-config {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.pane-direction-controls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  min-width: 160px;
+}
+
+.direction-title {
+  margin: 0 0 8px 0;
+  text-align: center;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.direction-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  width: 120px;
+  margin: 0 auto;
+}
+
+.direction-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.direction-btn:hover {
+  background: #e8e8e8;
+  border-color: #7c5dfa;
+}
+
+.direction-btn.active {
+  background: #7c5dfa;
+  color: white;
+  border-color: #6c4dea;
+}
+
+.direction-btn .hinge-indicator {
+  position: absolute;
+  font-size: 16px;
+  color: inherit;
+}
+
+.direction-btn .arrow {
+  font-size: 14px;
+  color: inherit;
+}
+
+.direction-btn.top {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.direction-btn.right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.direction-btn.bottom {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.direction-btn.left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* Position hinge indicators and arrows for each direction */
+.direction-btn.top .hinge-indicator {
+  top: 2px;
+}
+
+.direction-btn.right .hinge-indicator {
+  right: 2px;
+}
+
+.direction-btn.bottom .hinge-indicator {
+  bottom: 2px;
+}
+
+.direction-btn.left .hinge-indicator {
+  left: 2px;
+}
+
+/* Tooltip styles */
+.direction-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* --- Door Type Selector --- */
+.door-type-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.door-type-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1.5px solid #DFE3FA;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #7E88C3;
+  transition: all 0.2s;
+}
+
+.door-type-btn.active {
+  background: #7C5DFA;
+  color: white;
+  border-color: #7C5DFA;
+}
+
+.door-type-btn:not(.active):hover {
+  border-color: #7C5DFA;
+  color: #7C5DFA;
+}
+
+/* --- End Pane Division & Door Type Styles --- */
+
+/* --- Tabs UI --- */
+
+.sketch-tabs-header {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #DFE3FA;
+  margin-bottom: 0;
+  background: #f9fafe;
+  border-radius: 8px 8px 0 0;
+  padding: 0 0 0 0;
+}
+
+.sketch-tab-btn {
+  background: none;
+  border: none;
+  outline: none;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #7E88C3;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: background 0.2s, color 0.2s;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+
+.sketch-tab-btn.active {
+  background: #fff;
+  color: #7C5DFA;
+  border-bottom: 2px solid #7C5DFA;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.sketch-tabs-content {
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 8px rgba(124, 93, 250, 0.04);
+  padding: 20px 0 0 0;
+  min-height: 120px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* --- Panel Widths Inputs --- */
+.control-group .panel-widths-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  background: #f9fafe;
+  border-radius: 6px;
+  padding: 10px 8px;
+  border: 1px solid #DFE3FA;
+  align-items: center;
+}
+
+.control-group .panel-width-input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  margin-right: 4px;
+}
+
+.control-group .panel-width-label {
+  font-size: 12px;
+  color: #7E88C3;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.control-group .panel-width-input input[type="number"] {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid #DFE3FA;
+  color: #373B53;
+  border-radius: 4px;
+  outline: none;
+  font-size: 14px;
+  padding: 4px 0;
+  transition: border 0.2s;
+}
+
+.control-group .panel-width-input input[type="number"]:disabled {
+  background: #f3f3f3;
+  border: 1px solid #e0e0e0;
+  color: #b0b0b0;
+}
+
+.control-group .panel-widths-total {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #7E88C3;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.control-group .panel-widths-hint {
+  color: #7E88C3;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* --- Responsive Tabs --- */
+@media (max-width: 600px) {
+  .sketch-tabs-header {
+    flex-direction: column;
+    gap: 0;
+    border-radius: 8px 8px 0 0;
+  }
+  .sketch-tab-btn {
+    border-radius: 8px 8px 0 0;
+    width: 100%;
+    text-align: left;
+    padding: 12px 12px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #DFE3FA;
+  }
+  .sketch-tab-btn.active {
+    border-bottom: 2px solid #7C5DFA;
+  }
+}
+
 @media (max-width: 1200px) {
   .sketch-container {
     max-width: calc(100vw - 48px);
@@ -938,4 +1287,371 @@
   .product-preview {
     min-height: 300px;
   }
+}
+
+/* --- Pane Division & Opening Pane Controls --- */
+.panel-config-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-config-card {
+  background: #fff;
+  border: 1px solid #DFE3FA;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.panel-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-config-title {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.panel-config-preview {
+  width: 80px;
+  height: 80px;
+  padding: 8px;
+  background: #F9FAFE;
+  border-radius: 4px;
+}
+
+.mini-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 2px;
+}
+
+.mini-cell {
+  background: white;
+  border-radius: 2px;
+  width: 100%;
+  height: 100%;
+}
+
+.division-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.division-input-group {
+  flex: 1;
+}
+
+.division-input-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.division-input-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #DFE3FA;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.division-separator {
+  padding: 0 4px;
+  margin-bottom: 8px;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.opening-panes-grid {
+  border-top: 1px solid #DFE3FA;
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+.opening-panes-grid label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.panes-grid {
+  background: #F9FAFE;
+  padding: 4px;
+  border-radius: 4px;
+  display: grid;
+  gap: 2px;
+}
+
+.pane-toggle {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  border: 1px solid #DFE3FA;
+  background: white;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.pane-toggle:hover {
+  border-color: var(--primary-color);
+  background: #F8F9FF;
+}
+
+.pane-toggle.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.pane-toggle.active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 1px;
+}
+
+.pane-help-text {
+  color: var(--text-light);
+  font-size: 12px;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.pane-config {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.pane-direction-controls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  min-width: 160px;
+}
+
+.direction-title {
+  margin: 0 0 8px 0;
+  text-align: center;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.direction-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  width: 120px;
+  margin: 0 auto;
+}
+
+.direction-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.direction-btn:hover {
+  background: #e8e8e8;
+  border-color: #7c5dfa;
+}
+
+.direction-btn.active {
+  background: #7c5dfa;
+  color: white;
+  border-color: #6c4dea;
+}
+
+.direction-btn .hinge-indicator {
+  position: absolute;
+  font-size: 16px;
+  color: inherit;
+}
+
+.direction-btn .arrow {
+  font-size: 14px;
+  color: inherit;
+}
+
+.direction-btn.top {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.direction-btn.right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.direction-btn.bottom {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.direction-btn.left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* Position hinge indicators and arrows for each direction */
+.direction-btn.top .hinge-indicator {
+  top: 2px;
+}
+
+.direction-btn.right .hinge-indicator {
+  right: 2px;
+}
+
+.direction-btn.bottom .hinge-indicator {
+  bottom: 2px;
+}
+
+.direction-btn.left .hinge-indicator {
+  left: 2px;
+}
+
+/* Tooltip styles */
+.direction-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* --- Door Type Selector --- */
+.door-type-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.door-type-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1.5px solid #DFE3FA;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #7E88C3;
+  transition: all 0.2s;
+}
+
+.door-type-btn.active {
+  background: #7C5DFA;
+  color: white;
+  border-color: #7C5DFA;
+}
+
+.door-type-btn:not(.active):hover {
+  border-color: #7C5DFA;
+  color: #7C5DFA;
+}
+
+/* --- End Pane Division & Door Type Styles --- */
+
+/* ...existing code... */
+
+.product-preview {
+  /* ...existing code... */
+  position: relative;
+  overflow: visible;
+}
+
+/* Dimension lines and labels for preview */
+.dimension-label {
+  pointer-events: none;
+  user-select: none;
+  font-family: inherit;
+}
+
+.dimension-label-top,
+.dimension-label-bottom {
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+}
+
+.dimension-label-top {
+  top: -32px;
+}
+
+.dimension-label-bottom {
+  bottom: -32px;
+}
+
+.dimension-label-left {
+  top: 0;
+  left: -60px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+}
+
+.dimension-line {
+  background: none;
+}
+
+.dimension-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #7E88C3;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid #DFE3FA;
+  padding: 0 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  white-space: nowrap;
+  pointer-events: none;
 }
