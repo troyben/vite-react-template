@@ -4,6 +4,7 @@ import { getAllQuotations, type Quotation } from '../services/quotationService';
 import { getAllClients, type Client } from '../services/clientService';
 import '../styles/variables.css';
 import '../styles/Dashboard.css';
+import { ScreenLoader } from './ScreenLoader';
 
 const statusMap = {
   'draft': 'Draft',
@@ -102,7 +103,7 @@ const Dashboard = () => {
     })
     .slice(0, 5);
 
-  if (loading) return <div>Loading dashboard...</div>;
+  if (loading) return <ScreenLoader isLoading={true} />;
   if (error) return <div className="error">{error}</div>;
 
   return (

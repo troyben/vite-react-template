@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import * as userService from '../services/userService'; // New import
 import { useAuth } from '../contexts/AuthContext';
 import { notify, confirm, alert } from '../utils/notifications';
+import { ScreenLoader } from './ScreenLoader';
 
 import '../styles/Users.css';
 
@@ -207,6 +208,7 @@ const Users = () => {
 
   return (
     <div className="users-page">
+      <ScreenLoader isLoading={loading} />
       <div className="page-header">
         <h1>Users Management</h1>
         <button 
@@ -220,10 +222,9 @@ const Users = () => {
           Add New User
         </button>
       </div>
-
       {error && <div style={{ color: '#EC5757', marginBottom: 16 }}>{error}</div>}
       {loading ? (
-        <div style={{ textAlign: 'center', margin: '32px 0' }}>Loading...</div>
+        null // Loader is now handled by ScreenLoader
       ) : (
         <BaseDataTable columns={columns} data={users} globalFilterPlaceholder="Search users..." />
       )}

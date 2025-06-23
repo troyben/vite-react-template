@@ -5,6 +5,7 @@ import { notify } from '../utils/notifications';
 import { compressImage } from '../utils/imageUtils';
 import '../styles/variables.css';
 import '../styles/Settings.css';
+import { ScreenLoader } from './ScreenLoader';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -149,7 +150,7 @@ const Settings = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <ScreenLoader isLoading={true} />;
   if (error) return <div className="error">{error}</div>;
   if (!profileData) return <div>No profile data available</div>;
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getAllQuotations, deleteQuotation, type Quotation } from '../services/quotationService';
 import { getAllClients, type Client } from '../services/clientService';
 import '../styles/QuotationList.css';
+import { ScreenLoader } from './ScreenLoader';
 
 const QuotationList = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -100,11 +101,9 @@ const QuotationList = () => {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  if (loading) return <div>Loading quotations...</div>;
-  if (error) return <div className="error">{error}</div>;
-
   return (
     <div className="quotations-page">
+      <ScreenLoader isLoading={loading} />
       <div className="header">
         <div className="header-left">
           <h1>Quotations</h1>
