@@ -180,12 +180,12 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
 
           const getTransform = () => {
             if (!openingPane?.openingDirection) return 'none';
-            const baseTransform = 'perspective(500px)';
+            const baseTransform = 'perspective(600px)';
             switch (openingPane.openingDirection) {
               case 'left': return `${baseTransform} translateZ(0) rotateY(-45deg) translateX(0%)`;
-              case 'right': return `${baseTransform} translateZ(0) rotateY(45deg) translateX(40%)`;
+              case 'right': return `${baseTransform} translateZ(0) rotateY(45deg) translateX(0%)`;
               case 'top': return `${baseTransform} translateZ(0) rotateX(55deg) translateY(0%)`;
-              case 'bottom': return `${baseTransform} translateZ(0) rotateX(-45deg) translateY(40%)`;
+              case 'bottom': return `${baseTransform} translateZ(0) rotateX(-45deg) translateY(0%)`;
               default: return 'none';
             }
           };

@@ -468,6 +468,7 @@ const QuotationForm = () => {
           let paneOrigin = 'center';
           let paneShadow = 'none';
           let marginStyle: React.CSSProperties = {};
+          let handle = null;
           if (isPaneOpening) {
             const paneDir = sketch.openingPanes?.find(
               (p) =>
@@ -477,28 +478,32 @@ const QuotationForm = () => {
             )?.openingDirection;
             switch (paneDir) {
               case 'left':
-                paneTransform = 'perspective(1200px) translateX(-18%) rotateY(-55deg) scaleX(0.97)';
+                paneTransform = 'perspective(1200px) translateX(-30%) rotateY(-55deg) scaleX(0.97)';
                 paneOrigin = 'left center';
                 paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
                 marginStyle = { marginLeft: '16px' };
+                handle = <div style={{ position: 'absolute', right: 4, top: '50%', width: 10, height: 10, background: '#7c5dfa', borderRadius: '50%', transform: 'translateY(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
                 break;
               case 'right':
                 paneTransform = 'perspective(1200px) translateX(18%) rotateY(55deg) scaleX(0.97)';
                 paneOrigin = 'right center';
                 paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
                 marginStyle = { marginRight: '16px' };
+                handle = <div style={{ position: 'absolute', left: 4, top: '50%', width: 10, height: 10, background: '#7c5dfa', borderRadius: '50%', transform: 'translateY(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
                 break;
               case 'top':
-                paneTransform = 'perspective(1200px) translateY(-20%) rotateX(50deg) scaleY(0.97)';
+                paneTransform = 'perspective(1200px) translateY(-15%) rotateX(50deg) scaleY(0.97)';
                 paneOrigin = 'center top';
                 paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
                 marginStyle = { marginTop: '10px' };
+                handle = <div style={{ position: 'absolute', bottom: 4, left: '50%', width: 10, height: 10, background: '#7c5dfa', borderRadius: '50%', transform: 'translateX(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
                 break;
               case 'bottom':
-                paneTransform = 'perspective(1200px) translateY(10%) rotateX(-50deg) scaleY(0.97)';
+                paneTransform = 'perspective(1200px) translateY(0%) rotateX(-50deg) scaleY(0.97)';
                 paneOrigin = 'center bottom';
                 paneShadow = '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
                 marginStyle = { marginBottom: '10px' };
+                handle = <div style={{ position: 'absolute', top: 4, left: '50%', width: 10, height: 10, background: '#7c5dfa', borderRadius: '50%', transform: 'translateX(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
                 break;
               default:
                 break;
@@ -521,8 +526,11 @@ const QuotationForm = () => {
                 transformOrigin: paneOrigin,
                 boxShadow: paneShadow,
                 ...marginStyle,
+                position: 'relative',
               }}
-            />
+            >
+              {handle}
+            </div>
           );
         }
       }
