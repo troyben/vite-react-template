@@ -57,7 +57,18 @@ export const AuthProvider = ({ children, onSessionExpired }: AuthProviderProps) 
           const userData = JSON.parse(storedUser);
           setUser(userData);
           setAuthHandlers({
-            getAccessToken: () => userData.accessToken,
+            getAccessToken: () => {
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                try {
+                  const userData = JSON.parse(storedUser);
+                  return userData.accessToken;
+                } catch {
+                  return null;
+                }
+              }
+              return null;
+            },
             refresh: async () => {
               if (!userData.refreshToken) {
                 throw new Error('No refresh token available');
