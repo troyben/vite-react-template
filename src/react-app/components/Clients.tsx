@@ -26,10 +26,8 @@ const Clients = () => {
       const response = await clientApi.getAllClients();
       setClients(response.data.success ? response.data.data : []);
     } catch (err: any) {
-      if (!clientApi.isAuthError(err)) {
-        setError(err.message || 'Failed to fetch clients');
-        notify.error(err.message || 'Failed to fetch clients');
-      }
+      setError(err.message || 'Failed to fetch clients');
+      notify.error(err.message || 'Failed to fetch clients');
     } finally {
       setLoading(false);
     }
