@@ -69,15 +69,23 @@ export const getQuotationById = async (id: number): Promise<AxiosResponse<ApiRes
   }
 };
 
-export const updateQuotation = (
+export const updateQuotation = async (
   id: number, 
   quotation: Partial<Quotation>
 ): Promise<AxiosResponse<ApiResponse<Quotation>>> => {
-  return api.put(`/quotations/${id}`, quotation);
+  try {
+    return await api.put(`/quotations/${id}`, quotation);
+  } catch (error) {
+    return handleServiceError(error);
+  }
 };
 
-export const deleteQuotation = (id: number): Promise<AxiosResponse<ApiResponse<void>>> => {
-  return api.delete(`/quotations/${id}`);
+export const deleteQuotation = async (id: number): Promise<AxiosResponse<ApiResponse<void>>> => {
+  try {
+    return await api.delete(`/quotations/${id}`);
+  } catch (error) {
+    return handleServiceError(error);
+  }
 };
 
 // Add a validation function

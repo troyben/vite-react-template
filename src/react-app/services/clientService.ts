@@ -18,11 +18,6 @@ export interface Client {
   updatedAt?: string;
 }
 
-// Add helper function to check if error is auth-related
-export const isAuthError = (error: any): boolean => {
-  return error?.response?.status === 401;
-};
-
 export const getAllClients = async (): Promise<AxiosResponse<ApiResponse<Client[]>>> => {
   try {
     return await api.get('/clients');
@@ -39,19 +34,31 @@ export const getClientById = async (id: number): Promise<AxiosResponse<ApiRespon
   }
 };
 
-export const createClient = (
+export const createClient = async (
   client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<AxiosResponse<ApiResponse<Client>>> => {
-  return api.post('/clients', client);
+  try {
+    return await api.post('/clients', client);
+  } catch (error) {
+    return handleServiceError(error);
+  }
 };
 
-export const updateClient = (
+export const updateClient = async (
   id: number, 
   client: Partial<Client>
 ): Promise<AxiosResponse<ApiResponse<Client>>> => {
-  return api.put(`/clients/${id}`, client);
+  try {
+    return await api.put(`/clients/${id}`, client);
+  } catch (error) {
+    return handleServiceError(error);
+  }
 };
 
-export const deleteClient = (id: number): Promise<AxiosResponse<ApiResponse<void>>> => {
-  return api.delete(`/clients/${id}`);
+export const deleteClient = async (id: number): Promise<AxiosResponse<ApiResponse<void>>> => {
+  try {
+    return await api.delete(`/clients/${id}`);
+  } catch (error) {
+    return handleServiceError(error);
+  }
 };
