@@ -59,26 +59,33 @@ export const AuthProvider = ({ children, onSessionExpired }: AuthProviderProps) 
           setAuthHandlers({
             getAccessToken: () => userData.accessToken,
             refresh: async () => {
+              if (!userData.refreshToken) {
+                throw new Error('No refresh token available');
+              }
               try {
                 const response = await authApi.refresh(userData.refreshToken);
-                if (response.data.success) {
-                  saveAuth(response.data.data);
-                  return response.data.data.accessToken;
-                } else {
-                  throw new Error(response.data.message || 'Refresh failed');
+                if (!response.data?.success) {
+                  throw new Error(response.data?.message || 'Refresh failed');
                 }
+                const newAuthData = response.data.data;
+                saveAuth(newAuthData);
               } catch (refreshError: any) {
-                console.error('Refresh error:', refreshError);
+                console.error('Refresh error:', refreshError?.response?.data || refreshError);
                 notify.error('Session expired. Please login again.');
                 await clearAuth();
-                onSessionExpired?.();
+                if (onSessionExpired) {
+                  onSessionExpired();
+                } else {
+                  window.location.href = '/login';
+                }
                 throw refreshError;
               }
             },
             logout: clearAuth
           });
         } catch (error) {
-          clearAuth();
+          console.error('Auth initialization error:', error);
+          await clearAuth();
         }
       }
       setLoading(false);

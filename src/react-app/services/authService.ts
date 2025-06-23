@@ -5,6 +5,11 @@ let getAccessTokenHandler: (() => string | null) | null = null;
 let refreshHandler: (() => Promise<void>) | null = null;
 let logoutHandler: (() => Promise<void>) | null = null;
 
+// Export handlers for use in API interceptors
+export const getAccessToken = () => getAccessTokenHandler?.() ?? null;
+export const handleRefresh = () => refreshHandler?.() ?? Promise.reject(new Error('Refresh handler not set'));
+export const handleLogout = () => logoutHandler?.() ?? Promise.reject(new Error('Logout handler not set'));
+
 // Function to check if handlers are set
 function checkHandlers() {
   if (!getAccessTokenHandler || !refreshHandler || !logoutHandler) {

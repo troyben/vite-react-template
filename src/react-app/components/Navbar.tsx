@@ -17,7 +17,7 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { 
+    ...(user?.role === 'admin' ? [{ 
       path: '/', 
       title: 'Dashboard',
       icon: (
@@ -28,7 +28,7 @@ const Navbar = () => {
           <path d="M3 13H8.5V17H3V13Z" fill="currentColor"/>
         </svg>
       )
-    },
+    }] : []),
     { 
       path: '/quotations', 
       title: 'Quotations',
@@ -54,7 +54,7 @@ const Navbar = () => {
         </svg>
       )
     },
-    { 
+    ...(user?.role === 'admin' ? [{ 
       path: '/users', 
       title: 'Users',
       icon: (
@@ -64,7 +64,7 @@ const Navbar = () => {
           <ellipse cx="10" cy="15" rx="7" ry="4" fill="#edeaff"/>
         </svg>
       )
-    },
+    }] : []),
     { 
       path: '/settings', 
       title: 'Settings',

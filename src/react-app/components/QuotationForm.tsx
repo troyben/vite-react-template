@@ -7,6 +7,7 @@ import type { Client } from '../services/clientService';
 import type { QuotationItem, QuotationFormData, Quotation } from '../services/quotationService';
 import ProductSketch, { type ProductData } from './ProductSketch';
 import ClientSelector from './ClientSelector';
+import QuotationPreviewModal from './QuotationPreviewModal';
 import '../styles/QuotationForm.css';
 
 const emptyItem: QuotationItem = {
@@ -42,6 +43,7 @@ const QuotationForm = () => {
   const [currentItemIndex, setCurrentItemIndex] = useState<number>(-1);
   const [showClientSelector, setShowClientSelector] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -879,20 +881,29 @@ const QuotationForm = () => {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">{isEditing ? 'Edit Quotation' : 'Create New Quotation'}</h1>
-        <Link to="/quotations" className="btn btn-secondary">
-          Back to List
-        </Link>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h1 className="page-title">{isEditing ? 'Edit Quotation' : 'Create New Quotation'}</h1>
+          <Link to="/quotations" className="btn btn-secondary">
+            Back to List
+          </Link>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ marginLeft: 8 }}
+            onClick={() => setShowPreviewModal(true)}
+          >
+            View Preview
+          </button>
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
 
       <div className="quotation-form-container">
-        {/* Form section - left side */}
-        <div className="quotation-form">
+        <div className="quotation-form" style={{ width: '100%' }}>
           <form onSubmit={handleSubmit}>
-            <div className="client-section">
+            <div className="client-section" style={{ width: '100%' }}>
               <div className="section-header" style={{ alignItems: 'flex-end', gap: '16px' }}>
                 <h3>Client Information</h3>
                 <div className="select-client-btn-wrapper">
@@ -986,9 +997,6 @@ const QuotationForm = () => {
                         </svg>
                       </button>
                     </div>
-                    <div style={{ marginBottom: 16, color: '#7E88C3', fontSize: 13 }}>
-                      <span>Item Details</span>
-                    </div>
                     <div className="item-fields">
                       <div className="form-row">
                         <div className="form-group">
@@ -1020,9 +1028,9 @@ const QuotationForm = () => {
                           <label>Quantity *</label>
                           <input
                             type="number"
-                            min="1"
+                            // min="1"
                             value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                             className="form-control"
                             required
                           />
@@ -1035,7 +1043,7 @@ const QuotationForm = () => {
                             min="0"
                             step="0.01"
                             value={item.rate ?? ''}
-                            onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value) || 0)}
+                            onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
                             className="form-control"
                             placeholder="Enter rate"
                           />
@@ -1061,7 +1069,7 @@ const QuotationForm = () => {
                             min="0"
                             step="0.01"
                             value={item.price}
-                            onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
+                            onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
                             className="form-control"
                             required
                             readOnly={(item.rate !== undefined && item.productSketch) ? true : false}
@@ -1078,7 +1086,7 @@ const QuotationForm = () => {
                           <label>Total</label>
                           <input
                             type="text"
-                            value={`$${item.total.toFixed(2)}`}
+                            value={`$${item.total ? item.total.toFixed(2) : '0.00'}`}
                             className="form-control"
                             readOnly
                           />
@@ -1160,96 +1168,96 @@ const QuotationForm = () => {
           </form>
         </div>
 
-        {/* Preview section - right side */}
-        <div className="quotation-preview">
-          <div className="preview-header">
-            <h2 className="preview-title">Preview</h2>
-            <div className="preview-actions">
-              <button onClick={handleDownloadPDF} className="btn btn-secondary">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
-                  <path d="M8 1V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M3.5 7.5L8 12L12.5 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M1 14H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Download PDF
-              </button>
-            </div>
-          </div>
-          
-          <div className="preview-content">
-            <div className="preview-section">
-              <div className="preview-section-title">Quotation</div>
-              <div className="preview-client">
-                <div className="preview-client-name">{selectedClient?.name || 'Client Name'}</div>
-                
-                {selectedClient?.phone && (
-                  <div className="preview-client-detail">
-                    <svg className="preview-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M13.3333 10.6233V12.62C13.3343 12.7967 13.2964 12.9716 13.2223 13.1336C13.1482 13.2956 13.0395 13.4407 12.9034 13.5594C12.7672 13.678 12.6067 13.7677 12.4323 13.8228C12.2579 13.8779 12.0737 13.8973 11.8917 13.88C10.1252 13.6877 8.42769 13.0732 6.94999 12.08C5.57516 11.1723 4.41297 10.0101 3.50533 8.63499C2.50666 7.14962 1.89187 5.44364 1.70133 3.66833C1.68403 3.48695 1.70328 3.30335 1.75798 3.1294C1.81268 2.95546 1.90191 2.79515 2.01991 2.65895C2.13791 2.52274 2.28215 2.4137 2.44341 2.33895C2.60468 2.26419 2.77887 2.22538 2.95499 2.22499H4.95199C5.26472 2.22186 5.56743 2.33192 5.80174 2.53529C6.03605 2.73865 6.18382 3.01957 6.21999 3.32999C6.28626 3.96002 6.43145 4.58122 6.65133 5.17833C6.7366 5.39856 6.75938 5.6383 6.71692 5.87089C6.67446 6.10349 6.56842 6.31859 6.41066 6.48499L5.61533 7.28033C6.45143 8.7056 7.62909 9.88326 9.05433 10.7193L9.84966 9.92399C10.016 9.76623 10.2311 9.66019 10.4637 9.61773C10.6963 9.57527 10.936 9.59805 11.1563 9.68333C11.7534 9.9032 12.3746 10.0484 13.0047 10.1147C13.3184 10.1514 13.6019 10.3017 13.8059 10.54C14.01 10.7784 14.1178 11.0851 14.11 11.4V10.6233H13.3333Z" fill="currentColor"/>
-                    </svg>
-                    <div className="preview-client-phone">{selectedClient.phone}</div>
-                  </div>
-                )}
-                
-                {selectedClient?.address && (
-                  <div className="preview-client-detail">
-                    <svg className="preview-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 1.5C6.67392 1.5 5.40215 2.02678 4.46447 2.96447C3.52678 3.90215 3 5.17392 3 6.5C3 9.5 8 14.5 8 14.5C8 14.5 13 9.5 13 6.5C13 5.17392 12.4732 3.90215 11.5355 2.96447C10.5979 2.02678 9.32608 1.5 8 1.5ZM8 8C7.60444 8 7.21776 7.8827 6.88886 7.66294C6.55996 7.44318 6.30362 7.13082 6.15224 6.76537C6.00087 6.39991 5.96126 5.99778 6.03843 5.60982C6.1156 5.22186 6.30608 4.86549 6.58579 4.58579C6.86549 4.30608 7.22186 4.1156 7.60982 4.03843C7.99778 3.96126 8.39991 4.00087 8.76537 4.15224C9.13082 4.30362 9.44318 4.55996 9.66294 4.88886C9.8827 5.21776 10 5.60444 10 6C10 6.53043 9.78929 7.03914 9.41421 7.41421C9.03914 7.78929 8.53043 8 8 8Z" fill="currentColor"/>
-                    </svg>
-                    <div className="preview-client-address">{selectedClient.address}</div>
-                  </div>
-                )}
+        {/* Preview Modal */}
+        <QuotationPreviewModal open={showPreviewModal} onClose={() => setShowPreviewModal(false)}>
+          {/* --- Place the preview content here (copied from the old right-side preview) --- */}
+          <div className="quotation-preview">
+            <div className="preview-header">
+              <h2 className="preview-title">Preview</h2>
+              <div className="preview-actions">
+                <button onClick={handleDownloadPDF} className="btn btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
+                    <path d="M8 1V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3.5 7.5L8 12L12.5 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1 14H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Download PDF
+                </button>
               </div>
             </div>
-            
-            <div className="preview-section">
-              <div className="preview-section-title">Items</div>
-              <table className="preview-items">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th className="text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(formData.items as QuotationItem[]).map((item, index) => (
-                    <tr key={index}>
-                      <td>
-                        <div>{item.item || 'Item name'}</div>
-                        <div style={{ color: 'var(--text-light)', fontSize: '14px'}}>{item.description}</div>
-                        <br />
-                        {item.productSketch && (
-                          <div className="preview-sketch">
-                            <div className="preview-sketch-container">
-                              <div className="preview-sketch-info">
-                                {renderSketchDetails(item.productSketch)}
-                              </div>
-                              <div className="preview-sketch-visual" style={{ minWidth: 120, minHeight: 60, marginTop: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <MiniSketchPreview sketch={item.productSketch} />
+            <div className="preview-content">
+              <div className="preview-section">
+                <div className="preview-section-title">Quotation</div>
+                <div className="preview-client">
+                  <div className="preview-client-name">{selectedClient?.name || 'Client Name'}</div>
+                  
+                  {selectedClient?.phone && (
+                    <div className="preview-client-detail">
+                      <svg className="preview-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.3333 10.6233V12.62C13.3343 12.7967 13.2964 12.9716 13.2223 13.1336C13.1482 13.2956 13.0395 13.4407 12.9034 13.5594C12.7672 13.678 12.6067 13.7677 12.4323 13.8228C12.2579 13.8779 12.0737 13.8973 11.8917 13.88C10.1252 13.6877 8.42769 13.0732 6.94999 12.08C5.57516 11.1723 4.41297 10.0101 3.50533 8.63499C2.50666 7.14962 1.89187 5.44364 1.70133 3.66833C1.68403 3.48695 1.70328 3.30335 1.75798 3.1294C1.81268 2.95546 1.90191 2.79515 2.01991 2.65895C2.13791 2.52274 2.28215 2.4137 2.44341 2.33895C2.60468 2.26419 2.77887 2.22538 2.95499 2.22499H4.95199C5.26472 2.22186 5.56743 2.33192 5.80174 2.53529C6.03605 2.73865 6.18382 3.01957 6.21999 3.32999C6.28626 3.96002 6.43145 4.58122 6.65133 5.17833C6.7366 5.39856 6.75938 5.6383 6.71692 5.87089C6.67446 6.10349 6.56842 6.31859 6.41066 6.48499L5.61533 7.28033C6.45143 8.7056 7.62909 9.88326 9.05433 10.7193L9.84966 9.92399C10.016 9.76623 10.2311 9.66019 10.4637 9.61773C10.6963 9.57527 10.936 9.59805 11.1563 9.68333C11.7534 9.9032 12.3746 10.0484 13.0047 10.1147C13.3184 10.1514 13.6019 10.3017 13.8059 10.54C14.01 10.7784 14.1178 11.0851 14.11 11.4V10.6233H13.3333Z" fill="currentColor"/>
+                      </svg>
+                      <div className="preview-client-phone">{selectedClient.phone}</div>
+                    </div>
+                  )}
+                  
+                  {selectedClient?.address && (
+                    <div className="preview-client-detail">
+                      <svg className="preview-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 1.5C6.67392 1.5 5.40215 2.02678 4.46447 2.96447C3.52678 3.90215 3 5.17392 3 6.5C3 9.5 8 14.5 8 14.5C8 14.5 13 9.5 13 6.5C13 5.17392 12.4732 3.90215 11.5355 2.96447C10.5979 2.02678 9.32608 1.5 8 1.5ZM8 8C7.60444 8 7.21776 7.8827 6.88886 7.66294C6.55996 7.44318 6.30362 7.13082 6.15224 6.76537C6.00087 6.39991 5.96126 5.99778 6.03843 5.60982C6.1156 5.22186 6.30608 4.86549 6.58579 4.58579C6.86549 4.30608 7.22186 4.1156 7.60982 4.03843C7.99778 3.96126 8.39991 4.00087 8.76537 4.15224C9.13082 4.30362 9.44318 4.55996 9.66294 4.88886C9.8827 5.21776 10 5.60444 10 6C10 6.53043 9.78929 7.03914 9.41421 7.41421C9.03914 7.78929 8.53043 8 8 8Z" fill="currentColor"/>
+                      </svg>
+                      <div className="preview-client-address">{selectedClient.address}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="preview-section">
+                <div className="preview-section-title">Items</div>
+                <table className="preview-items">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Qty</th>
+                      <th>Price</th>
+                      <th className="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(formData.items as QuotationItem[]).map((item, index) => (
+                      <tr key={index}>
+                        <td>
+                          <div>{item.item || 'Item name'}</div>
+                          <div style={{ color: 'var(--text-light)', fontSize: '14px'}}>{item.description}</div>
+                          <br />
+                          {item.productSketch && (
+                            <div className="preview-sketch">
+                              <div className="preview-sketch-container">
+                                <div className="preview-sketch-info">
+                                  {renderSketchDetails(item.productSketch)}
+                                </div>
+                                <div className="preview-sketch-visual" style={{ minWidth: 120, minHeight: 60, marginTop: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <MiniSketchPreview sketch={item.productSketch} />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </td>
-                      <td>{item.quantity}</td>
-                      <td>${item.price.toFixed(2)}</td>
-                      <td className="text-right">{formatAmount(item.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              
-              <div className="preview-total">
-                <div className="preview-total-label">Total Amount</div>
-                <div className="preview-total-value">{formatAmount(formData.total_amount)}</div>
+                          )}
+                        </td>
+                        <td>{item.quantity}</td>
+                        <td>${item.price.toFixed(2)}</td>
+                        <td className="text-right">{formatAmount(item.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                <div className="preview-total">
+                  <div className="preview-total-label">Total Amount</div>
+                  <div className="preview-total-value">{formatAmount(formData.total_amount)}</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      
+        </QuotationPreviewModal>
+
       {showClientSelector && (
         <ClientSelector
           onSelect={handleClientSelect}
@@ -1273,6 +1281,7 @@ const QuotationForm = () => {
           />
         </div>
       )}
+    </div>
     </div>
   );
 };

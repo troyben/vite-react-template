@@ -45,10 +45,10 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   const [doorType, setDoorType] = useState<'hinged' | 'sliding'>(
     initialData?.type === 'door' ? (initialData?.doorType || 'hinged') : 'hinged'
   );
-  const [width, setWidth] = useState<number>(initialData?.width || 100);
-  const [height, setHeight] = useState<number>(initialData?.height || 100);
+  const [width, setWidth] = useState<number>(initialData?.width || 1000);
+  const [height, setHeight] = useState<number>(initialData?.height || 1000);
   const [panels, setPanels] = useState<number>(initialData?.panels || 1);
-  const [unit, setUnit] = useState<Unit>(initialData?.unit || 'cm');
+  const [unit, setUnit] = useState<Unit>(initialData?.unit || 'mm');
 
   // Panel and opening state
   const [openingPanels, setOpeningPanels] = useState<number[]>(
@@ -785,7 +785,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
               perspective: '2000px',
               backgroundColor: frameColor === '#C0C0C0' ? '#E5E5E5' : frameColor,
               padding: 0,
-              transform: `scale(${Math.min(800 / Math.max(width, height), 1)})`,
+              transform: "scale(1)",
               transformOrigin: 'center center',
               boxSizing: 'border-box',
               display: 'flex'
@@ -932,8 +932,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
                           type="number"
                           value={width}
                           onChange={e => setWidth(Number(e.target.value))}
-                          min="1"
-                          step="1"
+                          step="0.1"
                           className="dimension-input"
                         />
                       </div>
@@ -943,8 +942,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
                           type="number"
                           value={height}
                           onChange={e => handleDimensionChange(e.target.value, 'height')}
-                          min="1"
-                          step="1"
+                          step="0.1"
                           className="dimension-input"
                         />
                       </div>

@@ -39,7 +39,6 @@ const Login = () => {
         isEmail ? userForm.identifier : '',
         userForm.password
       );
-      notify.success('Login successful');
       navigate(from, { replace: true });
     } catch (err: any) {
       notify.error(err.message || 'Login failed');

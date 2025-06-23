@@ -1,5 +1,5 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
-import { getAccessTokenHandler, refreshHandler, logoutHandler } from '../services/authService';
+import { getAccessToken, handleRefresh, handleLogout } from '../services/authService';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -31,14 +31,13 @@ const processQueue = (error: any, token: string | null = null) => {
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      if (getAccessTokenHandler) {
-        const token = await getAccessTokenHandler();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+      const token = getAccessToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     } catch (error) {
+      console.error('Error in request interceptor:', error);
       return config;
     }
   },
@@ -69,15 +68,11 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        if (!refreshHandler || !getAccessTokenHandler || !logoutHandler) {
-          throw new Error('Auth handlers not initialized');
-        }
-
-        await refreshHandler();
-        const token = await getAccessTokenHandler();
+        await handleRefresh();
+        const token = getAccessToken();
         
         if (!token) {
-          throw new Error('Failed to get new access token');
+          throw new Error('Failed to get new access token after refresh');
         }
 
         if (originalRequest.headers) {
@@ -87,9 +82,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        if (logoutHandler) {
-          await logoutHandler();
-        }
+        await handleLogout().catch(console.error);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
