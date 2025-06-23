@@ -9,7 +9,6 @@ const QuotationList = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [clients, setClients] = useState<Record<number, Client>>({});
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 5;
@@ -33,10 +32,8 @@ const QuotationList = () => {
         }, {} as Record<number, Client>);
         
         setClients(clientMap);
-        setError(null);
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to fetch data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -52,11 +49,9 @@ const QuotationList = () => {
         if (response.data.success) {
           setQuotations(quotations.filter(quotation => quotation.id !== id));
         } else {
-          setError('Failed to delete quotation. Please try again.');
         }
       } catch (err) {
         console.error('Error deleting quotation:', err);
-        setError('Failed to delete quotation. Please try again.');
       }
     }
   };
