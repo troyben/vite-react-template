@@ -43,7 +43,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   // Basic product state
   const [type, setType] = useState<'window' | 'door'>(initialData?.type || 'window');
   const [doorType, setDoorType] = useState<'hinged' | 'sliding'>(
-    initialData?.type === 'door' ? (initialData?.doorType || 'hinged') : 'hinged'
+    initialData?.doorType || 'hinged'
   );
   const [width, setWidth] = useState<number>(initialData?.width || 1000);
   const [height, setHeight] = useState<number>(initialData?.height || 1000);
@@ -254,7 +254,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   const renderPanel = (panelIndex: number) => {
     const isOpening = openingPanels.includes(panelIndex);
     const openingDirection = openingDirections[panelIndex];
-    const isSliding = type === 'door' && doorType === 'sliding';
+    const isSliding = doorType === 'sliding';
 
     // Calculate transform based on conditions
     const getTransform = () => {
@@ -788,7 +788,8 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
               transform: "scale(1)",
               transformOrigin: 'center center',
               boxSizing: 'border-box',
-              display: 'flex'
+              display: 'flex',
+              overflow: `${doorType === 'sliding' ? 'hidden' : 'visible'}`,
             }}
           >
             {/* Render panels as equal parts, filling the entire width */}
@@ -845,27 +846,27 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
           </div>
 
           {/* Door Type Selector (only for doors) */}
-          {type === 'door' && (
-            <div className="control-group">
-              <label>Door Type</label>
-              <div className="door-type-selector">
-                <button
-                  type="button"
-                  className={`door-type-btn${doorType === 'hinged' ? ' active' : ''}`}
-                  onClick={() => setDoorType('hinged')}
-                >
-                  Hinged
-                </button>
-                <button
-                  type="button"
-                  className={`door-type-btn${doorType === 'sliding' ? ' active' : ''}`}
-                  onClick={() => setDoorType('sliding')}
-                >
-                  Sliding
-                </button>
-              </div>
+          
+          <div className="control-group">
+            <label> {type === 'door' ? "Door Type" : "Window Type"}</label>
+            <div className="door-type-selector">
+              <button
+                type="button"
+                className={`door-type-btn${doorType === 'hinged' ? ' active' : ''}`}
+                onClick={() => setDoorType('hinged')}
+              >
+                Hinged
+              </button>
+              <button
+                type="button"
+                className={`door-type-btn${doorType === 'sliding' ? ' active' : ''}`}
+                onClick={() => setDoorType('sliding')}
+              >
+                Sliding
+              </button>
             </div>
-          )}
+          </div>
+          
 
           {/* --- Tabs UI --- */}
           <div className="sketch-tabs">
