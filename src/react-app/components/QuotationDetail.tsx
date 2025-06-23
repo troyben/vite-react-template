@@ -4,7 +4,7 @@ import { getQuotationById, deleteQuotation, updateQuotation, type Quotation, typ
 import { notify } from '../utils/notifications';
 import { exportQuotationToPDF } from '../utils/pdfExport';
 import '../styles/QuotationDetail.css';
-import SketchPreview from './SketchPreview';
+import MiniSketchPreview from './MiniSketchPreview';
 
 type QuotationStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
 
@@ -14,6 +14,7 @@ const QuotationDetail = () => {
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     const fetchQuotation = async () => {
@@ -87,11 +88,13 @@ const QuotationDetail = () => {
   const handleExportPDF = async () => {
     if (!quotation) return;
     try {
+      setPdfLoading(true);
       await exportQuotationToPDF(quotation);
-      notify.success('PDF generated successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
       notify.error('Failed to generate PDF');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -178,6 +181,8 @@ const QuotationDetail = () => {
   const renderItemWithSketch = (item: QuotationItem) => {
     const sketchData = item.productSketch;
 
+    console.log('Rendering item with sketch:', item, sketchData);
+
     return (
       <>
         <td>
@@ -190,9 +195,7 @@ const QuotationDetail = () => {
                 <div className="sketch-preview-specs">
                   {renderSketchDetails(sketchData)}
                 </div>
-                <div className="sketch-preview-visual" style={{ minWidth: 120, minHeight: 60, marginTop: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <SketchPreview data={sketchData} size="small" />
-                </div>
+                  <MiniSketchPreview sketch={sketchData} widthPx={320} heightPx={160} />
               </div>
             </div>
           )}
@@ -212,21 +215,36 @@ const QuotationDetail = () => {
           <button
             onClick={handleExportPDF}
             className="btn btn-secondary"
-            style={{ marginRight: '12px' }}
+            style={{ marginRight: '12px', position: 'relative' }}
+            disabled={pdfLoading}
           >
-            <svg 
-              width="16" 
-              height="16" 
-              viewBox="0 0 16 16" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg" 
-              style={{ marginRight: '8px' }}
-            >
-              <path d="M14 6H10V2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 6L10 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 11V14H2V2H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Download PDF
+            {pdfLoading ? (
+              <span className="loader" style={{
+                display: 'inline-block',
+                width: 18,
+                height: 18,
+                border: '2.5px solid #ccc',
+                borderTop: '2.5px solid #7E88C3',
+                borderRadius: '50%',
+                animation: 'spin 0.7s linear infinite',
+                marginRight: 8,
+                verticalAlign: 'middle'
+              }} />
+            ) : (
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 16 16" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg" 
+                style={{ marginRight: '8px' }}
+              >
+                <path d="M14 6H10V2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 6L10 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 11V14H2V2H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+            {pdfLoading ? 'Generating PDF...' : 'Download PDF'}
           </button>
           <select 
             value={quotation?.status || 'draft'}
@@ -299,6 +317,13 @@ const QuotationDetail = () => {
           </table>
         </div>
       </div>
+
+      {/* Add loader animation keyframes */}
+      <style>{`
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }`}</style>
     </div>
   );
 };

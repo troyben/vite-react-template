@@ -1,6 +1,6 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import SketchPreviewMini from "../components/SketchPreviewMini";
+import MiniSketchPreview from "../components/MiniSketchPreview";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import type { Quotation } from '../services/quotationService';
@@ -229,9 +229,9 @@ export async function exportQuotationToPDF(quotation: Quotation) {
         if (imgData) {
           // Position sketch to the right - taking most of the available width
           const sketchWidth = 100;
-          const sketchHeight = 50;
+          const sketchHeight = 60;
           const sketchX = pageWidth - margin - sketchWidth - 5;
-          const sketchY = currentY + 35;
+          const sketchY = currentY + 30;
 
           doc.addImage(
             imgData,
@@ -246,6 +246,67 @@ export async function exportQuotationToPDF(quotation: Quotation) {
           doc.setDrawColor(...COLORS.accent);
           doc.setLineWidth(0.2);
           doc.rect(sketchX, sketchY, sketchWidth, sketchHeight);
+
+          // === PDF-ONLY DIMENSION LINES & LABELS ===
+          // Horizontal (bottom) dimension line
+          const dimColor = COLORS.primary;
+          const arrowLen = 1; // smaller arrow
+          const arrowHead = 1; // smaller arrow head
+          // Align lines exactly with the sketch corners
+          const bottomOffset = 2;
+          const arrowY = sketchY + sketchHeight + bottomOffset;
+          doc.setDrawColor(...dimColor);
+          doc.setLineWidth(0.2); // thinner lines
+          // Main line
+          doc.line(sketchX, arrowY, sketchX + sketchWidth, arrowY);
+          // Left arrow
+          doc.line(sketchX, arrowY, sketchX + arrowLen, arrowY - arrowHead);
+          doc.line(sketchX, arrowY, sketchX + arrowLen, arrowY + arrowHead);
+          // Right arrow
+          doc.line(sketchX + sketchWidth, arrowY, sketchX + sketchWidth - arrowLen, arrowY - arrowHead);
+          doc.line(sketchX + sketchWidth, arrowY, sketchX + sketchWidth - arrowLen, arrowY + arrowHead);
+          // Label
+          doc.setFontSize(11);
+          doc.setTextColor(...dimColor);
+          doc.setFont(undefined, 'regular');
+          doc.text(`${sketch.width} ${sketch.unit}`, sketchX + sketchWidth / 2, arrowY + 3, { align: 'center' });
+
+          // Vertical (left) dimension line
+          const arrowX = sketchX - 2;
+          const verticalTop = sketchY;
+          const verticalBottom = sketchY + sketchHeight;
+          doc.setDrawColor(...dimColor);
+          doc.setLineWidth(0.2);
+          doc.line(arrowX, verticalTop, arrowX, verticalBottom);
+          // Top arrow
+          doc.line(arrowX, verticalTop, arrowX - arrowHead, verticalTop + arrowLen);
+          doc.line(arrowX, verticalTop, arrowX + arrowHead, verticalTop + arrowLen);
+          // Bottom arrow
+          doc.line(arrowX, verticalBottom, arrowX - arrowHead, verticalBottom - arrowLen);
+          doc.line(arrowX, verticalBottom, arrowX + arrowHead, verticalBottom - arrowLen);
+          // Label
+          doc.setFontSize(11);
+          doc.setTextColor(...dimColor);
+          doc.setFont(undefined, 'regular');
+          doc.text(`${sketch.height} ${sketch.unit}`, arrowX + 10, sketchY + 6 + sketchHeight / 2, { align: 'right', angle: 90 });
+
+          // === Panel Top Dimensions ===
+          if (sketch.panelWidths && sketch.panelWidths.length > 1) {
+            let px = sketchX;
+            let totalWidth = 0;
+            for (let i = 0; i < sketch.panelWidths.length; i++) {
+              const panelW = sketch.panelWidths[i];
+              const panelPx = (panelW / sketch.width) * sketchWidth;
+              // Draw label above
+              doc.setFontSize(8);
+              doc.setTextColor(...dimColor);
+              doc.setFont(undefined, 'regular');
+              doc.text(`${panelW} ${sketch.unit}`, px + panelPx / 2, sketchY + 2, { align: 'center' });
+              px += panelPx;
+              totalWidth += panelW;
+            }
+            // End tick
+          }
         }
       }
 
@@ -332,7 +393,7 @@ async function renderSketchToImage(sketchData: any): Promise<string | null> {
   container.style.left = "-9999px";
   container.style.top = "0";
   container.style.width = "800px";
-  container.style.height = "500px";
+  container.style.height = "600px";
   container.style.backgroundColor = "#ffffff";
   document.body.appendChild(container);
 
@@ -342,34 +403,18 @@ async function renderSketchToImage(sketchData: any): Promise<string | null> {
       "div",
       {
         style: {
-          width: "100%",
-          height: "100%",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "20px",
+          padding: "0",
           boxSizing: "border-box"
         }
       },
-      React.createElement(SketchPreviewMini, {
-        data: sketchData,
-        showDimensions: true,
-        dimensionStyle: {
-          fontSize: "18px",
-          color: "#333333",
-          stroke: "#333333",
-          strokeWidth: 2,
-          background: "rgba(255,255,255,0.8)",
-          padding: "3px 6px",
-          borderRadius: "4px"
-        },
-        style: {
-          border: "1px solid #eeeeee",
-          backgroundColor: "#ffffff",
-          padding: "15px",
-          width: "100%",
-          height: "100%"
-        }
+      React.createElement(MiniSketchPreview, {
+        sketch: sketchData,
+        widthPx: 800,
+        heightPx: 620,
+        pdfMode: true
       })
     )
   );

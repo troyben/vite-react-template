@@ -180,6 +180,17 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
 
           const getTransform = () => {
             if (!openingPane?.openingDirection) return 'none';
+            // Sliding effect for sliding door or window pane set as sliding
+            if ((type === 'door' && doorType === 'sliding') || (type === 'window' && doorType === 'sliding')) {
+              switch (openingPane.openingDirection) {
+                case 'left': return 'translateX(-50%)';
+                case 'right': return 'translateX(50%)';
+                case 'top': return 'translateY(-50%)';
+                case 'bottom': return 'translateY(50%)';
+                default: return 'none';
+              }
+            }
+            // Hinged effect for window pane set as hinged, or for hinged door
             const baseTransform = 'perspective(600px)';
             switch (openingPane.openingDirection) {
               case 'left': return `${baseTransform} translateZ(0) rotateY(-45deg) translateX(0%)`;
@@ -262,6 +273,9 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
       if (isSliding) {
         if (openingDirection === 'left' || openingDirection === 'right') {
           return `translateX(${openingDirection === 'left' ? '-50%' : '50%'})`;
+        }
+        if (openingDirection === 'top' || openingDirection === 'bottom') {
+          return `translateY(${openingDirection === 'top' ? '-50%' : '50%'})`;
         }
         return 'none';
       }

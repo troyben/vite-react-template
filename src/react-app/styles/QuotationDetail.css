@@ -203,7 +203,7 @@
 .sketch-preview-container {
   display: flex;
   align-items: flex-start;
-  gap: 24px;
+  gap: 50px;
   padding: 16px;
   background: #F9FAFE;
   border-radius: 8px;
