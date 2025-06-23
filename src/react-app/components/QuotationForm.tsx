@@ -338,8 +338,7 @@ const QuotationForm = () => {
     const isOpening = sketch.openingPanels?.includes(panelIndex);
     const openingDirection = sketch.openingDirections?.[panelIndex];
     const division = sketch.panelDivisions?.find(d => d.panelIndex === panelIndex);
-    const isSliding = sketch.type === 'door' && sketch.doorType === 'sliding';
-
+    const isSliding = sketch.doorType === 'sliding';
     const frameColor = sketch.frameColor || '#C0C0C0';
     const glassColor =
       sketch.glassType === 'clear'
@@ -361,17 +360,15 @@ const QuotationForm = () => {
     const getTransform = () => {
       if (!isOpening) return 'none';
       if (isSliding) {
-        // Slide left/right with more gap
         if (openingDirection === 'left') return 'translateX(-50%)';
         if (openingDirection === 'right') return 'translateX(50%)';
         return 'none';
       }
-      // Hinged: rotate with more perspective and gap
       switch (openingDirection) {
         case 'left':
           return 'perspective(1200px) translateX(-24%) rotateY(-55deg) scaleX(0.97)';
         case 'right':
-          return 'perspective(1200px) translateX(24%) rotateY(55deg) scaleX(0.97)';
+          return 'perspective(1200px) translateX(5%) rotateY(55deg) scaleX(1)';
         case 'top':
           return 'perspective(1200px) translateY(-16%) rotateX(50deg) scaleY(0.97)';
         case 'bottom':
@@ -393,6 +390,65 @@ const QuotationForm = () => {
     const getBoxShadow = () => {
       if (!isOpening) return 'none';
       return '0 16px 40px 0 rgba(124,93,250,0.18), 0 6px 16px 0 rgba(0,0,0,0.13)';
+    };
+
+    // --- Handle rendering for mini preview ---
+    const renderHandle = () => {
+      if (!isOpening || !openingDirection) return null;
+      // Sliding: show a bar at the opposite edge of the sliding direction
+      if (isSliding) {
+        if (openingDirection === 'left') {
+          // If sliding left, handle should be on the right
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                right: 6,
+                width: 8,
+                height: 32,
+                background: '#7c5dfa',
+                borderRadius: 4,
+                transform: 'translateY(-50%)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+                zIndex: 3
+              }}
+            />
+          );
+        }
+        if (openingDirection === 'right') {
+          // If sliding right, handle should be on the left
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: 6,
+                width: 8,
+                height: 32,
+                background: '#7c5dfa',
+                borderRadius: 4,
+                transform: 'translateY(-50%)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+                zIndex: 3
+              }}
+            />
+          );
+        }
+      }
+      // Hinged: show a small dot/knob at the edge
+      switch (openingDirection) {
+        case 'left':
+          return <div style={{ position: 'absolute', right: 6, top: '50%', width: 12, height: 12, background: '#7c5dfa', borderRadius: '50%', transform: 'translateY(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
+        case 'right':
+          return <div style={{ position: 'absolute', left: 6, top: '50%', width: 12, height: 12, background: '#7c5dfa', borderRadius: '50%', transform: 'translateY(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
+        case 'top':
+          return <div style={{ position: 'absolute', bottom: 6, left: '50%', width: 12, height: 12, background: '#7c5dfa', borderRadius: '50%', transform: 'translateX(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
+        case 'bottom':
+          return <div style={{ position: 'absolute', top: 6, left: '50%', width: 12, height: 12, background: '#7c5dfa', borderRadius: '50%', transform: 'translateX(-50%)', zIndex: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }} />;
+        default:
+          return null;
+      }
     };
 
     // --- Division grid ---
@@ -511,8 +567,11 @@ const QuotationForm = () => {
           marginRight: isOpening && openingDirection === 'right' ? '24px' : undefined,
           marginTop: isOpening && openingDirection === 'top' ? '14px' : undefined,
           marginBottom: isOpening && openingDirection === 'bottom' ? '14px' : undefined,
+          position: 'relative',
         }}
-      />
+      >
+        {renderHandle()}
+      </div>
     );
   };
 
