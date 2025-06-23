@@ -1,6 +1,7 @@
 import { AxiosError } from 'axios';
 
 export const handleServiceError = (error: any) => {
+  console.log('Handling service error:', error);
   if (error instanceof AxiosError && error.response?.data) {
     if (error.response.status === 401) {
       // Suppress console error for 401

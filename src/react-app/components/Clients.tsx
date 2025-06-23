@@ -5,6 +5,7 @@ import '../styles/Clients.css';
 import * as clientApi from '../services/clientService';
 import type { Client } from '../services/clientService';
 import { notify } from '../utils/notifications';
+import { ScreenLoader } from './ScreenLoader';
 
 const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -132,6 +133,7 @@ const Clients = () => {
 
   return (
     <div className="clients-container">
+      <ScreenLoader isLoading={loading} />
       <div className="page-header">
         <h1>Clients</h1>
         <button 
@@ -145,9 +147,7 @@ const Clients = () => {
         </button>
       </div>
       
-      {loading ? (
-        <div className="loading">Loading...</div>
-      ) : error ? (
+      {error ? (
         <div className="error">{error}</div>
       ) : (
         <BaseDataTable
