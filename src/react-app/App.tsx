@@ -24,15 +24,6 @@ function PrivateRoute({ children }: { children: ReactElement }) {
   return children;
 }
 
-function AdminRoute({ children }: { children: ReactElement }) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
-  if (user.role !== 'admin') return <Navigate to="/unauthorized" replace />;
-  return children;
-}
-
 function AdminOnlyRoute({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
   const location = useLocation();
