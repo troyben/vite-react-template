@@ -1273,19 +1273,11 @@
     max-width: 100%;
     height: auto;
   }
-
-  .product-preview {
-    min-height: 400px;
-  }
 }
 
 @media (max-width: 768px) {
   .sketch-body {
     grid-template-columns: 1fr;
-  }
-  
-  .product-preview {
-    min-height: 300px;
   }
 }
 
@@ -1596,13 +1588,6 @@
 
 /* --- End Pane Division & Door Type Styles --- */
 
-/* ...existing code... */
-
-.product-preview {
-  /* ...existing code... */
-  position: relative;
-  overflow: visible;
-}
 
 /* Dimension lines and labels for preview */
 .dimension-label {

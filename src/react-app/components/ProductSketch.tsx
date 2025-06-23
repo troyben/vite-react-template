@@ -488,8 +488,8 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
 
   // --- Dimension Lines for Preview ---
   const renderDimensionLines = () => {
-    const frameWidth = panels < 4 ? 400 : 800;
-    const frameHeight = 500;
+    const frameWidth = panels < 4 ? 400 : 700;
+    const frameHeight = 400;
     const offset = 10;
 
     // Panel widths in px: always divide frameWidth equally, regardless of panelWidths values
@@ -777,8 +777,8 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
           <div 
             className="product-frame"
             style={{
-              width: `${panels < 4 ? "400px" : "800px"}`,
-              height: '500px',
+              width: `${panels < 4 ? "400px" : "700px"}`,
+              height: '400px',
               border: `4px solid ${frameColor}`,
               position: 'relative',
               borderRadius: '0',
@@ -831,17 +831,15 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
               
               <div className="form-group">
                 <label>Panels</label>
-                <select
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
                   value={panels}
-                  onChange={(e) => handlePanelCountChange(Number(e.target.value))}
+                  onChange={e => handlePanelCountChange(Number(e.target.value))}
                   className="styled-select"
-                >
-                  {[1, 2, 3, 4, 5, 6].map(num => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? 'Panel' : 'Panels'}
-                    </option>
-                  ))}
-                </select>
+                  style={{ width: 80 }}
+                />
               </div>
             </div>
           </div>
