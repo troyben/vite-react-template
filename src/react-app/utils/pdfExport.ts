@@ -430,7 +430,6 @@ async function renderSketchToImage(sketchData: any): Promise<string | null> {
       style: {
         backgroundColor: "#ffffff"
       },
-      filter: (node) => true // include all nodes
     });
   } catch (e) {
     console.error("Error rendering sketch:", e);

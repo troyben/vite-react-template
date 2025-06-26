@@ -118,13 +118,6 @@ const renderMiniPreviewDimensionLines = (sketch: ProductData, widthPx: number, h
 const renderMiniPreviewPanel = (sketch: ProductData, panelIndex: number, frameColor: string, glassColor: string) => {
   const division = sketch.panelDivisions?.find(d => d.panelIndex === panelIndex);
   if (!division) return null;
-  // Division border color logic
-  const divisionBorder =
-    frameColor === '#4F4F4F'
-      ? '#BDBDBD'
-      : frameColor === '#CD7F32'
-      ? '#A67C52'
-      : 'rgba(0,0,0,0.18)';
   // Use a solid color for open panes
   const solidOpenColor = '#44D5B8'; // A shade of green for open glass
   const isPanelOpening = Array.isArray(sketch.openingPanels) && sketch.openingPanels.includes(panelIndex);
