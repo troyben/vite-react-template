@@ -9,7 +9,7 @@ interface SketchPreviewMiniProps {
   style?: React.CSSProperties;
 }
 
-const SketchPreviewMini: React.FC<SketchPreviewMiniProps> = ({
+const MiniSketchPreview: React.FC<SketchPreviewMiniProps> = ({
   data,
   size = 'medium',
   showDimensions = true
@@ -23,6 +23,8 @@ const SketchPreviewMini: React.FC<SketchPreviewMiniProps> = ({
 
   const panelCount = data.panels || 1;
   const frameColor = data.frameColor || '#C0C0C0';
+
+
 
   // Use panelWidths if available, else equal widths
   const panelWidths =
@@ -506,4 +508,4 @@ const SketchPreviewMini: React.FC<SketchPreviewMiniProps> = ({
   );
 };
 
-export default SketchPreviewMini;
+export default MiniSketchPreview;

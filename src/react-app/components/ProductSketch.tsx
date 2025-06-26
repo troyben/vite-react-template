@@ -8,6 +8,7 @@ type GlassType = 'clear' | 'frosted' | 'custom-tint';  // Update type definition
 export interface ProductData {
   type: 'window' | 'door';
   doorType?: 'hinged' | 'sliding';
+  windowType?: 'hinged' | 'sliding'; // <-- Add this line
   width: number;
   height: number;
   panels: number;
@@ -45,6 +46,9 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   const [doorType, setDoorType] = useState<'hinged' | 'sliding'>(
     initialData?.doorType || 'hinged'
   );
+  const [windowType, setWindowType] = useState<'hinged' | 'sliding'>(
+    initialData?.windowType || 'hinged'
+  ); // <-- Add this line
   const [width, setWidth] = useState<number>(initialData?.width || 1000);
   const [height, setHeight] = useState<number>(initialData?.height || 1000);
   const [panels, setPanels] = useState<number>(initialData?.panels || 1);
@@ -97,6 +101,9 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   // Tab state
   const [activeTab, setActiveTab] = useState<'dimensions' | 'appearance' | 'openings' | 'divisions'>('dimensions');
 
+  // Use correct sliding logic for both doors and windows (make available to all render logic)
+  const isSliding = (type === 'door' && doorType === 'sliding') || (type === 'window' && windowType === 'sliding');
+
   const handleSave = () => {
     // New: total width/height from panelWidths/panelDivisionHeights
     const totalWidth = panelWidths.reduce((a, b) => a + b, 0);
@@ -107,6 +114,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
     const data: ProductData = {
       type,
       doorType: type === 'door' ? doorType : undefined,
+      windowType: type === 'window' ? windowType : undefined, // <-- Add this line
       width: totalWidth,
       height,
       panels,
@@ -265,7 +273,8 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
   const renderPanel = (panelIndex: number) => {
     const isOpening = openingPanels.includes(panelIndex);
     const openingDirection = openingDirections[panelIndex];
-    const isSliding = doorType === 'sliding';
+    // Use isSliding from outer scope
+    const isSliding = (type === 'door' && doorType === 'sliding') || (type === 'window' && windowType === 'sliding');
 
     // Calculate transform based on conditions
     const getTransform = () => {
@@ -803,7 +812,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
               transformOrigin: 'center center',
               boxSizing: 'border-box',
               display: 'flex',
-              overflow: `${doorType === 'sliding' ? 'hidden' : 'visible'}`,
+              overflow: isSliding ? 'hidden' : 'visible',
             }}
           >
             {/* Render panels as equal parts, filling the entire width */}
@@ -859,25 +868,45 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
             </div>
           </div>
 
-          {/* Door Type Selector (only for doors) */}
-          
+          {/* Door/Window Type Selector */}
           <div className="control-group">
-            <label> {type === 'door' ? "Door Type" : "Window Type"}</label>
+            <label>{type === 'door' ? 'Door Type' : 'Window Type'}</label>
             <div className="door-type-selector">
-              <button
-                type="button"
-                className={`door-type-btn${doorType === 'hinged' ? ' active' : ''}`}
-                onClick={() => setDoorType('hinged')}
-              >
-                Hinged
-              </button>
-              <button
-                type="button"
-                className={`door-type-btn${doorType === 'sliding' ? ' active' : ''}`}
-                onClick={() => setDoorType('sliding')}
-              >
-                Sliding
-              </button>
+              {type === 'door' ? (
+                <>
+                  <button
+                    type="button"
+                    className={`door-type-btn${doorType === 'hinged' ? ' active' : ''}`}
+                    onClick={() => setDoorType('hinged')}
+                  >
+                    Hinged
+                  </button>
+                  <button
+                    type="button"
+                    className={`door-type-btn${doorType === 'sliding' ? ' active' : ''}`}
+                    onClick={() => setDoorType('sliding')}
+                  >
+                    Sliding
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`door-type-btn${windowType === 'hinged' ? ' active' : ''}`}
+                    onClick={() => setWindowType('hinged')}
+                  >
+                    Hinged
+                  </button>
+                  <button
+                    type="button"
+                    className={`door-type-btn${windowType === 'sliding' ? ' active' : ''}`}
+                    onClick={() => setWindowType('sliding')}
+                  >
+                    Sliding
+                  </button>
+                </>
+              )}
             </div>
           </div>
           

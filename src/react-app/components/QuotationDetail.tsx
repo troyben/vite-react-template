@@ -181,8 +181,6 @@ const QuotationDetail = () => {
   const renderItemWithSketch = (item: QuotationItem) => {
     const sketchData = item.productSketch;
 
-    console.log('Rendering item with sketch:', item, sketchData);
-
     return (
       <>
         <td>

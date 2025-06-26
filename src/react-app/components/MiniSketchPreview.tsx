@@ -8,6 +8,22 @@ interface MiniSketchPreviewProps {
   pdfMode?: boolean;
 }
 
+// Helper for glass color
+const getGlassColor = (sketch: ProductData, frameColor: string) => {
+  switch (sketch.glassType) {
+    case 'clear':
+      return frameColor === '#C0C0C0'
+        ? 'rgb(220,225,255)'
+        : 'rgb(200,200,255)';
+    case 'frosted':
+      return 'rgb(255,255,255)';
+    case 'custom-tint':
+      return `${sketch.customGlassTint || '#AEEEEE'}80`;
+    default:
+      return 'rgba(200,200,255,0.3)';
+  }
+};
+
 const renderMiniPreviewDimensionLines = (sketch: ProductData, widthPx: number, heightPx: number, pdfMode = false) => {
   if (!sketch) return null;
   const { width, height, unit, panels, panelWidths, panelDivisions, panelDivisionHeights } = sketch;
@@ -16,6 +32,9 @@ const renderMiniPreviewDimensionLines = (sketch: ProductData, widthPx: number, h
   const total = widths.reduce((a, b) => a + b, 0);
   let x = 0;
   const arrowOffset = 10;
+
+    console.log('Rendering: ', sketch);
+
 
   // For vertical panel heights (if panelDivisionHeights is present)
   let verticalTicks: any[] = [];
@@ -96,24 +115,41 @@ const renderMiniPreviewDimensionLines = (sketch: ProductData, widthPx: number, h
   );
 };
 
-const renderMiniPreviewPanel = (sketch: ProductData, panelIndex: number) => {
+const renderMiniPreviewPanel = (sketch: ProductData, panelIndex: number, frameColor: string, glassColor: string) => {
   const division = sketch.panelDivisions?.find(d => d.panelIndex === panelIndex);
   if (!division) return null;
+  // Division border color logic
+  const divisionBorder =
+    frameColor === '#4F4F4F'
+      ? '#BDBDBD'
+      : frameColor === '#CD7F32'
+      ? '#A67C52'
+      : 'rgba(0,0,0,0.18)';
+  // Use a solid color for open panes
+  const solidOpenColor = '#44D5B8'; // A shade of green for open glass
+  const isPanelOpening = Array.isArray(sketch.openingPanels) && sketch.openingPanels.includes(panelIndex);
+  const panelOpeningDirection = sketch.openingDirections?.[panelIndex];
+  // Correct sliding logic: sliding if doorType is 'sliding' for doors or windowType === 'sliding' for windows
+  const isSliding = (sketch.type === 'door' && sketch.doorType === 'sliding') ||
+                    (sketch.type === 'window' && sketch.windowType === 'sliding');
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: `repeat(${division.verticalCount}, 1fr)`,
-      gridTemplateRows: `repeat(${division.horizontalCount}, 1fr)`,
-      height: '100%',
-      width: '100%',
-      gap: '2px',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      padding: '2px',
-      boxSizing: 'border-box',
-      zIndex: 2
-    }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${division.verticalCount}, 1fr)`,
+        gridTemplateRows: `repeat(${division.horizontalCount}, 1fr)`,
+        height: '100%',
+        width: '100%',
+        gap: '2px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        padding: '2px',
+        boxSizing: 'border-box',
+        zIndex: 0,
+        overflow:  `${sketch.doorType === 'sliding' || sketch.windowType === 'sliding' ? 'hidden' : 'visible'}`,
+      }}
+    >
       {Array.from({ length: division.horizontalCount * division.verticalCount }).map((_, index) => {
         const rowIndex = Math.floor(index / division.verticalCount);
         const colIndex = index % division.verticalCount;
@@ -122,50 +158,153 @@ const renderMiniPreviewPanel = (sketch: ProductData, panelIndex: number) => {
           p.rowIndex === rowIndex &&
           p.colIndex === colIndex
         );
-        // Opening effect: transform for open panes
+        // If panel is opening, treat all cells as open
+        const isOpening = isPanelOpening || !!openingPane;
+        // Transform logic
         let transform = 'none';
-        if (openingPane?.openingDirection) {
-          switch (openingPane.openingDirection) {
-            case 'left': transform = 'translateX(-15%) rotateY(-10deg)'; break;
-            case 'right': transform = 'translateX(15%) rotateY(10deg)'; break;
-            case 'top': transform = 'translateY(-15%) rotateX(10deg)'; break;
-            case 'bottom': transform = 'translateY(15%) rotateX(-10deg)'; break;
-            default: break;
+        let transformOrigin = 'center';
+        let showHandle = false;
+        let handleDirection = undefined;
+        if (isPanelOpening && panelOpeningDirection) {
+          showHandle = true;
+          handleDirection = panelOpeningDirection;
+          if (isSliding) {
+            // Sliding transform for open panel
+            switch (panelOpeningDirection) {
+              case 'left':
+                transform = 'translateX(-60%)';
+                break;
+              case 'right':
+                transform = 'translateX(60%)';
+                break;
+              case 'top':
+                transform = 'translateY(-60%)';
+                break;
+              case 'bottom':
+                transform = 'translateY(60%)';
+                break;
+              default:
+                break;
+            }
+          } else {
+            // Hinged/tilt transform for open panel
+            switch (panelOpeningDirection) {
+              case 'left':
+                transform = 'perspective(600px) translateZ(0) rotateY(-45deg) translateX(0%)';
+                transformOrigin = '0 50%';
+                break;
+              case 'right':
+                transform = 'perspective(600px) translateZ(0) rotateY(45deg) translateX(0%)';
+                transformOrigin = '100% 50%';
+                break;
+              case 'top':
+                transform = 'perspective(600px) translateZ(0) rotateX(55deg) translateY(0%)';
+                transformOrigin = '100% 0';
+                break;
+              case 'bottom':
+                transform = 'perspective(600px) translateZ(0) rotateX(-45deg) translateY(0%)';
+                transformOrigin = '50% 100%';
+                break;
+              default:
+                break;
+            }
+          }
+        } else if (openingPane?.openingDirection) {
+          showHandle = true;
+          handleDirection = openingPane.openingDirection;
+          if (isSliding) {
+            // Sliding transform for open pane
+            switch (openingPane.openingDirection) {
+              case 'left':
+                transform = 'translateX(-60%)';
+                break;
+              case 'right':
+                transform = 'translateX(60%)';
+                break;
+              case 'top':
+                transform = 'translateY(-60%)';
+                break;
+              case 'bottom':
+                transform = 'translateY(60%)';
+                break;
+              default:
+                break;
+            }
+          } else {
+            // Hinged/tilt transform for open pane
+            switch (openingPane.openingDirection) {
+              case 'left':
+                transform = 'perspective(300px) translateZ(0) rotateY(-45deg) translateX(0%)';
+                transformOrigin = '0 50%';
+                break;
+              case 'right':
+                transform = 'perspective(300px) translateZ(0) rotateY(45deg) translateX(0%)';
+                transformOrigin = '100% 50%';
+                break;
+              case 'top':
+                transform = 'perspective(600px) translateZ(0) rotateX(55deg) translateY(0%)';
+                transformOrigin = '100% 0';
+                break;
+              case 'bottom':
+                transform = 'perspective(300px) translateZ(0) rotateX(-45deg) translateY(0%)';
+                transformOrigin = '50% 100%';
+                break;
+              default:
+                break;
+            }
           }
         }
-        // Handle position
-        const handleStyle = openingPane?.openingDirection ? {
-          position: 'absolute',
-          background: '#aaa',
-          borderRadius: 2,
-          zIndex: 3,
-          ...(openingPane.openingDirection === 'left' || openingPane.openingDirection === 'right'
-            ? {
-                width: 12, height: 3,
-                top: '50%', right: openingPane.openingDirection === 'left' ? 4 : 'unset', left: openingPane.openingDirection === 'right' ? 4 : 'unset',
-                transform: 'translateY(-50%)'
-              }
-            : {
-                width: 3, height: 12,
-                left: '50%', bottom: openingPane.openingDirection === 'top' ? 4 : 'unset', top: openingPane.openingDirection === 'bottom' ? 4 : 'unset',
-                transform: 'translateX(-50%)'
-              })
-        } : {};
         return (
           <div
             key={index}
             style={{
-              border: '1px solid #bfc7d1',
-              backgroundColor: openingPane ? 'rgba(124, 93, 250, 0.15)' : '#e9eaf3',
+              border: `2px solid ${frameColor}`,
+              backgroundColor: isOpening ? solidOpenColor : glassColor,
               position: 'relative',
               minWidth: 0,
               minHeight: 0,
-              transition: 'transform 0.3s',
+              transition: 'all 0.3s',
               transform,
+              transformOrigin,
+              boxSizing: 'border-box',
+              boxShadow: isOpening ? '0 0 10px rgba(0,0,0,0.5)' : 'none',
+              backfaceVisibility: 'hidden',
+              zIndex: isOpening ? 99 : 0,
             }}
           >
-            {openingPane && (
-              <div style={handleStyle} />
+            {showHandle && handleDirection && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width:
+                    handleDirection === 'left' || handleDirection === 'right'
+                      ? '3px'
+                      : '20px',
+                  height:
+                    handleDirection === 'top' || handleDirection === 'bottom'
+                      ? '3px'
+                      : '20px',
+                  backgroundColor: frameColor,
+                  borderRadius: '1px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  zIndex: 100,
+                  ...{
+                    left:
+                      handleDirection === 'right'
+                        ? '10%'
+                        : handleDirection === 'left'
+                        ? '90%'
+                        : '50%',
+                    top:
+                      handleDirection === 'bottom'
+                        ? '10%'
+                        : handleDirection === 'top'
+                        ? '90%'
+                        : '50%',
+                    transform: 'translate(-50%, -50%)',
+                  },
+                }}
+              />
             )}
           </div>
         );
@@ -178,6 +317,7 @@ const MiniSketchPreview: React.FC<MiniSketchPreviewProps> = ({ sketch, widthPx =
   if (!sketch) return null;
   const panelCount = sketch.panels || 1;
   const frameColor = sketch.frameColor || '#C0C0C0';
+  const glassColor = getGlassColor(sketch, frameColor);
   const panelWidths =
     sketch.panelWidths && sketch.panelWidths.length === panelCount
       ? sketch.panelWidths
@@ -194,11 +334,10 @@ const MiniSketchPreview: React.FC<MiniSketchPreviewProps> = ({ sketch, widthPx =
           height: heightPx,
           border: `2px solid ${frameColor}`,
           borderRadius: 0,
-          overflow: 'hidden',
-          background: '#f8fafd',
+          background: frameColor === '#C0C0C0' ? '#E5E5E5' : frameColor,
           boxSizing: 'border-box',
           position: 'relative',
-          zIndex: 2
+          zIndex: 0
         }}
       >
         {Array.from({ length: panelCount }).map((_, i) => (
@@ -212,13 +351,12 @@ const MiniSketchPreview: React.FC<MiniSketchPreviewProps> = ({ sketch, widthPx =
               display: 'flex',
               alignItems: 'stretch',
               justifyContent: 'stretch',
-              background: '#e9eaf3',
-              border: '1px solid #bfc7d1',
+              border: 'none',
               boxSizing: 'border-box',
-              zIndex: 1
+              zIndex: -2
             }}
           >
-            {renderMiniPreviewPanel(sketch, i)}
+            {renderMiniPreviewPanel(sketch, i, frameColor, glassColor)}
           </div>
         ))}
       </div>

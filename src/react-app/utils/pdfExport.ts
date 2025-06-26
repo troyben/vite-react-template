@@ -1,10 +1,10 @@
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import MiniSketchPreview from "../components/MiniSketchPreview";
 import ReactDOM from "react-dom/client";
 import React from "react";
 import type { Quotation } from '../services/quotationService';
 import { notify } from '../utils/notifications';
+import domtoimage from "dom-to-image-more";
 
 // Color scheme
 const COLORS = {
@@ -407,13 +407,15 @@ async function renderSketchToImage(sketchData: any): Promise<string | null> {
           justifyContent: "center",
           alignItems: "center",
           padding: "0",
-          boxSizing: "border-box"
+          marginTop: "50px",
+          boxSizing: "border-box",
+          overflow: "visible"
         }
       },
       React.createElement(MiniSketchPreview, {
         sketch: sketchData,
-        widthPx: 800,
-        heightPx: 620,
+        widthPx: 700,
+        heightPx: 420,
         pdfMode: true
       })
     )
@@ -423,14 +425,13 @@ async function renderSketchToImage(sketchData: any): Promise<string | null> {
 
   let dataUrl: string | null = null;
   try {
-    const canvas = await html2canvas(container, {
-      backgroundColor: "#ffffff",
-      scale: 4,
-      logging: true,
-      useCORS: true,
-      allowTaint: true
+    dataUrl = await domtoimage.toPng(container, {
+      bgcolor: "#ffffff",
+      style: {
+        backgroundColor: "#ffffff"
+      },
+      filter: (node) => true // include all nodes
     });
-    dataUrl = canvas.toDataURL("image/png", 1.0);
   } catch (e) {
     console.error("Error rendering sketch:", e);
     dataUrl = null;
