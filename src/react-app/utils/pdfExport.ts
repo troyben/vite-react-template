@@ -201,7 +201,7 @@ export async function exportQuotationToPDF(quotation: Quotation) {
 
       // Frame and glass type
       const frameColor = sketch?.frameColor === '#C0C0C0' ? 'Silver' :
-        sketch?.frameColor === 'natural' ? 'Natural' :
+        sketch?.frameColor === '#4F4F4F' ? 'Charcoal Grey' : sketch?.frameColor === '#CD7F32' ? 'Bronze' :
           sketch?.frameColor || 'Not specified';
       doc.text(`Frame: ${frameColor}`, detailsLeft, detailsY);
       detailsY += 6;
