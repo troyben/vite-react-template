@@ -1,9 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
-  plugins: [react(), cloudflare()],
+  plugins: [react()],
   build: {
     rollupOptions: {
       input: {
@@ -12,14 +11,14 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          styles: ['./src/react-app/styles/base.css'],
+          styles: ['./src/styles/base.css'],
         },
       },
     },
   },
   resolve: {
     alias: {
-      '@': '/src/react-app',
+      '@': '/src',
     },
   },
   server: {
