@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../styles/ProductSketch.css';
 
 type OpeningDirection = 'left' | 'right' | 'top' | 'bottom';  // Keep this type but restrict usage for doors
@@ -390,9 +391,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
                 [index]: 'top'
               })}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 18L12 6M12 6L6 12M12 6L18 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ArrowUp className="w-6 h-6" strokeWidth={3} />
             </button>
             <button
               type="button"
@@ -402,9 +401,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
                 [index]: 'bottom'
               })}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 6L12 18M12 18L6 12M12 18L18 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ArrowDown className="w-6 h-6" strokeWidth={3} />
             </button>
           </>
         )}
@@ -416,9 +413,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
             [index]: 'left'
           })}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 18L6 12L18 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronLeft className="w-6 h-6" strokeWidth={3} />
         </button>
         <button
           type="button"
@@ -428,9 +423,7 @@ const ProductSketch: React.FC<ProductSketchProps> = ({ onSave, onCancel, initial
             [index]: 'right'
           })}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 18L18 12L6 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronRight className="w-6 h-6" strokeWidth={3} />
         </button>
       </div>
     );

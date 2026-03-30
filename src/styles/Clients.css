@@ -14,7 +14,7 @@
 }
 
 .page-header h1 {
-  font-size: 24px;
+  font-size: clamp(18px, 3vw, 22px);
   font-weight: 700;
   color: var(--text-color);
 }

@@ -25,19 +25,18 @@ const PasswordForm = ({
   onSubmit,
 }: PasswordFormProps) => {
   return (
-    <div style={{ marginTop: 32 }}>
-      <Separator className="mb-8" style={{ borderColor: '#e0e7ff' }} />
+    <div className="mt-6">
+      <Separator className="mb-6" style={{ borderColor: '#e0e7ff' }} />
       <Button
         type="button"
-        className="btn btn-secondary"
+        className="btn btn-secondary w-full"
         onClick={onToggle}
-        style={{ width: '100%' }}
       >
         {showPasswordForm ? 'Cancel Password Change' : 'Change Password'}
       </Button>
 
       {showPasswordForm && (
-        <form onSubmit={onSubmit} style={{ marginTop: 24 }}>
+        <form onSubmit={onSubmit} className="mt-5">
           <div className="form-group">
             <Label className="form-label">Current Password</Label>
             <Input
@@ -71,7 +70,7 @@ const PasswordForm = ({
               required
             />
           </div>
-          <div className="form-actions" style={{ marginTop: 24 }}>
+          <div className="form-actions mt-5">
             <Button type="submit" className="btn btn-primary" disabled={submitting}>
               {submitting ? 'Updating...' : 'Update Password'}
             </Button>

@@ -66,18 +66,17 @@ const ProfileForm = ({
             placeholder="e.g. 0771234567"
           />
         </div>
-        <div className="form-actions" style={{ justifyContent: 'center', marginTop: 32 }}>
+        <div className="form-actions">
           <Button
             type="submit"
-            className="btn btn-primary btn-lg"
-            style={{ minWidth: 160 }}
+            className="btn btn-primary w-full sm:w-auto sm:min-w-[160px]"
             disabled={loading || submitting}
           >
             {loading || submitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
         {success && (
-          <div style={{ color: '#33D69F', textAlign: 'center', marginTop: 16, fontWeight: 600 }}>
+          <div className="text-center mt-4 font-semibold" style={{ color: '#33D69F' }}>
             Profile updated!
           </div>
         )}

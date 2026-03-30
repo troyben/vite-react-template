@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import type { Quotation } from '@/services/quotationService';
 import type { Client } from '@/services/clientService';
 import { formatCurrency, getStatusClass, statusMap } from '@/hooks/useDashboardData';
@@ -15,10 +16,7 @@ export function RecentQuotations({ quotations, clients }: RecentQuotationsProps)
         <h2>Recent Quotations</h2>
         <Link to="/quotations" className="view-all-button">
           View All Quotations
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4.16666 10H15.8333" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M10.8333 5L15.8333 10L10.8333 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowRight className="w-5 h-5" />
         </Link>
       </div>
       {quotations.length === 0 ? (

@@ -23,13 +23,13 @@ const Login = () => {
   } = useLogin();
 
   return (
-    <div className="login-page" style={{ maxWidth: 400, margin: '60px auto' }}>
+    <div className="login-page">
       <Card>
         <CardHeader>
           <div className="login-logo">
             <img src="/logo.jpg" alt="Logo" />
           </div>
-          <CardTitle style={{ fontWeight: 700, fontSize: 24, textAlign: 'center' }}>
+          <CardTitle className="font-bold text-lg sm:text-xl text-center">
             Sign In
           </CardTitle>
         </CardHeader>

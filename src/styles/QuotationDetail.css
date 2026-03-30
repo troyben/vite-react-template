@@ -60,7 +60,7 @@
 }
 
 .refined-client-name {
-  font-size: 24px;
+  font-size: clamp(16px, 2.5vw, 20px);
   font-weight: 700;
   color: var(--text-color);
 }
@@ -126,7 +126,7 @@
 }
 
 .refined-total-value {
-  font-size: 20px;
+  font-size: clamp(16px, 2vw, 20px);
   font-weight: 700;
   color: var(--text-color);
 }

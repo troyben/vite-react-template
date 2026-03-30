@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as clientApi from '@/services/clientService';
 import type { Client } from '@/services/clientService';
@@ -122,14 +123,10 @@ export function useClients() {
       cell: info => (
         <div className="actions">
           <button className="btn-icon" title="Edit" onClick={() => openEditForm(info.row.original)}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M14.5 2.5L17.5 5.5M2.5 17.5V14.5L12.5 4.5L15.5 7.5L5.5 17.5H2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <Pencil className="w-5 h-5" />
           </button>
           <button className="btn-icon" title="Delete" onClick={() => handleDelete(info.row.original.id)}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 5.5H17M7.5 5.5V4C7.5 3.44772 7.94772 3 8.5 3H11.5C12.0523 3 12.5 3.44772 12.5 4V5.5M14.5 5.5V16C14.5 16.5523 14.0523 17 13.5 17H6.5C5.94772 17 5.5 16.5523 5.5 16V5.5H14.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <Trash2 className="w-5 h-5" />
           </button>
         </div>
       ),

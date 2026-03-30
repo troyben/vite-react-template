@@ -1,3 +1,4 @@
+import { CircleUser } from 'lucide-react';
 import type { ProfileData } from '@/services/settingsService';
 
 interface AvatarUploadProps {
@@ -10,46 +11,27 @@ const AvatarUpload = ({ avatarPreview, profileData, onAvatarChange }: AvatarUplo
   const hasAvatar = avatarPreview || (profileData && profileData.avatar);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
-      <label htmlFor="avatar-upload" style={{ cursor: 'pointer' }}>
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: '50%',
-            background: '#f3f3fb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            marginBottom: 12,
-            border: '2px solid #e0e7ff',
-          }}
-        >
+    <div className="flex flex-col items-center mb-6">
+      <label htmlFor="avatar-upload" className="cursor-pointer flex flex-col items-center">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#f3f3fb] flex items-center justify-center overflow-hidden mb-3 border-2 border-[#e0e7ff]">
           {hasAvatar ? (
             <img
               src={avatarPreview || profileData?.avatar}
               alt="Avatar"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              className="w-full h-full object-cover"
             />
           ) : (
-            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="40" cy="40" r="40" fill="#edeaff" />
-              <circle cx="40" cy="32" r="14" fill="#7c5dfa" />
-              <path d="M20 62c0-10.5 13-16 20-16s20 5.5 20 16" fill="#d6d3fa" />
-              <circle cx="40" cy="32" r="10" fill="#edeaff" />
-              <path d="M30 60c0-5.5 6.5-8 10-8s10 2.5 10 8" fill="#edeaff" />
-            </svg>
+            <CircleUser className="w-14 h-14 sm:w-16 sm:h-16 text-[#7c5dfa]" />
           )}
         </div>
         <input
           id="avatar-upload"
           type="file"
           accept="image/*"
-          style={{ display: 'none' }}
+          className="hidden"
           onChange={onAvatarChange}
         />
-        <span style={{ color: '#7c5dfa', fontWeight: 500, fontSize: 14 }}>Change Avatar</span>
+        <span className="text-[#7c5dfa] font-medium text-sm">Change Avatar</span>
       </label>
     </div>
   );

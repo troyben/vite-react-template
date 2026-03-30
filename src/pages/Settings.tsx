@@ -29,10 +29,10 @@ const Settings = () => {
   if (!profileData) return <div>No profile data available</div>;
 
   return (
-    <div className="settings-page" style={{ maxWidth: 500, margin: '40px auto' }}>
+    <div className="settings-page">
       <Card>
         <CardHeader>
-          <CardTitle style={{ fontWeight: 700, fontSize: 24 }}>Profile Settings</CardTitle>
+          <CardTitle className="text-lg sm:text-xl font-bold">Profile Settings</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="settings-content">

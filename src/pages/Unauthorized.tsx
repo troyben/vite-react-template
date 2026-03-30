@@ -1,14 +1,12 @@
 import React from 'react';
+import { Ban } from 'lucide-react';
 import '../styles/Unauthorized.css';
 
 const Unauthorized: React.FC = () => {
   return (
     <div className="unauthorized-container">
       <div className="unauthorized-card">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="32" r="32" fill="var(--status-pending-bg)"/>
-          <path d="M20 44L44 20M20 20l24 24" stroke="var(--primary-color)" strokeWidth="4" strokeLinecap="round"/>
-        </svg>
+        <Ban className="w-16 h-16" style={{ color: 'var(--primary-color)' }} />
         <h2>Access Denied</h2>
         <p>You do not have permission to view this page.</p>
         <a href="/" className="unauthorized-link">Go Home</a>
