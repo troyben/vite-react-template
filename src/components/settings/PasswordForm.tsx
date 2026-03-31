@@ -26,52 +26,53 @@ const PasswordForm = ({
 }: PasswordFormProps) => {
   return (
     <div className="mt-6">
-      <Separator className="mb-6" style={{ borderColor: '#e0e7ff' }} />
+      <Separator className="mb-6" />
       <Button
         type="button"
-        className="btn btn-secondary w-full"
+        variant="outline"
+        className="w-full"
         onClick={onToggle}
       >
         {showPasswordForm ? 'Cancel Password Change' : 'Change Password'}
       </Button>
 
       {showPasswordForm && (
-        <form onSubmit={onSubmit} className="mt-5">
-          <div className="form-group">
-            <Label className="form-label">Current Password</Label>
+        <form onSubmit={onSubmit} className="mt-5 space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="currentPassword">Current Password</Label>
             <Input
+              id="currentPassword"
               type="password"
               name="currentPassword"
-              className="form-control"
               value={passwordData.currentPassword}
               onChange={onChange}
               required
             />
           </div>
-          <div className="form-group">
-            <Label className="form-label">New Password</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="newPassword">New Password</Label>
             <Input
+              id="newPassword"
               type="password"
               name="newPassword"
-              className="form-control"
               value={passwordData.newPassword}
               onChange={onChange}
               required
             />
           </div>
-          <div className="form-group">
-            <Label className="form-label">Confirm New Password</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="confirmPassword">Confirm New Password</Label>
             <Input
+              id="confirmPassword"
               type="password"
               name="confirmPassword"
-              className="form-control"
               value={passwordData.confirmPassword}
               onChange={onChange}
               required
             />
           </div>
-          <div className="form-actions mt-5">
-            <Button type="submit" className="btn btn-primary" disabled={submitting}>
+          <div className="pt-4">
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Updating...' : 'Update Password'}
             </Button>
           </div>

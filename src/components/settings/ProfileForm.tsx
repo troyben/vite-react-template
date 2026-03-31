@@ -26,57 +26,57 @@ const ProfileForm = ({
   onSubmit,
 }: ProfileFormProps) => {
   return (
-    <section className="profile-section">
-      <form onSubmit={onSubmit}>
+    <section>
+      <form onSubmit={onSubmit} className="space-y-4">
         <AvatarUpload
           avatarPreview={avatarPreview}
           profileData={profileData}
           onAvatarChange={onAvatarChange}
         />
-        <div className="form-group">
-          <Label className="form-label">Name</Label>
+        <div className="grid gap-2">
+          <Label htmlFor="profile-name">Name</Label>
           <Input
+            id="profile-name"
             type="text"
             name="name"
-            className="form-control"
             value={profileData?.name || ''}
             onChange={onChange}
             required
           />
         </div>
-        <div className="form-group">
-          <Label className="form-label">Email</Label>
+        <div className="grid gap-2">
+          <Label htmlFor="profile-email">Email</Label>
           <Input
+            id="profile-email"
             type="email"
             name="email"
-            className="form-control"
             value={profileData?.email || ''}
             onChange={onChange}
             required
           />
         </div>
-        <div className="form-group">
-          <Label className="form-label">Mobile Number</Label>
+        <div className="grid gap-2">
+          <Label htmlFor="profile-mobile">Mobile Number</Label>
           <Input
+            id="profile-mobile"
             type="tel"
             name="mobile"
-            className="form-control"
             value={profileData?.mobile || ''}
             onChange={onChange}
             placeholder="e.g. 0771234567"
           />
         </div>
-        <div className="form-actions">
+        <div className="pt-4">
           <Button
             type="submit"
-            className="btn btn-primary w-full sm:w-auto sm:min-w-[160px]"
+            className="w-full sm:w-auto sm:min-w-[160px]"
             disabled={loading || submitting}
           >
             {loading || submitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
         {success && (
-          <div className="text-center mt-4 font-semibold" style={{ color: '#33D69F' }}>
+          <div className="text-center mt-4 text-sm font-medium text-emerald-600">
             Profile updated!
           </div>
         )}

@@ -1,89 +1,107 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { ColumnDef } from '@tanstack/react-table';
 import { getAllQuotations, deleteQuotation, type Quotation } from '@/services/quotationService';
-import { getAllClients, type Client } from '@/services/clientService';
-
-const ITEMS_PER_PAGE = 5;
+import { formatAmount } from '@/utils/quotationHelpers';
+import { notify } from '@/utils/notifications';
 
 export function useQuotationList() {
+  const navigate = useNavigate();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [clients, setClients] = useState<Record<number, Client>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const fetchQuotations = useCallback(async (page: number, search?: string) => {
+    try {
+      setLoading(true);
+      const response = await getAllQuotations({ page, limit: 10, search });
+      if (response.data.success) {
+        setQuotations(response.data.data.items);
+        setTotalPages(response.data.data.pagination.totalPages);
+        setTotalItems(response.data.data.pagination.totalItems);
+        setCurrentPage(response.data.data.pagination.page);
+      }
+    } catch (err) {
+      notify.error('Failed to fetch quotations');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [quotationsRes, clientsRes] = await Promise.all([
-          getAllQuotations(),
-          getAllClients()
-        ]);
-
-        setQuotations(quotationsRes.data.success ? quotationsRes.data.data : []);
-
-        const clientMap = (clientsRes.data.success ? clientsRes.data.data : []).reduce((acc, client) => {
-          acc[client.id] = client;
-          return acc;
-        }, {} as Record<number, Client>);
-
-        setClients(clientMap);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+    fetchQuotations(1);
+  }, [fetchQuotations]);
 
   const handleDelete = useCallback(async (id: number) => {
     if (window.confirm('Are you sure you want to delete this quotation?')) {
       try {
         const response = await deleteQuotation(id);
         if (response.data.success) {
-          setQuotations(prev => prev.filter(q => q.id !== id));
+          notify.success('Quotation deleted successfully');
+          fetchQuotations(currentPage, searchTerm);
         }
       } catch (err) {
-        console.error('Error deleting quotation:', err);
+        notify.error('Failed to delete quotation');
       }
     }
-  }, []);
+  }, [fetchQuotations, currentPage, searchTerm]);
 
-  const filteredQuotations = useMemo(() => {
-    return quotations.filter(quotation => {
-      const client = clients[quotation.clientId];
-      return client?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-  }, [quotations, clients, searchTerm]);
-
-  const totalPages = Math.ceil(filteredQuotations.length / ITEMS_PER_PAGE);
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentQuotations = filteredQuotations.slice(indexOfFirstItem, indexOfLastItem);
+  const handlePageChange = useCallback((page: number) => {
+    fetchQuotations(page, searchTerm);
+  }, [fetchQuotations, searchTerm]);
 
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
-    setCurrentPage(1);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchQuotations(1, term);
+    }, 300);
+  }, [fetchQuotations]);
+
+  const getStatusVariant = useCallback((status: string) => {
+    switch (status) {
+      case 'draft':
+        return 'secondary' as const;
+      case 'sent':
+        return 'default' as const;
+      case 'approved':
+      case 'accepted':
+      case 'paid':
+        return 'default' as const;
+      case 'rejected':
+        return 'destructive' as const;
+      default:
+        return 'secondary' as const;
+    }
   }, []);
 
-  const clearSearch = useCallback(() => {
-    setSearchTerm('');
-    setCurrentPage(1);
+  const getStatusClassName = useCallback((status: string) => {
+    switch (status) {
+      case 'approved':
+      case 'accepted':
+      case 'paid':
+        return 'bg-green-100 text-green-800 hover:bg-green-100/80';
+      default:
+        return '';
+    }
   }, []);
 
   return {
     loading,
-    clients,
+    quotations,
     searchTerm,
     currentPage,
     totalPages,
-    currentQuotations,
-    filteredQuotations,
+    totalItems,
     handleDelete,
     handleSearch,
-    clearSearch,
-    setCurrentPage,
+    handlePageChange,
+    navigate,
+    getStatusVariant,
+    getStatusClassName,
   };
 }

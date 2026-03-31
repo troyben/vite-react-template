@@ -2,8 +2,6 @@ import { BrowserRouter as Router, useLocation, useNavigate } from 'react-router-
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
-import './styles/variables.css';
-import './styles/base.css';
 import { AuthProvider } from './contexts/AuthContext';
 import type { ReactNode } from 'react';
 import AppRoutes from './routes';
@@ -13,9 +11,9 @@ function AppContent() {
   const hideNavbar = location.pathname === '/login';
 
   return (
-    <div className="app">
+    <div className="flex min-h-screen">
       {!hideNavbar && <Navbar />}
-      <div className="main-content" style={hideNavbar ? { marginLeft: 0, width: '100%' } : {}}>
+      <div className={hideNavbar ? 'flex-1' : 'flex-1 ml-16'}>
         <AppRoutes />
       </div>
     </div>

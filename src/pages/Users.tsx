@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers } from '@/hooks/useUsers';
 import { ScreenLoader } from '@/components/ScreenLoader';
@@ -5,20 +6,16 @@ import BaseDataTable from '@/components/BaseDataTable';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { Button } from '@/components/ui/button';
 
-import '@/styles/Users.css';
-
 const Users = () => {
   const { user: currentUser, loading: authLoading } = useAuth();
 
-  // Ensure nothing runs before context is ready
   if (authLoading || !currentUser) {
     return <div>Loading...</div>;
   }
 
-  // Restrict access to admins only
   if (currentUser?.role !== 'admin') {
     return (
-      <div style={{ color: '#EC5757', textAlign: 'center', marginTop: 40 }}>
+      <div className="text-destructive text-center mt-10">
         Access denied. Only admins can manage users.
       </div>
     );
@@ -36,21 +33,40 @@ function UsersContent({ currentUserId }: { currentUserId: number }) {
     isFormOpen,
     editingUser,
     formError,
+    currentPage,
+    totalPages,
+    totalItems,
+    searchTerm,
     openAddForm,
     closeForm,
     handleFormSubmit,
+    handlePageChange,
+    handleSearch,
   } = useUsers(currentUserId);
 
   return (
-    <div className="users-page">
+    <div className="p-6 space-y-6">
       <ScreenLoader isLoading={loading} />
-      <div className="page-header">
-        <h1>Users Management</h1>
-        <Button onClick={openAddForm}>Add New User</Button>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Users Management</h1>
+        <Button onClick={openAddForm}>
+          <Plus className="h-4 w-4" />
+          New User
+        </Button>
       </div>
-      {error && <div style={{ color: '#EC5757', marginBottom: 16 }}>{error}</div>}
+      {error && <div className="text-destructive mb-4">{error}</div>}
       {!loading && (
-        <BaseDataTable columns={columns} data={users} globalFilterPlaceholder="Search users..." />
+        <BaseDataTable
+          columns={columns}
+          data={users}
+          searchPlaceholder="Search users..."
+          searchValue={searchTerm}
+          onSearch={handleSearch}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          onPageChange={handlePageChange}
+        />
       )}
       <UserFormDialog
         open={isFormOpen}

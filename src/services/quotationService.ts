@@ -1,7 +1,8 @@
 import api from '../api';
-import type { ProductData } from '../components/ProductSketch';
+import type { ProductData } from '../components/product-sketch';
 import { AxiosResponse } from 'axios';
 import { handleServiceError } from '../utils/errorHandling';
+import type { PaginationParams, PaginatedResponse } from '@/types/pagination';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -53,9 +54,11 @@ export interface Quotation {
   updatedAt: string;
 }
 
-export const getAllQuotations = async (): Promise<AxiosResponse<ApiResponse<Quotation[]>>> => {
+export const getAllQuotations = async (
+  params?: PaginationParams
+): Promise<AxiosResponse<ApiResponse<PaginatedResponse<Quotation>>>> => {
   try {
-    return await api.get('/quotations');
+    return await api.get('/quotations', { params });
   } catch (error) {
     return handleServiceError(error);
   }

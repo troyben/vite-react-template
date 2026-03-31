@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Image, Download, Phone, MapPin } from 'lucide-react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Plus, X, Image, Download, Phone, MapPin, Eye, ArrowLeft, LayoutTemplate } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getQuotationById, createQuotation, updateQuotation } from '../services/quotationService';
 import { getAllClients } from '../services/clientService';
 import { exportQuotationToPDF } from '../utils/pdfExport';
 import type { Client } from '../services/clientService';
 import type { QuotationItem, QuotationFormData, Quotation } from '../services/quotationService';
-import ProductSketch, { type ProductData } from '@/components/ProductSketch';
+import { ProductSketch, type ProductData } from '@/components/product-sketch';
 import ClientSelector from '@/components/ClientSelector';
+import TemplatePicker from '@/components/TemplatePicker';
 import QuotationPreviewModal from '@/components/QuotationPreviewModal';
 import MiniSketchPreview from '@/components/MiniSketchPreview';
-import '../styles/QuotationForm.css';
+import { createTemplate } from '@/services/templateService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const emptyItem: QuotationItem = {
   item: '',
@@ -46,29 +54,27 @@ const QuotationForm = () => {
   const [showClientSelector, setShowClientSelector] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState<boolean>(false);
+  const [templateTargetIndex, setTemplateTargetIndex] = useState<number>(-1);
+  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState<boolean>(false);
+  const [saveTemplateData, setSaveTemplateData] = useState<ProductData | null>(null);
+  const [templateName, setTemplateName] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
         const clientsResponse = await getAllClients();
-        
         if (isEditing && id) {
           const quotationResponse = await getQuotationById(parseInt(id));
           if (quotationResponse.data.success) {
             const quotationData = quotationResponse.data.data;
-            
-            // Parse the items JSON string into an array of objects
-            const parsedItems = typeof quotationData.items === 'string' 
-              ? JSON.parse(quotationData.items) 
+            const parsedItems = typeof quotationData.items === 'string'
+              ? JSON.parse(quotationData.items)
               : quotationData.items;
-
-            // Handle total_amount type conversion
-            const total = typeof quotationData.total_amount === 'string' 
+            const total = typeof quotationData.total_amount === 'string'
               ? parseFloat(quotationData.total_amount)
               : Number(quotationData.total_amount);
-
             setFormData({
               id: quotationData.id,
               clientId: quotationData.clientId,
@@ -77,35 +83,27 @@ const QuotationForm = () => {
               client_phone: quotationData.client_phone || '',
               client_address: quotationData.client_address || '',
               items: parsedItems,
-              total_amount: total, // Use the converted number
+              total_amount: total,
               status: quotationData.status,
               notes: quotationData.notes || ''
             });
-            
-            // Find and set the selected client
-            const clientsData = clientsResponse.data.success ? clientsResponse.data.data : [];
-            const client = clientsData.find(c => c.id === quotationData.clientId);
-            if (client) {
-              setSelectedClient(client);
-            }
+            const clientsData = clientsResponse.data.success ? clientsResponse.data.data.items : [];
+            const client = clientsData.find((c: Client) => c.id === quotationData.clientId);
+            if (client) setSelectedClient(client);
           }
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
         setError('Failed to fetch data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [id, isEditing]);
 
-  const calculateTotal = (items: QuotationItem[]): number => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-  };
+  const calculateTotal = (items: QuotationItem[]): number =>
+    items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
-  // Helper: convert value to meters based on unit
   const toMeters = (value: number, unit: string) => {
     if (unit === 'm') return value;
     if (unit === 'cm') return value / 100;
@@ -113,22 +111,11 @@ const QuotationForm = () => {
     return value;
   };
 
-  // --- Price Calculation with Rate ---
-  // Each item can have a 'rate' field, and price is calculated as L x W x Rate (L/W in meters)
   const handleItemChange = (index: number, field: keyof QuotationItem | 'rate', value: string | number) => {
-    const updatedItems = (formData.items as QuotationItem[]).map((item: QuotationItem, i: number) => {
+    const updatedItems = (formData.items as QuotationItem[]).map((item, i) => {
       if (i !== index) return item;
-
-      // Add 'rate' field to item if changed
       let updatedItem: any = { ...item, [field]: value };
-
-      // If productSketch exists and rate is set, calculate price
-      if (
-        updatedItem.productSketch &&
-        updatedItem.rate !== undefined &&
-        updatedItem.rate !== null &&
-        updatedItem.rate !== ''
-      ) {
+      if (updatedItem.productSketch && updatedItem.rate !== undefined && updatedItem.rate !== null && updatedItem.rate !== '') {
         const { width, height, unit } = updatedItem.productSketch;
         const widthM = toMeters(Number(width), unit);
         const heightM = toMeters(Number(height), unit);
@@ -137,61 +124,30 @@ const QuotationForm = () => {
           updatedItem.price = +(widthM * heightM * rate).toFixed(2);
         }
       }
-
-      // Recalculate total if quantity or price or rate changes
       if (field === 'quantity' || field === 'price' || field === 'rate') {
         updatedItem.total = updatedItem.quantity * updatedItem.price;
       }
-
       return updatedItem;
     });
-
-    setFormData({
-      ...formData,
-      items: updatedItems,
-      total_amount: calculateTotal(updatedItems)
-    });
+    setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
   };
 
   const handleAddItem = () => {
-    const updatedItems = [...(formData.items as QuotationItem[]), { ...emptyItem }];
-    setFormData({
-      ...formData,
-      items: updatedItems
-    });
+    setFormData({ ...formData, items: [...(formData.items as QuotationItem[]), { ...emptyItem }] });
   };
 
   const handleRemoveItem = (index: number) => {
-    if ((formData.items as QuotationItem[]).length <= 1) {
-      return;
-    }
-    
+    if ((formData.items as QuotationItem[]).length <= 1) return;
     const updatedItems = (formData.items as QuotationItem[]).filter((_, i) => i !== index);
-    setFormData({
-      ...formData,
-      items: updatedItems,
-      total_amount: calculateTotal(updatedItems)
-    });
+    setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
   };
 
   const handleSaveSketch = (productData: ProductData) => {
     const updatedItems = (formData.items as QuotationItem[]).map((item, i) => {
       if (i !== currentItemIndex) return item;
-      
-      return {
-        ...item,
-        productSketch: {
-          ...productData
-          // sketchSvg removed since we're using dynamic styles
-        }
-      };
+      return { ...item, productSketch: { ...productData } };
     });
-    
-    setFormData({
-      ...formData,
-      items: updatedItems
-    });
-    
+    setFormData({ ...formData, items: updatedItems });
     setShowSketchDialog(false);
     setCurrentItemIndex(-1);
   };
@@ -204,6 +160,28 @@ const QuotationForm = () => {
   const handleCancelSketch = () => {
     setShowSketchDialog(false);
     setCurrentItemIndex(-1);
+  };
+
+  const handleTemplateSelect = (productData: ProductData) => {
+    const updatedItems = (formData.items as QuotationItem[]).map((item, i) => {
+      if (i !== templateTargetIndex) return item;
+      return { ...item, productSketch: { ...productData } };
+    });
+    setFormData({ ...formData, items: updatedItems });
+    setShowTemplatePicker(false);
+    setTemplateTargetIndex(-1);
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!saveTemplateData || !templateName.trim()) return;
+    try {
+      await createTemplate({ name: templateName.trim(), sketchData: saveTemplateData });
+      setShowSaveTemplateDialog(false);
+      setSaveTemplateData(null);
+      setTemplateName('');
+    } catch (err) {
+      setError('Failed to save template. Please try again.');
+    }
   };
 
   const handleClientSelect = (client: Client) => {
@@ -219,21 +197,11 @@ const QuotationForm = () => {
     setShowClientSelector(false);
   };
 
-  const handleClientSelectorClose = () => {
-    setShowClientSelector(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedClient) {
-      setError('Please select a client first.');
-      return;
-    }
-    
+    if (!selectedClient) { setError('Please select a client first.'); return; }
     try {
       setSubmitting(true);
-      
       const quotationData: Omit<QuotationFormData, 'id'> = {
         clientId: selectedClient.id,
         client_name: selectedClient.name,
@@ -241,514 +209,513 @@ const QuotationForm = () => {
         client_phone: selectedClient.phone || '',
         client_address: selectedClient.address || '',
         items: formData.items.map(item => ({
-          item: item.item,
-          description: item.description || '',
-          quantity: item.quantity,
-          price: item.price,
-          total: item.quantity * item.price,
-          rate: item.rate, // include rate if present
-          productSketch: item.productSketch ? {
-            ...item.productSketch,
-            type: item.productSketch.type,
-            width: item.productSketch.width,
-            height: item.productSketch.height,
-            panels: item.productSketch.panels,
-            openingPanels: item.productSketch.openingPanels || [],
-            openingDirections: item.productSketch.openingDirections || {},
-            frameColor: item.productSketch.frameColor,
-            glassType: item.productSketch.glassType
-          } : undefined
+          item: item.item, description: item.description || '',
+          quantity: item.quantity, price: item.price,
+          total: item.quantity * item.price, rate: item.rate,
+          productSketch: item.productSketch ? { ...item.productSketch } : undefined
         })),
         total_amount: calculateTotal(formData.items),
-        status: 'draft',
-        notes: formData.notes || ''
+        status: 'draft', notes: formData.notes || ''
       };
-      
-      if (isEditing && id) {
-        await updateQuotation(parseInt(id), quotationData);
-      } else {
-        await createQuotation(quotationData);
-      }
-      
+      if (isEditing && id) await updateQuotation(parseInt(id), quotationData);
+      else await createQuotation(quotationData);
       navigate('/quotations');
     } catch (err) {
-      console.error('Error saving quotation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save quotation. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to save quotation.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDownloadPDF = async () => {
-    if (!formData || !selectedClient) {
-      // notify.error('Please complete the quotation before generating PDF');
-      return;
-    }
-
+    if (!formData || !selectedClient) return;
     try {
       const quotationData: Quotation = {
-        id: formData.id || Date.now(),
-        clientId: selectedClient.id,
-        client_name: selectedClient.name,
-        client_email: selectedClient.email || '', // Ensure it's never undefined
+        id: formData.id || Date.now(), clientId: selectedClient.id,
+        client_name: selectedClient.name, client_email: selectedClient.email || '',
         client_phone: selectedClient.phone || undefined,
         client_address: selectedClient.address || '',
-        items: formData.items.map(item => ({
-          ...item,
-          total: item.quantity * item.price
-        })),
-        total_amount: calculateTotal(formData.items),
-        status: formData.status,
+        items: formData.items.map(item => ({ ...item, total: item.quantity * item.price })),
+        total_amount: calculateTotal(formData.items), status: formData.status,
         notes: formData.notes || '',
         created_at: formData.created_at || new Date().toISOString(),
         updated_at: formData.updated_at || new Date().toISOString(),
         createdAt: formData.created_at || new Date().toISOString(),
         updatedAt: formData.updated_at || new Date().toISOString()
       };
-
       await exportQuotationToPDF(quotationData);
-      // notify.success('PDF generated successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      // notify.error('Failed to generate PDF');
     }
   };
 
   const handleRemoveSketch = (index: number) => {
     const updatedItems = formData.items.map((item, i) => {
-      if (i === index) {
-        const { productSketch, ...itemWithoutSketch } = item;
-        return itemWithoutSketch;
-      }
+      if (i === index) { const { productSketch, ...rest } = item; return rest; }
       return item;
     });
-    
-    setFormData({
-      ...formData,
-      items: updatedItems
-    });
+    setFormData({ ...formData, items: updatedItems });
   };
 
-  // Add this helper function near the top of the component
   const formatAmount = (amount: any): string => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
   };
 
-  const renderSketchDetails = (sketchData: ProductData) => {
-    const openingCount = sketchData.openingPanels?.length || 0;
-    const dividedPanelsCount = sketchData.panelDivisions?.length || 0;
-    const openingPanesCount = sketchData.openingPanes?.length || 0;
+  const renderSketchDetails = (sketchData: ProductData) => (
+    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">
+        {sketchData.type === 'door' ? `${sketchData.doorType} Door` : 'Window'}
+      </span>
+      <span>{sketchData.width} × {sketchData.height} {sketchData.unit}</span>
+      <span>{sketchData.panels}P • {sketchData.openingPanels?.length || 0} opening</span>
+    </div>
+  );
 
-    return (
-      <div className="sketch-details-grid">
-        <div className="sketch-details-main">
-          <div className="sketch-type">
-            {sketchData.type === 'door' ? `${sketchData.doorType} Door` : 'Window'}
-          </div>
-          <div className="sketch-dimensions">
-            {sketchData.width} × {sketchData.height} {sketchData.unit}
-          </div>
-        </div>
-        <div className="sketch-details-specs">
-          <div className="spec-item">
-            <span className="spec-label">Panels:</span>
-            <span className="spec-value">{sketchData.panels} total ({openingCount} opening)</span>
-          </div>
-          {dividedPanelsCount > 0 && (
-            <div className="spec-item">
-              <span className="spec-label">Divisions:</span>
-              <span className="spec-value">{dividedPanelsCount} panels with divisions</span>
-            </div>
-          )}
-          {openingPanesCount > 0 && (
-            <div className="spec-item">
-              <span className="spec-label">Opening Panes:</span>
-              <span className="spec-value">{openingPanesCount} panes</span>
-            </div>
-          )}
-          <div className="spec-item">
-            <span className="spec-label">Frame:</span>
-            <span className="spec-value">
-              {sketchData.frameColor === '#C0C0C0' ? 'Natural/Silver' :
-               sketchData.frameColor === '#4F4F4F' ? 'Charcoal Grey' :
-               sketchData.frameColor === '#CD7F32' ? 'Bronze' : 'Custom'}
-            </span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Glass:</span>
-            <span className="spec-value">{sketchData.glassType}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  if (loading) return <div>Loading quotation data...</div>;
+  if (loading) return <div className="p-6">Loading quotation data...</div>;
 
   return (
-    <div>
-      <div className="page-header flex flex-wrap items-center justify-between gap-3">
-        <h1 className="page-title">{isEditing ? 'Edit Quotation' : 'Create New Quotation'}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/quotations" className="btn btn-secondary">
-            Back to List
-          </Link>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setShowPreviewModal(true)}
-          >
-            View Preview
-          </button>
+    <div className="p-4 md:p-6 space-y-4">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon-sm" onClick={() => navigate('/quotations')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Quotation' : 'New Quotation'}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowPreviewModal(true)}>
+            <Eye className="h-4 w-4 mr-1.5" />
+            Preview
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+            <Download className="h-4 w-4 mr-1.5" />
+            PDF
+          </Button>
         </div>
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && (
+        <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
+      )}
 
-      <div className="quotation-form-container">
-        <div className="quotation-form" style={{ width: '100%' }}>
-          <form onSubmit={handleSubmit}>
-            <div className="client-section" style={{ width: '100%' }}>
-              <div className="section-header" style={{ alignItems: 'flex-end', gap: '16px' }}>
-                <h3>Client Information</h3>
-                <div className="select-client-btn-wrapper">
-                  <button
-                    type="button"
-                    className="btn btn-secondary select-client-btn"
-                    onClick={() => setShowClientSelector(true)}
-                  >
-                    <Plus className="w-4 h-4" style={{ marginRight: '10px' }} />
-                    {selectedClient ? 'Change Client' : 'Select Client'}
-                  </button>
-                </div>
-              </div>
-
-              {selectedClient && (
-                <div className="selected-client-summary" style={{ margin: '12px 0 20px 0', padding: '12px', background: '#f9fafe', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{selectedClient.name}</span>
-                  {selectedClient.address && (
-                    <span style={{ color: 'var(--text-light)', fontSize: '14px' }}>{selectedClient.address}</span>
-                  )}
-                  {selectedClient.phone && (
-                    <span style={{ color: 'var(--text-light)', fontSize: '14px' }}>{selectedClient.phone}</span>
-                  )}
-                </div>
-              )}
-
-              {!selectedClient && (
-                <div className="no-client-selected">
-                  <p>Please select a client to continue</p>
-                </div>
-              )}
-            </div>
-
-            <div className="items-section">
-              <div className="items-header">
-                <h3>Items</h3>
-                <button
-                  type="button"
-                  className="btn btn-secondary "
-                  onClick={handleAddItem}
-                >
-                  Add Item
-                </button>
-              </div>
-              
-              <div className="items-list">
-                {(formData.items as QuotationItem[]).map((item, index) => (
-                  <div
-                    key={index}
-                    className="item-card"
-                    style={{
-                      background: '#F9FAFE',
-                      borderRadius: 12,
-                      marginBottom: 32,
-                      boxShadow: '0 2px 8px rgba(124,93,250,0.04)',
-                      border: '1.5px solid #DFE3FA',
-                      padding: 24,
-                      position: 'relative',
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        height: '100%',
-                        width: 6,
-                        background: `linear-gradient(180deg, #7C5DFA 0%, #6247e0 100%)`,
-                        borderRadius: '12px 0 0 12px',
-                        opacity: 0.18,
-                      }}
-                    />
-                    <div className="item-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                      <span className="item-number" style={{ fontWeight: 700, color: '#7C5DFA', fontSize: 18 }}>
-                        Item #{index + 1}
+      <form onSubmit={handleSubmit}>
+        {/* Client Section - compact inline */}
+        <Card className="mb-4">
+          <CardContent className="py-3 px-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0 flex-1">
+                <span className="text-sm font-medium text-muted-foreground shrink-0">Client:</span>
+                {selectedClient ? (
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="font-semibold text-sm truncate">{selectedClient.name}</span>
+                    {selectedClient.phone && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />{selectedClient.phone}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="btn-icon-round remove-item-btn"
-                        disabled={(formData.items as QuotationItem[]).length <= 1}
-                        title="Remove this item"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-                      >
-                        <X className="w-[18px] h-[18px]" aria-hidden="true" />
-                      </button>
-                    </div>
-                    <div className="item-fields">
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Item Name *</label>
-                          <input
-                            type="text"
-                            value={item.item}
-                            onChange={(e) => handleItemChange(index, 'item', e.target.value)}
-                            className="form-control"
-                            placeholder="Enter item name"
-                            required
-                          />
-                        </div>
+                    )}
+                    {selectedClient.address && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                        <MapPin className="h-3 w-3 shrink-0" />{selectedClient.address}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground italic">No client selected</span>
+                )}
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowClientSelector(true)}>
+                {selectedClient ? 'Change' : 'Select Client'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-                        <div className="form-group">
-                          <label>Description</label>
-                          <input
-                            type="text"
-                            value={item.description}
-                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                            className="form-control"
-                            placeholder="Enter description (optional)"
-                          />
-                        </div>
-                      </div>
+        {/* Items Table */}
+        <Card>
+          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Line Items</CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add Item
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3 p-3">
+              {(formData.items as QuotationItem[]).map((item, index) => (
+                <div key={index} className="rounded-lg border bg-card p-3 space-y-3 relative">
+                  {/* Header: # + remove */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Item #{index + 1}</span>
+                    <button type="button" onClick={() => handleRemoveItem(index)}
+                      disabled={(formData.items as QuotationItem[]).length <= 1}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
 
-                      <div className="item-numbers">
-                        <div className="form-group">
-                          <label>Quantity *</label>
-                          <input
-                            type="number"
-                            // min="1"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                            className="form-control"
-                            required
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Rate (per m²)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.rate ?? ''}
-                            onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
-                            className="form-control"
-                            placeholder="Enter rate"
-                          />
-                          {item.productSketch && (
-                            <small style={{ color: '#7E88C3', fontSize: 12 }}>
-                              Area: {(() => {
-                                const { width, height, unit } = item.productSketch;
-                                const widthM = toMeters(Number(width), unit);
-                                const heightM = toMeters(Number(height), unit);
-                                if (!isNaN(widthM) && !isNaN(heightM)) {
-                                  return `${widthM.toFixed(2)}m × ${heightM.toFixed(2)}m = ${(widthM * heightM).toFixed(2)} m²`;
-                                }
-                                return '';
-                              })()}
-                            </small>
-                          )}
-                        </div>
-
-                        <div className="form-group">
-                          <label>Price *</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.price}
-                            onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
-                            className="form-control"
-                            required
-                            readOnly={(item.rate !== undefined && item.productSketch) ? true : false}
-                            style={item.rate !== undefined && item.productSketch ? { background: '#f3f3f3', color: '#888' } : {}}
-                          />
-                          {item.rate !== undefined && item.productSketch && (
-                            <small style={{ color: '#7E88C3', fontSize: 12 }}>
-                              Price = L × W × Rate
-                            </small>
-                          )}
-                        </div>
-
-                        <div className="form-group">
-                          <label>Total</label>
-                          <input
-                            type="text"
-                            value={`$${item.total ? item.total.toFixed(2) : '0.00'}`}
-                            className="form-control"
-                            readOnly
-                          />
-                        </div>
-                      </div>
-
-                      <div className="item-sketch">
-                        {item.productSketch ? (
-                          <div className="sketch-preview">
-                            <div className="sketch-preview-container">
-                              <div className="sketch-preview-specs">
-                                {renderSketchDetails(item.productSketch)}
-                              </div>
-
-                              <MiniSketchPreview sketch={item.productSketch} />
-
-                              <div className="sketch-actions">
-                                <button 
-                                  type="button"
-                                  className="btn btn-sm btn-secondary"
-                                  onClick={() => handleOpenSketch(index)}
-                                >
-                                  Edit Sketch
-                                </button>
-                                <button 
-                                  type="button"
-                                  className="btn btn-sm btn-danger"
-                                  onClick={() => handleRemoveSketch(index)}
-                                >
-                                  Clear Sketch
-                                </button>
-                              </div>
-                            </div>
+                  {/* Sketch + Item name row */}
+                  <div className="flex gap-3">
+                    {/* Sketch thumbnail */}
+                    <div className="shrink-0">
+                      {item.productSketch ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                               onClick={() => handleOpenSketch(index)}>
+                            <MiniSketchPreview sketch={item.productSketch} widthPx={60} heightPx={40} />
                           </div>
-                        ) : (
-                          <button 
-                            type="button" 
-                            className="btn btn-secondary btn-add-sketch"
-                            onClick={() => handleOpenSketch(index)}
-                          >
-                            <Image className="w-4 h-4" style={{ marginRight: '8px' }} />
-                            Add Product Sketch
+                          {renderSketchDetails(item.productSketch)}
+                          <div className="flex flex-wrap gap-1">
+                            <button type="button" onClick={() => handleOpenSketch(index)}
+                              className="text-[10px] text-primary hover:underline">Edit</button>
+                            <span className="text-muted-foreground text-[10px]">·</span>
+                            <button type="button" onClick={() => handleRemoveSketch(index)}
+                              className="text-[10px] text-destructive hover:underline">Remove</button>
+                            <span className="text-muted-foreground text-[10px]">·</span>
+                            <button type="button" onClick={() => { setSaveTemplateData(item.productSketch!); setShowSaveTemplateDialog(true); }}
+                              className="text-[10px] text-primary hover:underline">Save Template</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <button type="button" onClick={() => handleOpenSketch(index)}
+                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-2 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                            <Image className="h-3 w-3" />
+                            Sketch
                           </button>
-                        )}
+                          <button type="button" onClick={() => { setTemplateTargetIndex(index); setShowTemplatePicker(true); }}
+                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-2 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                            <LayoutTemplate className="h-3 w-3" />
+                            Template
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Item name + description */}
+                    <div className="flex-1 space-y-1.5">
+                      <Input value={item.item} onChange={(e) => handleItemChange(index, 'item', e.target.value)}
+                        placeholder="Item name" className="h-8 text-sm" required />
+                      <Input value={item.description} onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="Description" className="h-8 text-sm" />
+                    </div>
+                  </div>
+
+                  {/* Numbers: 2x2 grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Qty</Label>
+                      <Input type="number" value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                        className="h-8 text-sm" required />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Rate</Label>
+                      <Input type="number" min="0" step="0.01" value={item.rate ?? ''}
+                        onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
+                        placeholder="—" className="h-8 text-sm" />
+                      {item.productSketch && item.rate && (
+                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                          {(() => {
+                            const { width, height, unit } = item.productSketch;
+                            const w = toMeters(Number(width), unit);
+                            const h = toMeters(Number(height), unit);
+                            return !isNaN(w) && !isNaN(h) ? `${(w * h).toFixed(2)} m²` : '';
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Price</Label>
+                      <Input type="number" min="0" step="0.01" value={item.price}
+                        onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
+                        className="h-8 text-sm" required
+                        readOnly={!!(item.rate !== undefined && item.productSketch)}
+                        disabled={!!(item.rate !== undefined && item.productSketch)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Total</Label>
+                      <div className="h-8 flex items-center text-sm font-medium">
+                        {formatAmount(item.total)}
                       </div>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile add item button */}
+            <div className="md:hidden pt-2 px-3 pb-3">
+              <button type="button" onClick={handleAddItem}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors py-1">
+                <Plus className="h-3.5 w-3.5" />
+                Add another item
+              </button>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">#</TableHead>
+                  <TableHead className="w-[200px]">Sketch</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-16">Qty</TableHead>
+                  <TableHead className="w-24">Rate</TableHead>
+                  <TableHead className="w-24">Price</TableHead>
+                  <TableHead className="w-24 text-right">Total</TableHead>
+                  <TableHead className="w-10"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(formData.items as QuotationItem[]).map((item, index) => (
+                  <TableRow key={index} className="align-top">
+                    {/* Row number */}
+                    <TableCell className="text-muted-foreground font-medium pt-4">
+                      {index + 1}
+                    </TableCell>
+
+                    {/* Sketch thumbnail */}
+                    <TableCell className="pt-3">
+                      {item.productSketch ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="cursor-pointer" onClick={() => handleOpenSketch(index)}>
+                            <MiniSketchPreview sketch={item.productSketch} widthPx={120} heightPx={70} />
+                          </div>
+                          <div className="flex gap-1 justify-center">
+                            <button type="button" onClick={() => handleOpenSketch(index)}
+                              className="text-[10px] text-primary hover:underline">Edit</button>
+                            <span className="text-muted-foreground text-[10px]">·</span>
+                            <button type="button" onClick={() => handleRemoveSketch(index)}
+                              className="text-[10px] text-destructive hover:underline">Remove</button>
+                            <span className="text-muted-foreground text-[10px]">·</span>
+                            <button type="button" onClick={() => { setSaveTemplateData(item.productSketch!); setShowSaveTemplateDialog(true); }}
+                              className="text-[10px] text-primary hover:underline">Save Template</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1">
+                          <button type="button" onClick={() => handleOpenSketch(index)}
+                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-1.5 py-1 text-[10px] text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                            <Image className="h-3 w-3" />
+                            Sketch
+                          </button>
+                          <button type="button" onClick={() => { setTemplateTargetIndex(index); setShowTemplatePicker(true); }}
+                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-1.5 py-1 text-[10px] text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                            <LayoutTemplate className="h-3 w-3" />
+                            Template
+                          </button>
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Item name */}
+                    <TableCell className="pt-3">
+                      <Input
+                        value={item.item}
+                        onChange={(e) => handleItemChange(index, 'item', e.target.value)}
+                        placeholder="Item name"
+                        className="h-8 text-sm"
+                        required
+                      />
+                    </TableCell>
+
+                    {/* Description */}
+                    <TableCell className="pt-3">
+                      <Input
+                        value={item.description ?? ''}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="Add description..."
+                        className="h-8 text-sm"
+                      />
+                    </TableCell>
+
+                    {/* Qty */}
+                    <TableCell className="pt-3">
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                        className="h-8 text-sm w-16"
+                        required
+                      />
+                    </TableCell>
+
+                    {/* Rate */}
+                    <TableCell className="pt-3">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.rate ?? ''}
+                        onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
+                        placeholder="—"
+                        className="h-8 text-sm w-24"
+                      />
+                      {item.productSketch && item.rate && (
+                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                          {(() => {
+                            const { width, height, unit } = item.productSketch;
+                            const w = toMeters(Number(width), unit);
+                            const h = toMeters(Number(height), unit);
+                            return !isNaN(w) && !isNaN(h) ? `${(w * h).toFixed(2)} m²` : '';
+                          })()}
+                        </span>
+                      )}
+                    </TableCell>
+
+                    {/* Price */}
+                    <TableCell className="pt-3">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.price}
+                        onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
+                        className="h-8 text-sm w-24"
+                        required
+                        readOnly={!!(item.rate !== undefined && item.productSketch)}
+                        disabled={!!(item.rate !== undefined && item.productSketch)}
+                      />
+                    </TableCell>
+
+                    {/* Total */}
+                    <TableCell className="pt-4 text-right font-medium">
+                      {formatAmount(item.total)}
+                    </TableCell>
+
+                    {/* Remove */}
+                    <TableCell className="pt-3">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                        disabled={(formData.items as QuotationItem[]).length <= 1}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </div>
-              
-              <button type="button" onClick={handleAddItem} className="btn btn-secondary add-item-btn-full" style={{marginTop: '16px', width: '100%' }}>
-                <Plus className="w-3.5 h-3.5" style={{ marginRight: '8px' }} />
-                Add Another Item
+              </TableBody>
+            </Table>
+
+            {/* Add item row */}
+            <div className="border-t px-4 py-2">
+              <button type="button" onClick={handleAddItem}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors py-1">
+                <Plus className="h-3.5 w-3.5" />
+                Add another item
               </button>
             </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => navigate('/quotations')}
-              >
+        {/* Notes + Total + Actions */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6 mt-4">
+          <div className="flex-1 md:max-w-md w-full">
+            <Label htmlFor="notes" className="text-sm mb-1.5">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes || ''}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Additional notes (optional)"
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+          <div className="flex flex-col items-start md:items-end gap-3 w-full md:w-auto">
+            <div className="text-left md:text-right">
+              <span className="text-sm text-muted-foreground">Total Amount</span>
+              <div className="text-2xl font-bold">{formatAmount(formData.total_amount)}</div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => navigate('/quotations')}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={submitting}
-              >
-                {submitting ? 'Saving...' : isEditing ? 'Update Quotation' : 'Create Quotation'}
-              </button>
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Saving...' : isEditing ? 'Update Quotation' : 'Save Quotation'}
+              </Button>
             </div>
-          </form>
+          </div>
         </div>
+      </form>
 
-        {/* Preview Modal */}
-        <QuotationPreviewModal open={showPreviewModal} onClose={() => setShowPreviewModal(false)}>
-          {/* --- Place the preview content here (copied from the old right-side preview) --- */}
-          <div className="quotation-preview">
-            <div className="preview-header">
-              <h2 className="preview-title">Preview</h2>
-              <div className="preview-actions">
-                <button onClick={handleDownloadPDF} className="btn btn-secondary">
-                  <Download className="w-4 h-4" style={{ marginRight: '8px' }} />
-                  Download PDF
-                </button>
+      {/* Modals */}
+      <QuotationPreviewModal open={showPreviewModal} onClose={() => setShowPreviewModal(false)}>
+        <div className="quotation-preview">
+          <div className="preview-header">
+            <h2 className="preview-title">Preview</h2>
+            <div className="preview-actions">
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+                <Download className="w-4 h-4 mr-1.5" />
+                Download PDF
+              </Button>
+            </div>
+          </div>
+          <div className="preview-content">
+            <div className="preview-section">
+              <div className="preview-section-title">Quotation</div>
+              <div className="preview-client">
+                <div className="preview-client-name">{selectedClient?.name || 'Client Name'}</div>
+                {selectedClient?.phone && (
+                  <div className="preview-client-detail">
+                    <Phone className="preview-icon w-4 h-4" />
+                    <div>{selectedClient.phone}</div>
+                  </div>
+                )}
+                {selectedClient?.address && (
+                  <div className="preview-client-detail">
+                    <MapPin className="preview-icon w-4 h-4" />
+                    <div>{selectedClient.address}</div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="preview-content">
-              <div className="preview-section">
-                <div className="preview-section-title">Quotation</div>
-                <div className="preview-client">
-                  <div className="preview-client-name">{selectedClient?.name || 'Client Name'}</div>
-                  
-                  {selectedClient?.phone && (
-                    <div className="preview-client-detail">
-                      <Phone className="preview-icon w-4 h-4" />
-                      <div className="preview-client-phone">{selectedClient.phone}</div>
-                    </div>
-                  )}
-                  
-                  {selectedClient?.address && (
-                    <div className="preview-client-detail">
-                      <MapPin className="preview-icon w-4 h-4" />
-                      <div className="preview-client-address">{selectedClient.address}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="preview-section">
-                <div className="preview-section-title">Items</div>
-                <table className="preview-items">
-                  <thead>
-                    <tr>
-                      <th>Item</th>
-                      <th>Qty</th>
-                      <th>Price</th>
-                      <th className="text-right">Total</th>
+            <div className="preview-section">
+              <div className="preview-section-title">Items</div>
+              <table className="preview-items">
+                <thead>
+                  <tr><th>Item</th><th>Qty</th><th>Price</th><th className="text-right">Total</th></tr>
+                </thead>
+                <tbody>
+                  {(formData.items as QuotationItem[]).map((item, index) => (
+                    <tr key={index}>
+                      <td>
+                        <div>{item.item || 'Item name'}</div>
+                        {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
+                        {item.productSketch && (
+                          <div className="mt-2">
+                            <MiniSketchPreview sketch={item.productSketch} widthPx={200} heightPx={100} />
+                          </div>
+                        )}
+                      </td>
+                      <td>{item.quantity}</td>
+                      <td>${item.price.toFixed(2)}</td>
+                      <td className="text-right">{formatAmount(item.total)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {(formData.items as QuotationItem[]).map((item, index) => (
-                      <tr key={index}>
-                        <td>
-                          <div>{item.item || 'Item name'}</div>
-                          <div style={{ color: 'var(--text-light)', fontSize: '14px'}}>{item.description}</div>
-                          <br />
-                          {item.productSketch && (
-                            <div className="preview-sketch">
-                              <div className="preview-sketch-container">
-                                <div className="preview-sketch-info">
-                                  {renderSketchDetails(item.productSketch)}
-                                </div>
-
-                                <MiniSketchPreview sketch={item.productSketch} />
-                                
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                        <td>{item.quantity}</td>
-                        <td>${item.price.toFixed(2)}</td>
-                        <td className="text-right">{formatAmount(item.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                
-                <div className="preview-total">
-                  <div className="preview-total-label">Total Amount</div>
-                  <div className="preview-total-value">{formatAmount(formData.total_amount)}</div>
-                </div>
+                  ))}
+                </tbody>
+              </table>
+              <div className="preview-total">
+                <div className="preview-total-label">Total Amount</div>
+                <div className="preview-total-value">{formatAmount(formData.total_amount)}</div>
               </div>
             </div>
           </div>
-        </QuotationPreviewModal>
+        </div>
+      </QuotationPreviewModal>
 
       {showClientSelector && (
         <ClientSelector
           onSelect={handleClientSelect}
           selectedClient={selectedClient}
-          onClose={handleClientSelectorClose}
+          onClose={() => setShowClientSelector(false)}
         />
       )}
 
@@ -758,16 +725,40 @@ const QuotationForm = () => {
             onSave={handleSaveSketch}
             onCancel={handleCancelSketch}
             initialData={((formData.items as QuotationItem[])[currentItemIndex]?.productSketch as ProductData) || {
-              type: 'window',
-              width: 100,
-              height: 100,
-              panels: 1,
-              doorType: 'traditional'
+              type: 'window', width: 100, height: 100, panels: 1, doorType: 'traditional'
             }}
           />
         </div>
       )}
-    </div>
+
+      {showTemplatePicker && (
+        <TemplatePicker
+          onSelect={handleTemplateSelect}
+          onClose={() => { setShowTemplatePicker(false); setTemplateTargetIndex(-1); }}
+        />
+      )}
+
+      <Dialog open={showSaveTemplateDialog} onOpenChange={setShowSaveTemplateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="Template name"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowSaveTemplateDialog(false); setSaveTemplateData(null); setTemplateName(''); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAsTemplate} disabled={!templateName.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -3,8 +3,6 @@ import { useSettings } from '@/hooks/useSettings';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import ProfileForm from '@/components/settings/ProfileForm';
 import PasswordForm from '@/components/settings/PasswordForm';
-import '@/styles/variables.css';
-import '@/styles/Settings.css';
 
 const Settings = () => {
   const {
@@ -25,36 +23,34 @@ const Settings = () => {
   } = useSettings();
 
   if (loading) return <ScreenLoader isLoading={true} />;
-  if (error) return <div className="error">{error}</div>;
-  if (!profileData) return <div>No profile data available</div>;
+  if (error) return <div className="p-6 text-destructive">{error}</div>;
+  if (!profileData) return <div className="p-6 text-muted-foreground">No profile data available</div>;
 
   return (
-    <div className="settings-page">
+    <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl font-bold">Profile Settings</CardTitle>
+          <CardTitle className="text-lg font-bold sm:text-xl">Profile Settings</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="settings-content">
-            <ProfileForm
-              profileData={profileData}
-              avatarPreview={avatarPreview}
-              loading={loading}
-              submitting={submitting}
-              success={success}
-              onChange={handleChange}
-              onAvatarChange={handleAvatarChange}
-              onSubmit={handleSubmit}
-            />
-            <PasswordForm
-              showPasswordForm={showPasswordForm}
-              passwordData={passwordData}
-              submitting={submitting}
-              onToggle={togglePasswordForm}
-              onChange={handlePasswordChange}
-              onSubmit={handlePasswordSubmit}
-            />
-          </div>
+        <CardContent className="space-y-6">
+          <ProfileForm
+            profileData={profileData}
+            avatarPreview={avatarPreview}
+            loading={loading}
+            submitting={submitting}
+            success={success}
+            onChange={handleChange}
+            onAvatarChange={handleAvatarChange}
+            onSubmit={handleSubmit}
+          />
+          <PasswordForm
+            showPasswordForm={showPasswordForm}
+            passwordData={passwordData}
+            submitting={submitting}
+            onToggle={togglePasswordForm}
+            onChange={handlePasswordChange}
+            onSubmit={handlePasswordSubmit}
+          />
         </CardContent>
       </Card>
     </div>

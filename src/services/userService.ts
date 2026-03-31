@@ -1,6 +1,7 @@
 import api from '../api';
 import { AxiosResponse } from 'axios';
 import { handleServiceError } from '../utils/errorHandling';
+import type { PaginationParams, PaginatedResponse } from '@/types/pagination';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -15,9 +16,11 @@ export interface User {
   role: 'admin' | 'user' | 'client';
 }
 
-export const getAllUsers = async (): Promise<AxiosResponse<ApiResponse<User[]>>> => {
+export const getAllUsers = async (
+  params?: PaginationParams
+): Promise<AxiosResponse<ApiResponse<PaginatedResponse<User>>>> => {
   try {
-    return await api.get('/users');
+    return await api.get('/users', { params });
   } catch (error) {
     return handleServiceError(error);
   }

@@ -136,7 +136,7 @@ export function UserFormDialog({
             </div>
           )}
           {formError && (
-            <div style={{ color: '#EC5757' }}>{formError}</div>
+            <div className="text-sm text-destructive">{formError}</div>
           )}
           <DialogFooter>
             <Button type="submit">

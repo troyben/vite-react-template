@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { getAllClients, createClient, Client } from '../services/clientService';
-import '../styles/ClientSelector.css';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 interface ClientSelectorProps {
   onSelect: (client: Client) => void;
   selectedClient: Client | null;
-  onClose: () => void;  // Add onClose prop
+  onClose: () => void;
 }
 
 const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClient, onClose }) => {
@@ -17,7 +20,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
     email: '',
     phone: '',
     company: '',
-    address: '' // Add address field
+    address: ''
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +33,8 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
     const fetchClients = async () => {
       try {
         setLoading(true);
-        const response = await getAllClients();
-        setClients(response.data.success ? response.data.data : []);
+        const response = await getAllClients({ limit: 100 });
+        setClients(response.data.success ? response.data.data.items : []);
       } catch (err) {
         if (!isAuthError(err)) {
           console.error('Error fetching clients:', err);
@@ -45,7 +48,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
     fetchClients();
   }, []);
 
-  const filteredClients = clients.filter(client => 
+  const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
     (client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
@@ -57,7 +60,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
       if (!newClient.name || !newClient.phone || !newClient.address) {
         throw new Error('Name, phone and address are required');
       }
-      
+
       const clientData = {
         name: newClient.name,
         address: newClient.address,
@@ -70,13 +73,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
       if (response.data.success) {
         setClients(prev => [...prev, response.data.data]);
         setShowNewClientForm(false);
-        setNewClient({
-          name: '',
-          email: '',
-          phone: '',
-          company: '',
-          address: '' // Add address field reset
-        });
+        setNewClient({ name: '', email: '', phone: '', company: '', address: '' });
       }
     } catch (err) {
       console.error('Error creating client:', err);
@@ -86,25 +83,37 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setNewClient(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setNewClient(prev => ({ ...prev, [name]: value }));
   };
 
-  if (loading) return <div className="modal-overlay"><div className="client-selector">Loading clients...</div></div>;
-  if (error) return <div className="modal-overlay"><div className="client-selector error">{error}</div></div>;
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="rounded-lg bg-card p-6 text-card-foreground">Loading clients...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="rounded-lg bg-card p-6 text-destructive">{error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="modal-overlay">
-      <div className="client-selector">
-        <div className="client-selector-header">
-          <h2>Select Client</h2>
-          <button className="close-button" onClick={onClose}>✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-lg">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Select Client</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
-        <div className="client-search">
-          <input
+        <div className="mb-4">
+          <Input
             type="text"
             placeholder="Search clients by name, email, or company..."
             value={searchTerm}
@@ -112,61 +121,60 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
           />
         </div>
 
-        <div className="client-list">
+        <div className="mb-4 max-h-64 space-y-1 overflow-y-auto">
           {filteredClients.length > 0 ? filteredClients.map(client => (
             <div
               key={client.id}
-              className={`client-item ${selectedClient?.id === client.id ? 'selected' : ''}`}
+              className={`cursor-pointer rounded-md p-3 transition-colors hover:bg-muted ${
+                selectedClient?.id === client.id ? 'border border-primary bg-primary/5' : ''
+              }`}
               onClick={() => onSelect(client)}
             >
-              <h4>{client.name}</h4>
-              {client.phone && <p><strong>Phone:</strong> {client.phone}</p>}
+              <h4 className="text-sm font-medium">{client.name}</h4>
+              {client.phone && <p className="text-xs text-muted-foreground">Phone: {client.phone}</p>}
             </div>
           )) : (
-            <div className="no-results">No clients found matching "{searchTerm}"</div>
+            <div className="py-4 text-center text-sm text-muted-foreground">
+              No clients found matching "{searchTerm}"
+            </div>
           )}
         </div>
 
         {!showNewClientForm ? (
-        <button
-          className="btn-secondary"
-          onClick={() => setShowNewClientForm(true)}
-        >
-          Add New Client
-        </button>
-      ) : (
-        <div className="new-client-form">
-          <h3>Add New Client</h3>
-          <form onSubmit={handleNewClientSubmit}>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="name">Full Name *</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={newClient.name}
-                  onChange={handleInputChange}
-                  required
-                />
+          <Button variant="outline" className="w-full" onClick={() => setShowNewClientForm(true)}>
+            Add New Client
+          </Button>
+        ) : (
+          <div className="space-y-4 rounded-md border p-4">
+            <h3 className="text-sm font-semibold">Add New Client</h3>
+            <form onSubmit={handleNewClientSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={newClient.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone *</Label>
+                  <Input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={newClient.phone}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="phone">Phone *</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={newClient.phone}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="address">Address *</label>
-                <input
+              <div className="grid gap-2">
+                <Label htmlFor="address">Address *</Label>
+                <Input
                   type="text"
                   id="address"
                   name="address"
@@ -175,24 +183,16 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
                   required
                 />
               </div>
-            </div>
-
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setShowNewClientForm(false)}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="btn-primary">
-                Create Client
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowNewClientForm(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create Client</Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

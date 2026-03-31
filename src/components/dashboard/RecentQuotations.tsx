@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { buttonVariants } from '@/components/ui/button';
+import { StatusBadge } from '@/components/quotations/StatusBadge';
 import type { Quotation } from '@/services/quotationService';
 import type { Client } from '@/services/clientService';
-import { formatCurrency, getStatusClass, statusMap } from '@/hooks/useDashboardData';
+import { formatCurrency } from '@/hooks/useDashboardData';
 
 interface RecentQuotationsProps {
   quotations: Quotation[];
@@ -11,42 +14,42 @@ interface RecentQuotationsProps {
 
 export function RecentQuotations({ quotations, clients }: RecentQuotationsProps) {
   return (
-    <div className="recent-quotations">
-      <div className="section-header">
-        <h2>Recent Quotations</h2>
-        <Link to="/quotations" className="view-all-button">
-          View All Quotations
-          <ArrowRight className="w-5 h-5" />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Recent Quotations</CardTitle>
+        <Link to="/quotations" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          View All
         </Link>
-      </div>
-      {quotations.length === 0 ? (
-        <p>No quotations found.</p>
-      ) : (
-        <div className="recent-quotations-list">
-          {quotations.map(quotation => (
-            <Link to={`/quotations/${quotation.id}`} key={quotation.id} className="recent-quotation-item">
-              <div className="quotation-item-left">
-                <div className="quotation-id">
-                  <span>#</span>{quotation.id.toString().padStart(6, '0')}
-                </div>
-                <div className="quotation-client">
-                  {clients[quotation.clientId]?.name || 'Loading...'}
-                </div>
-              </div>
-
-              <div className="quotation-item-right">
-                <div className="quotation-amount">
-                  {formatCurrency(quotation.total_amount)}
-                </div>
-                <div className={`quotation-status ${getStatusClass(quotation.status)}`}>
-                  <div className="status-circle"></div>
-                  {statusMap[quotation.status as keyof typeof statusMap]}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        {quotations.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No quotations found.</p>
+        ) : (
+          <Table>
+            <TableBody>
+              {quotations.map(quotation => (
+                <TableRow key={quotation.id}>
+                  <TableCell className="font-medium">
+                    <Link to={`/quotations/${quotation.id}`} className="hover:underline">
+                      <span className="text-muted-foreground">#</span>
+                      {quotation.id.toString().padStart(6, '0')}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {clients[quotation.clientId]?.name || 'Loading...'}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(quotation.total_amount)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <StatusBadge status={quotation.status} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }

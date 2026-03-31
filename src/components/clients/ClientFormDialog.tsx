@@ -34,9 +34,9 @@ export function ClientFormDialog({
             {editingClient ? 'Edit Client' : 'Add New Client'}
           </DialogTitle>
         </DialogHeader>
-        <form className="client-form" onSubmit={onSubmit}>
-          <div className="form-row">
-            <div className="form-group">
+        <form className="space-y-4" onSubmit={onSubmit}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
               <Label htmlFor="name">Full Name *</Label>
               <Input
                 id="name"
@@ -46,7 +46,7 @@ export function ClientFormDialog({
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="grid gap-2">
               <Label htmlFor="phone">Phone *</Label>
               <Input
                 id="phone"
@@ -57,7 +57,7 @@ export function ClientFormDialog({
               />
             </div>
           </div>
-          <div className="form-group">
+          <div className="grid gap-2">
             <Label htmlFor="address">Address *</Label>
             <Textarea
               id="address"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProductData } from './ProductSketch';
+import { ProductData } from './product-sketch';
 
 interface SketchPreviewMiniProps {
   data: ProductData;

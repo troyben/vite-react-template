@@ -1,5 +1,6 @@
 import React from 'react';
-import { ProductData } from './ProductSketch';
+import { ProductData } from './product-sketch';
+import { getShapeClipPath, getShapeSVGPath } from '@/utils/shapeClipPath';
 
 interface MiniSketchPreviewProps {
   sketch?: ProductData;
@@ -31,84 +32,90 @@ const renderMiniPreviewDimensionLines = (sketch: ProductData, widthPx: number, h
   const widths = panelWidths && panelWidths.length === panelCount ? panelWidths : Array(panelCount).fill(1);
   const total = widths.reduce((a, b) => a + b, 0);
   let x = 0;
-  const arrowOffset = 10;
 
-    console.log('Rendering: ', sketch);
-
+  // Scale all offsets and font sizes proportionally based on sketch size
+  const isSmall = widthPx <= 150;
+  const margin = isSmall ? 30 : 40;
+  const marginTop = isSmall ? 15 : 30;
+  const arrowOffset = isSmall ? 5 : 10;
+  const tickLen = isSmall ? 4 : 8;
+  const fontSize = pdfMode ? 14 : isSmall ? 7 : 11;
+  const fontSizeLg = pdfMode ? 16 : isSmall ? 8 : 13;
+  const fontWeight = isSmall ? 500 : 700;
+  const strokeW = isSmall ? 0.75 : 1.5;
+  const tickStrokeW = isSmall ? 0.5 : 1;
+  const markerSize = isSmall ? 4 : 6;
 
   // For vertical panel heights (if panelDivisionHeights is present)
   let verticalTicks: any[] = [];
   if (panelDivisions && panelDivisionHeights && panelDivisionHeights.length) {
-    // Use the first panel's rowHeights for vertical ticks (assuming all panels are the same)
     const firstPanelHeights = panelDivisionHeights[0]?.rowHeights || [];
     const totalHeight = firstPanelHeights.reduce((a, b) => a + b, 0);
-    let y = 40;
+    let y = margin;
     for (let i = 0; i < firstPanelHeights.length; i++) {
       const h = firstPanelHeights[i];
       const hPx = (h / totalHeight) * heightPx;
-      // Center the label horizontally to the drawing
       verticalTicks.push(
         <g key={i}>
-          <line x1={32} y1={y} x2={40} y2={y} stroke="#7E88C3" strokeWidth={1} />
-          <text x={40 + widthPx / 2} y={y - (pdfMode ? 12 : 8)} textAnchor="middle" fontSize={pdfMode ? 14 : 11} fill="#7E88C3" fontWeight="bold">{h} {unit}</text>
+          <line x1={margin - tickLen} y1={y} x2={margin} y2={y} stroke="#7E88C3" strokeWidth={tickStrokeW} />
+          <text x={margin + widthPx / 2} y={y - (isSmall ? 3 : 8)} textAnchor="middle" fontSize={fontSize} fill="#7E88C3" fontWeight={fontWeight}>{h} {unit}</text>
         </g>
       );
       y += hPx;
     }
-    // End tick
-    verticalTicks.push(<line key="end" x1={32} y1={y} x2={40} y2={y} stroke="#7E88C3" strokeWidth={1} />);
+    verticalTicks.push(<line key="end" x1={margin - tickLen} y1={y} x2={margin} y2={y} stroke="#7E88C3" strokeWidth={tickStrokeW} />);
   }
 
   return (
     <svg
-      width={widthPx + 40}
-      height={heightPx + 60}
+      width={widthPx + margin}
+      height={heightPx + margin + marginTop}
       style={{
         position: 'absolute',
-        left: -40,
-        top: -30,
+        left: -margin,
+        top: -marginTop,
         pointerEvents: 'none',
         zIndex: 20
       }}
     >
       {/* Horizontal (top) dimension line */}
-      <line x1={40 + arrowOffset} y1={18} x2={40 + widthPx - arrowOffset} y2={18} stroke="#7E88C3" strokeWidth={1.5} markerStart="url(#arrowLeft)" markerEnd="url(#arrowRight)" />
+      <line x1={margin + arrowOffset} y1={marginTop * 0.6} x2={margin + widthPx - arrowOffset} y2={marginTop * 0.6} stroke="#7E88C3" strokeWidth={strokeW} markerStart="url(#arrowLeft)" markerEnd="url(#arrowRight)" />
       {/* Top ticks and panel width labels */}
       {widths.map((w, i) => {
         const px = (w / total) * widthPx;
-        const left = 40 + x;
+        const left = margin + x;
         x += px;
         return (
           <g key={i}>
-            <line x1={left} y1={10} x2={left} y2={26} stroke="#7E88C3" strokeWidth={1} />
-            <text x={left + px / 2} y={pdfMode ? 2 : 10} textAnchor="middle" fontSize={pdfMode ? 14 : 11} fill="#7E88C3" fontWeight="bold">{w} {unit}</text>
+            <line x1={left} y1={marginTop * 0.6 - tickLen / 2} x2={left} y2={marginTop * 0.6 + tickLen / 2} stroke="#7E88C3" strokeWidth={tickStrokeW} />
+            <text x={left + px / 2} y={marginTop * 0.6 - tickLen} textAnchor="middle" fontSize={fontSize} fill="#7E88C3" fontWeight={fontWeight}>{w} {unit}</text>
           </g>
         );
       })}
       {/* End tick */}
-      <line x1={40 + widthPx} y1={10} x2={40 + widthPx} y2={26} stroke="#7E88C3" strokeWidth={1} />
+      <line x1={margin + widthPx} y1={marginTop * 0.6 - tickLen / 2} x2={margin + widthPx} y2={marginTop * 0.6 + tickLen / 2} stroke="#7E88C3" strokeWidth={tickStrokeW} />
       {/* Bottom (overall width) dimension line */}
-      <line x1={40 + arrowOffset} y1={heightPx + 40} x2={40 + widthPx - arrowOffset} y2={heightPx + 40} stroke="#7E88C3" strokeWidth={1.5} markerStart="url(#arrowLeft)" markerEnd="url(#arrowRight)" />
-      <text x={40 + widthPx / 2} y={heightPx + (pdfMode ? 60 : 56)} textAnchor="middle" fontSize={pdfMode ? 16 : 13} fill="#7E88C3" fontWeight="bold">{width} {unit}</text>
-     
+      <line x1={margin + arrowOffset} y1={heightPx + margin} x2={margin + widthPx - arrowOffset} y2={heightPx + margin} stroke="#7E88C3" strokeWidth={strokeW} markerStart="url(#arrowLeft)" markerEnd="url(#arrowRight)" />
+      <text x={margin + widthPx / 2} y={heightPx + margin + (isSmall ? 10 : 16)} textAnchor="middle" fontSize={fontSizeLg} fill="#7E88C3" fontWeight={fontWeight}>{width} {unit}</text>
+
       {/* Left (vertical) dimension line */}
-      <line x1={32} y1={30 + arrowOffset} x2={32} y2={heightPx + 30 - arrowOffset} stroke="#7E88C3" strokeWidth={1.5} markerStart="url(#varrowTop)" markerEnd="url(#varrowBottom)" />
+      <line x1={margin - tickLen * 1.5} y1={marginTop + arrowOffset} x2={margin - tickLen * 1.5} y2={heightPx + marginTop - arrowOffset} stroke="#7E88C3" strokeWidth={strokeW} markerStart="url(#varrowTop)" markerEnd="url(#varrowBottom)" />
 
       {/* Vertical panel heights and labels */}
       {verticalTicks}
-      <text x={18} y={heightPx / 2 + 40} textAnchor="middle" fontSize={pdfMode ? 14 : 11} fill="#7E88C3" fontWeight="bold" transform={`rotate(-90, 18, ${heightPx / 2 + 40})`}>{height} {unit}</text>
+      <text x={isSmall ? 10 : 18} y={marginTop + heightPx / 2} textAnchor="middle" fontSize={fontSize} fill="#7E88C3" fontWeight={fontWeight} transform={`rotate(-90, ${isSmall ? 10 : 18}, ${marginTop + heightPx / 2})`}>{height} {unit}</text>
       <defs>
-        <marker id="arrowLeft" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M6,0 L0,3 L6,6" fill="#7E88C3" />
+        <marker id="arrowLeft" markerWidth={markerSize} markerHeight={markerSize} refX={markerSize} refY={markerSize / 2} orient="auto" markerUnits="strokeWidth">
+          <path d={`M${markerSize},0 L0,${markerSize / 2} L${markerSize},${markerSize}`} fill="#7E88C3" />
         </marker>
-        <marker id="arrowRight" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L6,3 L0,6" fill="#7E88C3" />
+        <marker id="arrowRight" markerWidth={markerSize} markerHeight={markerSize} refX="0" refY={markerSize / 2} orient="auto" markerUnits="strokeWidth">
+          <path d={`M0,0 L${markerSize},${markerSize / 2} L0,${markerSize}`} fill="#7E88C3" />
         </marker>
-        <marker id="varrowTop" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M6,0 L0,3 L6,6" fill="#7E88C3" />
+        <marker id="varrowTop" markerWidth={markerSize} markerHeight={markerSize} refX={markerSize} refY={markerSize / 2} orient="auto" markerUnits="strokeWidth">
+          <path d={`M${markerSize},0 L0,${markerSize / 2} L${markerSize},${markerSize}`} fill="#7E88C3" />
         </marker>
-        <marker id="varrowBottom" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L6,3 L0,6" fill="#7E88C3" />
+        <marker id="varrowBottom" markerWidth={markerSize} markerHeight={markerSize} refX="0" refY={markerSize / 2} orient="auto" markerUnits="strokeWidth">
+          <path d={`M0,0 L${markerSize},${markerSize / 2} L0,${markerSize}`} fill="#7E88C3" />
         </marker>
       </defs>
     </svg>
@@ -317,22 +324,56 @@ const MiniSketchPreview: React.FC<MiniSketchPreviewProps> = ({ sketch, widthPx =
       : Array(panelCount).fill(1);
   const total = panelWidths.reduce((a, b) => a + b, 0);
   const flexes = panelWidths.map((w) => w / total);
+  const isSmall = widthPx <= 150;
+  const outerMarginTop = pdfMode ? 25 : isSmall ? 18 : 25;
+  const outerMarginBottom = pdfMode ? 25 : isSmall ? 28 : 25;
+  const outerMarginX = isSmall ? 10 : 0;
+  const isNonRect = sketch.shape && sketch.shape.type !== 'rectangle';
+  const svgFramePath = isNonRect ? getShapeSVGPath(sketch.shape, widthPx, heightPx) : null;
+
   return (
-    <div style={{ position: 'relative', width: widthPx, height: heightPx, margin: '25px auto', background: '#fff' }}>
+    <div style={{ position: 'relative', width: widthPx, height: heightPx, margin: `${outerMarginTop}px auto ${outerMarginBottom}px`, marginLeft: outerMarginX, background: '#fff' }}>
       {!pdfMode && renderMiniPreviewDimensionLines(sketch, widthPx, heightPx, pdfMode)}
       <div
         style={{
           display: 'flex',
           width: widthPx,
           height: heightPx,
-          border: `2px solid ${frameColor}`,
-          borderRadius: 0,
-          background: frameColor === '#C0C0C0' ? '#E5E5E5' : frameColor,
+          border: isNonRect ? 'none' : `2px solid ${frameColor}`,
+          borderRadius: sketch.shape?.type === 'arch'
+            ? `${(sketch.shape.archHeight ?? heightPx * 0.3)}px ${(sketch.shape.archHeight ?? heightPx * 0.3)}px 0 0`
+            : 0,
+          background: isNonRect ? 'transparent' : (frameColor === '#C0C0C0' ? '#E5E5E5' : frameColor),
           boxSizing: 'border-box',
           position: 'relative',
-          zIndex: 0
+          zIndex: 0,
+          clipPath: isNonRect
+            ? getShapeClipPath(sketch.shape, widthPx, heightPx)
+            : undefined,
         }}
       >
+        {/* SVG frame overlay for non-rectangular shapes */}
+        {svgFramePath && (
+          <svg
+            width={widthPx}
+            height={heightPx}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          >
+            <path
+              d={svgFramePath}
+              fill="none"
+              stroke={frameColor}
+              strokeWidth={isSmall ? 3 : 4}
+              strokeLinejoin="miter"
+            />
+          </svg>
+        )}
         {Array.from({ length: panelCount }).map((_, i) => (
           <div
             key={i}

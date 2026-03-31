@@ -19,37 +19,11 @@ export function useScreenLoader() {
 export function ScreenLoader({ isLoading }: { isLoading: boolean }) {
   if (!isLoading) return null;
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      background: 'rgba(255,255,255,0.7)',
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '2rem',
-      color: '#333',
-      transition: 'opacity 0.2s',
-    }}>
-      <div className="loader-spinner" style={{
-        border: '8px solid #f3f3f3',
-        borderTop: '8px solid #3498db',
-        borderRadius: '50%',
-        width: 60,
-        height: 60,
-        animation: 'spin 1s linear infinite',
-        marginRight: 20
-      }} />
-      Loading...
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+        <span className="text-sm font-medium">Loading...</span>
+      </div>
     </div>
   );
 }

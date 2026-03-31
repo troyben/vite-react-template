@@ -10,20 +10,6 @@ export const statusMap: Record<string, string> = {
   'paid': 'Paid',
 };
 
-export function getStatusClass(status: string): string {
-  const mappedStatus = statusMap[status as keyof typeof statusMap];
-  if (!mappedStatus) return '';
-
-  const uiStatus = mappedStatus.toLowerCase();
-  switch (uiStatus) {
-    case 'pending': return 'status-pending';
-    case 'paid': return 'status-paid';
-    case 'draft': return 'status-draft';
-    case 'rejected': return 'status-rejected';
-    default: return '';
-  }
-}
-
 export function formatCurrency(amount: any): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
@@ -69,15 +55,22 @@ export function useDashboardData(): DashboardData {
       try {
         setLoading(true);
         const [quotationsRes, clientsRes] = await Promise.all([
-          getAllQuotations(),
-          getAllClients(),
+          getAllQuotations({ limit: 100 }),
+          getAllClients({ limit: 100 }),
         ]);
 
-        // Correctly access the nested data property
-        setQuotations(quotationsRes.data.success ? quotationsRes.data.data : []);
+        // Unwrap paginated response: { items: T[], pagination: {...} }
+        const quotationItems = quotationsRes.data.success
+          ? quotationsRes.data.data.items
+          : [];
+        setQuotations(quotationItems);
+
+        const clientItems = clientsRes.data.success
+          ? clientsRes.data.data.items
+          : [];
 
         // Create a map of clientId to client for easy lookup
-        const clientMap = (clientsRes.data.success ? clientsRes.data.data : []).reduce(
+        const clientMap = clientItems.reduce(
           (acc, client) => {
             acc[client.id] = client;
             return acc;
