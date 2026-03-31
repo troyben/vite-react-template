@@ -13,6 +13,7 @@ interface PanelDivisionsProps {
     rowIndex: number;
     colIndex: number;
     openingDirection?: OpeningDirection;
+    openingType?: 'hinged' | 'sliding';
   }>;
   openingPanels: number[];
   type: 'window' | 'door';
@@ -78,8 +79,8 @@ const PanelDivisions: React.FC<PanelDivisionsProps> = ({
 
         const getTransform = () => {
           if (!openingPane?.openingDirection) return 'none';
-          // Sliding effect for sliding door or window pane set as sliding
-          if ((type === 'door' && doorType === 'sliding') || (type === 'window' && doorType === 'sliding')) {
+          // Use per-pane openingType to determine sliding vs hinged animation
+          if (openingPane.openingType === 'sliding') {
             switch (openingPane.openingDirection) {
               case 'left': return 'translateX(-50%)';
               case 'right': return 'translateX(50%)';
@@ -88,7 +89,7 @@ const PanelDivisions: React.FC<PanelDivisionsProps> = ({
               default: return 'none';
             }
           }
-          // Hinged effect for window pane set as hinged, or for hinged door
+          // Hinged effect
           const baseTransform = 'perspective(600px)';
           switch (openingPane.openingDirection) {
             case 'left': return `${baseTransform} translateZ(0) rotateY(-45deg) translateX(0%)`;

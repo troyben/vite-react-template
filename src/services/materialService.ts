@@ -19,6 +19,8 @@ export interface Material {
   description?: string;
   unit: MaterialUnit;
   costPrice: number;
+  isDefault?: boolean;
+  currency?: string;
   properties?: Record<string, any>;
   createdAt: string;
   updatedAt: string;

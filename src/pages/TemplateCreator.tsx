@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Shapes, Ruler, Palette, DoorOpen, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Save, Shapes, Ruler, Palette, DoorOpen, LayoutGrid, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,9 +17,15 @@ import OpeningsTab from '@/components/product-sketch/tabs/OpeningsTab';
 import PanelsTab from '@/components/product-sketch/tabs/PanelsTab';
 import ShapeSelector from '@/components/template-creator/ShapeSelector';
 import ShapeTab from '@/components/template-creator/tabs/ShapeTab';
+import CanvasToolbar from '@/components/template-creator/CanvasToolbar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { getTemplateById, createTemplate, updateTemplate } from '@/services/templateService';
+import { getAllMaterials } from '@/services/materialService';
+import { calculateProductCost } from '@/utils/costCalculator';
+import { MaterialBreakdownView } from '@/components/CostBreakdown';
 import { notify } from '@/utils/notifications';
+import type { CostBreakdown } from '@/utils/costCalculator';
+import type { CanvasTool, PlacedArc } from '@/components/template-creator/utils/canvas-tools';
 import type {
   ShapeConfig,
   ShapeType,
@@ -72,9 +78,12 @@ function useTemplateCreatorState() {
     rowIndex: number;
     colIndex: number;
     openingDirection?: OpeningDirection;
+    openingType?: 'hinged' | 'sliding';
   }>>([]);
   const [activeHingeSelector, setActiveHingeSelector] = useState<ActiveHingeSelector | null>(null);
   const [panelWidths, setPanelWidths] = useState<number[]>([1000]);
+  const [panelDivisionHeights, setPanelDivisionHeights] = useState<Array<{ panelIndex: number; rowHeights: number[] }>>([]);
+  const [panelDivisionWidths, setPanelDivisionWidths] = useState<Array<{ panelIndex: number; colWidths: number[] }>>([]);
   const [activeTab, setActiveTab] = useState<TabKey>('dimensions');
 
   const isSliding = (type === 'door' && doorType === 'sliding') || (type === 'window' && windowType === 'sliding');
@@ -193,10 +202,12 @@ function useTemplateCreatorState() {
       openingPanes,
       unit,
       panelWidths: panelWidths.slice(),
+      panelDivisionHeights: panelDivisionHeights.length > 0 ? panelDivisionHeights : undefined,
+      panelDivisionWidths: panelDivisionWidths.length > 0 ? panelDivisionWidths : undefined,
       shape,
     };
   }, [type, doorType, windowType, height, panels, openingPanels, openingDirections,
-      frameColor, glassType, customGlassTint, panelDivisions, openingPanes, unit, panelWidths, shape]);
+      frameColor, glassType, customGlassTint, panelDivisions, openingPanes, unit, panelWidths, panelDivisionHeights, panelDivisionWidths, shape]);
 
   // Load template from API
   const loadTemplate = useCallback(async (id: number) => {
@@ -223,6 +234,8 @@ function useTemplateCreatorState() {
         setPanelDivisions(d.panelDivisions || []);
         setOpeningPanes(d.openingPanes || []);
         setPanelWidths(d.panelWidths || [d.width || 1000]);
+        setPanelDivisionHeights(d.panelDivisionHeights || []);
+        setPanelDivisionWidths(d.panelDivisionWidths || []);
         setShapeState(d.shape || { type: 'rectangle' });
       }
     } catch {
@@ -282,6 +295,8 @@ function useTemplateCreatorState() {
     openingPanes, setOpeningPanes,
     activeHingeSelector, setActiveHingeSelector,
     panelWidths, setPanelWidths,
+    panelDivisionHeights, setPanelDivisionHeights,
+    panelDivisionWidths, setPanelDivisionWidths,
     activeTab, setActiveTab,
     isSliding,
     // Handlers
@@ -304,6 +319,23 @@ const TemplateCreator: React.FC = () => {
   const [saveName, setSaveName] = useState('');
   const [saveDescription, setSaveDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [costDialogOpen, setCostDialogOpen] = useState(false);
+  const [costLoading, setCostLoading] = useState(false);
+  const [costBreakdown, setCostBreakdown] = useState<CostBreakdown | null>(null);
+  const [costError, setCostError] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<CanvasTool>(null);
+  const [lineOrientation, setLineOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [lineTarget, setLineTarget] = useState<'panel' | 'pane'>('panel');
+  const [customArcs, setCustomArcs] = useState<PlacedArc[]>([]);
+
+  // Escape key deactivates tool
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveTool(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Load template if editing
   useEffect(() => {
@@ -312,6 +344,32 @@ const TemplateCreator: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const handleCalculateCost = async () => {
+    setCostDialogOpen(true);
+    setCostLoading(true);
+    setCostBreakdown(null);
+    setCostError(null);
+    try {
+      const response = await getAllMaterials({ limit: 1000 });
+      if (response.data.success) {
+        const materials = response.data.data.items;
+        if (materials.length === 0) {
+          setCostError('No materials found. Add materials in the Materials management page to calculate costs.');
+          return;
+        }
+        const productData = state.buildProductData();
+        const breakdown = calculateProductCost(productData, materials);
+        setCostBreakdown(breakdown);
+      } else {
+        setCostError('Failed to load materials.');
+      }
+    } catch {
+      setCostError('Failed to fetch materials. Please try again.');
+    } finally {
+      setCostLoading(false);
+    }
+  };
 
   const handleSaveClick = () => {
     setSaveName(state.templateName);
@@ -343,7 +401,59 @@ const TemplateCreator: React.FC = () => {
           className="max-w-xs font-semibold"
           placeholder="Template name"
         />
+        <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+          <button
+            type="button"
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              state.type === 'window'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => state.setType('window')}
+          >
+            Window
+          </button>
+          <button
+            type="button"
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              state.type === 'door'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => state.handleTypeChange('door')}
+          >
+            Door
+          </button>
+        </div>
+        <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+          <button
+            type="button"
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              (state.type === 'door' ? state.doorType : state.windowType) === 'hinged'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => state.type === 'door' ? state.setDoorType('hinged') : state.setWindowType('hinged')}
+          >
+            Hinged
+          </button>
+          <button
+            type="button"
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              (state.type === 'door' ? state.doorType : state.windowType) === 'sliding'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => state.type === 'door' ? state.setDoorType('sliding') : state.setWindowType('sliding')}
+          >
+            Sliding
+          </button>
+        </div>
         <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={handleCalculateCost}>
+          <Package className="h-4 w-4 mr-1" />
+          Materials
+        </Button>
         <Button size="sm" onClick={handleSaveClick}>
           <Save className="h-4 w-4 mr-1" data-icon="inline-start" />
           Save Template
@@ -379,62 +489,6 @@ const TemplateCreator: React.FC = () => {
             </Popover>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Type:</span>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                    state.type === 'window'
-                      ? 'bg-violet-100 text-violet-700'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                  }`}
-                  onClick={() => state.setType('window')}
-                >
-                  Window
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                    state.type === 'door'
-                      ? 'bg-violet-100 text-violet-700'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                  }`}
-                  onClick={() => state.handleTypeChange('door')}
-                >
-                  Door
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {state.type === 'door' ? 'Door:' : 'Window:'}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                    (state.type === 'door' ? state.doorType : state.windowType) === 'hinged'
-                      ? 'bg-violet-100 text-violet-700'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                  }`}
-                  onClick={() => state.type === 'door' ? state.setDoorType('hinged') : state.setWindowType('hinged')}
-                >
-                  Hinged
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                    (state.type === 'door' ? state.doorType : state.windowType) === 'sliding'
-                      ? 'bg-violet-100 text-violet-700'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                  }`}
-                  onClick={() => state.type === 'door' ? state.setDoorType('sliding') : state.setWindowType('sliding')}
-                >
-                  Sliding
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Panels:</span>
               <input
                 type="number"
@@ -445,6 +499,17 @@ const TemplateCreator: React.FC = () => {
                 className="w-16 rounded-md border border-input px-2 py-1 text-sm text-center"
               />
             </div>
+
+            <div className="h-5 w-px bg-border" />
+
+            <CanvasToolbar
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              lineOrientation={lineOrientation}
+              onLineOrientationChange={setLineOrientation}
+              lineTarget={lineTarget}
+              onLineTargetChange={setLineTarget}
+            />
           </div>
 
           {/* Live preview — fills all remaining vertical space */}
@@ -463,6 +528,141 @@ const TemplateCreator: React.FC = () => {
               openingDirections={state.openingDirections}
               isSliding={state.isSliding}
               panelDivisions={state.panelDivisions}
+              panelDivisionHeights={state.panelDivisionHeights}
+              panelDivisionWidths={state.panelDivisionWidths}
+              openingPanes={state.openingPanes}
+              onWidthChange={(v) => state.setWidth(v)}
+              onHeightChange={(v) => state.setHeight(v)}
+              onShapeConfigChange={(updates) => state.updateShapeConfig(updates)}
+              onPanelWidthChange={(i, v) => {
+                const newWidths = [...state.panelWidths];
+                newWidths[i] = v;
+                // Recalculate last panel to keep total width consistent
+                const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
+                newWidths[newWidths.length - 1] = Math.max(state.width - sumExceptLast, 1);
+                state.setPanelWidths(newWidths);
+              }}
+              onRowHeightChange={(panelIndex, rowIndex, v) => {
+                const heights = [...state.panelDivisionHeights];
+                const entry = heights.find(h => h.panelIndex === panelIndex);
+                if (entry) {
+                  const newRowHeights = [...entry.rowHeights];
+                  newRowHeights[rowIndex] = v;
+                  // Recalculate last row to keep total height consistent
+                  const sum = newRowHeights.slice(0, -1).reduce((a, b) => a + b, 0);
+                  newRowHeights[newRowHeights.length - 1] = Math.max(state.height - sum, 1);
+                  heights[heights.indexOf(entry)] = { ...entry, rowHeights: newRowHeights };
+                  state.setPanelDivisionHeights(heights);
+                }
+              }}
+              activeTool={activeTool}
+              lineOrientation={lineOrientation}
+              lineTarget={lineTarget}
+              onHandlePlaced={(panelIdx, dir, paneInfo) => {
+                if (paneInfo) {
+                  state.setOpeningPanes((prev) => [...prev, {
+                    panelIndex: panelIdx,
+                    rowIndex: paneInfo.rowIndex,
+                    colIndex: paneInfo.colIndex,
+                    openingDirection: dir as OpeningDirection,
+                    openingType: 'hinged',
+                  }]);
+                } else {
+                  state.setOpeningPanels([...state.openingPanels, panelIdx]);
+                  state.setOpeningDirections({ ...state.openingDirections, [panelIdx]: dir as OpeningDirection });
+                }
+                setActiveTool(null);
+              }}
+              onPanelSplit={(splitMm) => {
+                const newWidths = [...state.panelWidths];
+                let accumulated = 0;
+                for (let i = 0; i < newWidths.length; i++) {
+                  if (accumulated + newWidths[i] >= splitMm) {
+                    const leftWidth = Math.round(splitMm - accumulated);
+                    const rightWidth = Math.round(newWidths[i] - leftWidth);
+                    if (leftWidth < 10 || rightWidth < 10) return;
+                    newWidths.splice(i, 1, leftWidth, rightWidth);
+                    break;
+                  }
+                  accumulated += newWidths[i];
+                }
+                state.setPanels(newWidths.length);
+                state.setPanelWidths(newWidths);
+              }}
+              onPaneRowAdd={(panelIndex, splitMm) => {
+                const existing = state.panelDivisions.find(d => d.panelIndex === panelIndex);
+                const currentRows = existing?.horizontalCount ?? 1;
+                if (currentRows >= 4) return;
+                const newDivisions = state.panelDivisions.filter(d => d.panelIndex !== panelIndex);
+                newDivisions.push({
+                  panelIndex,
+                  horizontalCount: currentRows + 1,
+                  verticalCount: existing?.verticalCount ?? 1,
+                });
+                state.setPanelDivisions(newDivisions);
+                const existingHeights = state.panelDivisionHeights.find(h => h.panelIndex === panelIndex);
+                const oldRowHeights = existingHeights?.rowHeights ?? [state.height];
+                const newRowHeights: number[] = [];
+                let accumulated = 0;
+                let inserted = false;
+                for (let i = 0; i < oldRowHeights.length; i++) {
+                  if (!inserted && accumulated + oldRowHeights[i] >= splitMm) {
+                    const topPart = Math.round(splitMm - accumulated);
+                    const bottomPart = Math.round(oldRowHeights[i] - topPart);
+                    if (topPart >= 1 && bottomPart >= 1) {
+                      newRowHeights.push(topPart, bottomPart);
+                    } else {
+                      newRowHeights.push(oldRowHeights[i]);
+                    }
+                    inserted = true;
+                  } else {
+                    newRowHeights.push(oldRowHeights[i]);
+                  }
+                  accumulated += oldRowHeights[i];
+                }
+                const newHeights = state.panelDivisionHeights.filter(h => h.panelIndex !== panelIndex);
+                newHeights.push({ panelIndex, rowHeights: newRowHeights });
+                state.setPanelDivisionHeights(newHeights);
+              }}
+              onPaneColAdd={(panelIndex, splitMm) => {
+                const existing = state.panelDivisions.find(d => d.panelIndex === panelIndex);
+                const currentCols = existing?.verticalCount ?? 1;
+                if (currentCols >= 4) return;
+                const newDivisions = state.panelDivisions.filter(d => d.panelIndex !== panelIndex);
+                newDivisions.push({
+                  panelIndex,
+                  horizontalCount: existing?.horizontalCount ?? 1,
+                  verticalCount: currentCols + 1,
+                });
+                state.setPanelDivisions(newDivisions);
+                // Split column widths at clicked position
+                const panelW = state.panelWidths[panelIndex];
+                const existingWidths = state.panelDivisionWidths.find(w => w.panelIndex === panelIndex);
+                const oldColWidths = existingWidths?.colWidths ?? [panelW];
+                const newColWidths: number[] = [];
+                let accumulated = 0;
+                let inserted = false;
+                for (let i = 0; i < oldColWidths.length; i++) {
+                  if (!inserted && accumulated + oldColWidths[i] >= splitMm) {
+                    const leftPart = Math.round(splitMm - accumulated);
+                    const rightPart = Math.round(oldColWidths[i] - leftPart);
+                    if (leftPart >= 1 && rightPart >= 1) {
+                      newColWidths.push(leftPart, rightPart);
+                    } else {
+                      newColWidths.push(oldColWidths[i]);
+                    }
+                    inserted = true;
+                  } else {
+                    newColWidths.push(oldColWidths[i]);
+                  }
+                  accumulated += oldColWidths[i];
+                }
+                const newWidthsArr = state.panelDivisionWidths.filter(w => w.panelIndex !== panelIndex);
+                newWidthsArr.push({ panelIndex, colWidths: newColWidths });
+                state.setPanelDivisionWidths(newWidthsArr);
+              }}
+              customArcs={customArcs}
+              onArcPlaced={(arc) => setCustomArcs((prev) => [...prev, arc])}
             />
           </div>
         </div>
@@ -536,10 +736,17 @@ const TemplateCreator: React.FC = () => {
             {state.activeTab === 'panels' && (
               <PanelsTab
                 panels={state.panels}
+                height={state.height}
+                unit={state.unit}
+                panelWidths={state.panelWidths}
                 panelDivisions={state.panelDivisions}
+                panelDivisionHeights={state.panelDivisionHeights}
+                panelDivisionWidths={state.panelDivisionWidths}
                 openingPanes={state.openingPanes}
                 activeHingeSelector={state.activeHingeSelector}
                 setPanelDivisions={state.setPanelDivisions}
+                setPanelDivisionHeights={state.setPanelDivisionHeights}
+                setPanelDivisionWidths={state.setPanelDivisionWidths}
                 setOpeningPanes={state.setOpeningPanes}
                 setActiveHingeSelector={state.setActiveHingeSelector}
               />
@@ -581,6 +788,39 @@ const TemplateCreator: React.FC = () => {
             </Button>
             <Button size="sm" onClick={handleSaveConfirm} disabled={saving || !saveName.trim()}>
               {saving ? 'Saving...' : (state.templateId ? 'Update' : 'Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cost Calculation Dialog */}
+      <Dialog open={costDialogOpen} onOpenChange={setCostDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-5 pb-3 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Material Breakdown
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-2 min-h-0">
+            {costLoading && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading materials...</p>
+              </div>
+            )}
+            {costError && !costLoading && (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">{costError}</p>
+              </div>
+            )}
+            {costBreakdown && !costLoading && (
+              <MaterialBreakdownView breakdown={costBreakdown} />
+            )}
+          </div>
+          <DialogFooter className="px-6 py-3 border-t shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setCostDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

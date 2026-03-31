@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Star } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as materialApi from '@/services/materialService';
 import type { Material, MaterialCategory } from '@/services/materialService';
@@ -37,9 +37,21 @@ const CATEGORY_COLORS: Record<MaterialCategory, string> = {
   accessory: 'bg-violet-100 text-violet-800 hover:bg-violet-100',
 };
 
-export { formatCurrency } from '@/config/currency';
+import { formatCurrency } from '@/config/currency';
+export { formatCurrency };
 
-export { CATEGORY_LABELS, UNIT_LABELS, CATEGORY_COLORS };
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  ZAR: 'R',
+  EUR: '\u20AC',
+  GBP: '\u00A3',
+  INR: '\u20B9',
+  AUD: 'A$',
+  CAD: 'C$',
+  CNY: '\u00A5',
+};
+
+export { CATEGORY_LABELS, UNIT_LABELS, CATEGORY_COLORS, CURRENCY_SYMBOLS };
 
 export function useMaterials() {
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -151,6 +163,32 @@ export function useMaterials() {
     }
   }, [fetchMaterials, currentPage, searchTerm, categoryFilter]);
 
+  const handleToggleDefault = useCallback(async (material: Material) => {
+    const newValue = !material.isDefault;
+    // Optimistic update
+    setMaterials(prev => prev.map(m =>
+      m.id === material.id ? { ...m, isDefault: newValue } : m
+    ));
+    try {
+      const response = await materialApi.updateMaterial(material.id, { isDefault: newValue });
+      if (response.data.success) {
+        notify.success(newValue ? 'Set as default material' : 'Removed default status');
+      } else {
+        // Revert on failure
+        setMaterials(prev => prev.map(m =>
+          m.id === material.id ? { ...m, isDefault: material.isDefault } : m
+        ));
+        notify.error('Failed to update default status');
+      }
+    } catch {
+      // Revert on error
+      setMaterials(prev => prev.map(m =>
+        m.id === material.id ? { ...m, isDefault: material.isDefault } : m
+      ));
+      notify.error('Failed to update default status');
+    }
+  }, []);
+
   const columns = useMemo<ColumnDef<Material, any>[]>(() => [
     {
       accessorKey: 'name',
@@ -186,7 +224,44 @@ export function useMaterials() {
     {
       accessorKey: 'costPrice',
       header: 'Cost Price',
-      cell: info => formatCurrency(info.getValue() as number),
+      cell: info => {
+        const material = info.row.original;
+        const code = material.currency || 'USD';
+        const symbol = CURRENCY_SYMBOLS[code] || code;
+        const num = Number(info.getValue());
+        const formatted = isNaN(num) ? '0.00' : num.toFixed(2);
+        return `${symbol} ${formatted}`;
+      },
+    },
+    {
+      accessorKey: 'currency',
+      header: 'Currency',
+      cell: info => (info.getValue() as string) || 'USD',
+    },
+    {
+      id: 'isDefault',
+      header: 'Default',
+      enableSorting: false,
+      cell: info => {
+        const material = info.row.original;
+        const isDefault = !!material.isDefault;
+        return (
+          <button
+            type="button"
+            onClick={() => handleToggleDefault(material)}
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-muted"
+            title={isDefault ? 'Remove default' : 'Set as default'}
+          >
+            <Star
+              className={`h-4 w-4 transition-colors ${
+                isDefault
+                  ? 'fill-yellow-400 text-yellow-400'
+                  : 'text-muted-foreground'
+              }`}
+            />
+          </button>
+        );
+      },
     },
     {
       id: 'actions',
@@ -221,7 +296,7 @@ export function useMaterials() {
         </DropdownMenu>
       ),
     },
-  ], [openEditForm, handleDelete]);
+  ], [openEditForm, handleDelete, handleToggleDefault]);
 
   return {
     materials,

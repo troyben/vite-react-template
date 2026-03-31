@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getAllTemplates, type SketchTemplate } from '../services/templateService';
 import type { ProductData } from '@/components/product-sketch/types';
-import MiniSketchPreview from '@/components/MiniSketchPreview';
+import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -124,8 +125,8 @@ const TemplatePicker: React.FC<TemplatePickerProps> = ({ onSelect, onClose }) =>
                   onClick={() => handleSelect(template)}
                   className="cursor-pointer rounded-lg border bg-card p-3 transition-all hover:border-primary hover:shadow-md"
                 >
-                  <div className="flex justify-center rounded bg-muted/30 p-1">
-                    <MiniSketchPreview sketch={template.sketchData} widthPx={140} heightPx={80} />
+                  <div className="flex justify-center rounded bg-muted/30 p-1 h-[80px]">
+                    <ShapeCanvas {...extractShapeCanvasProps(template.sketchData)} svgStyle={{ width: '100%', height: '100%' }} />
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center gap-1.5">

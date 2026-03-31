@@ -6,11 +6,13 @@ import { getAllClients } from '../services/clientService';
 import { exportQuotationToPDF } from '../utils/pdfExport';
 import type { Client } from '../services/clientService';
 import type { QuotationItem, QuotationFormData, Quotation } from '../services/quotationService';
-import { ProductSketch, type ProductData } from '@/components/product-sketch';
+import type { ProductData } from '@/components/product-sketch/types';
+import ProductEditorDialog from '@/components/ProductEditorDialog';
+import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import ClientSelector from '@/components/ClientSelector';
 import TemplatePicker from '@/components/TemplatePicker';
 import QuotationPreviewModal from '@/components/QuotationPreviewModal';
-import MiniSketchPreview from '@/components/MiniSketchPreview';
 import { createTemplate } from '@/services/templateService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -360,9 +362,9 @@ const QuotationForm = () => {
                     <div className="shrink-0">
                       {item.productSketch ? (
                         <div className="flex flex-col gap-1">
-                          <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                          <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors w-[60px] h-[40px]"
                                onClick={() => handleOpenSketch(index)}>
-                            <MiniSketchPreview sketch={item.productSketch} widthPx={60} heightPx={40} />
+                            <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
                           </div>
                           {renderSketchDetails(item.productSketch)}
                           <div className="flex flex-wrap gap-1">
@@ -481,8 +483,8 @@ const QuotationForm = () => {
                     <TableCell className="pt-3">
                       {item.productSketch ? (
                         <div className="flex flex-col gap-1">
-                          <div className="cursor-pointer" onClick={() => handleOpenSketch(index)}>
-                            <MiniSketchPreview sketch={item.productSketch} widthPx={120} heightPx={70} />
+                          <div className="cursor-pointer w-[120px] h-[70px]" onClick={() => handleOpenSketch(index)}>
+                            <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
                           </div>
                           <div className="flex gap-1 justify-center">
                             <button type="button" onClick={() => handleOpenSketch(index)}
@@ -688,8 +690,8 @@ const QuotationForm = () => {
                         <div>{item.item || 'Item name'}</div>
                         {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
                         {item.productSketch && (
-                          <div className="mt-2">
-                            <MiniSketchPreview sketch={item.productSketch} widthPx={200} heightPx={100} />
+                          <div className="mt-2 w-[200px] h-[100px]">
+                            <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
                           </div>
                         )}
                       </td>
@@ -717,17 +719,12 @@ const QuotationForm = () => {
         />
       )}
 
-      {showSketchDialog && (
-        <div className="modal-overlay sketch-modal">
-          <ProductSketch
-            onSave={handleSaveSketch}
-            onCancel={handleCancelSketch}
-            initialData={((formData.items as QuotationItem[])[currentItemIndex]?.productSketch as ProductData) || {
-              type: 'window', width: 100, height: 100, panels: 1, doorType: 'traditional'
-            }}
-          />
-        </div>
-      )}
+      <ProductEditorDialog
+        open={showSketchDialog}
+        onOpenChange={(open) => { if (!open) handleCancelSketch(); }}
+        initialData={currentItemIndex >= 0 ? (formData.items[currentItemIndex]?.productSketch as ProductData) : undefined}
+        onSave={handleSaveSketch}
+      />
 
       {showTemplatePicker && (
         <TemplatePicker

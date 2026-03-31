@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAllTemplates, deleteTemplate, type SketchTemplate } from '../services/templateService';
 import { useAuth } from '@/contexts/AuthContext';
-import MiniSketchPreview from '@/components/MiniSketchPreview';
+import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import TemplateDetailModal from '@/components/templates/TemplateDetailModal';
+import { extractShapeCanvasProps, formatTemplateDate } from '@/utils/templateSketchProps';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PaginationMeta } from '@/types/pagination';
 
+
 const Templates = () => {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<SketchTemplate[]>([]);
@@ -18,12 +21,15 @@ const Templates = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedTemplate, setSelectedTemplate] = useState<SketchTemplate | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [pagination, setPagination] = useState<PaginationMeta>({
     page: 1,
     limit: 12,
     totalItems: 0,
     totalPages: 0,
   });
+  const isMountedFetch = useRef(false);
 
   const fetchTemplates = useCallback(async (page = 1, search?: string) => {
     try {
@@ -51,15 +57,21 @@ const Templates = () => {
     fetchTemplates(1, searchTerm);
   }, [fetchTemplates]);
 
-  // Debounced search
+  // Debounced search -- skips the initial render to avoid a double fetch on mount
+  // (the [fetchTemplates] effect above already fetches on mount).
   useEffect(() => {
+    if (!isMountedFetch.current) {
+      isMountedFetch.current = true;
+      return;
+    }
     const timeout = setTimeout(() => {
       fetchTemplates(1, searchTerm);
     }, 300);
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm('Are you sure you want to delete this template?')) return;
     try {
       await deleteTemplate(id);
@@ -69,23 +81,20 @@ const Templates = () => {
     }
   };
 
+  const handleCardClick = (template: SketchTemplate) => {
+    setSelectedTemplate(template);
+    setDetailOpen(true);
+  };
+
   const canDelete = (template: SketchTemplate): boolean => {
     if (!user) return false;
     return user.role === 'admin' || template.createdBy === user.id;
   };
 
-  const formatDate = (dateStr: string): string => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
   const SkeletonCard = () => (
     <Card>
       <CardContent className="p-4">
-        <Skeleton className="h-[100px] w-full mb-3 rounded" />
+        <Skeleton className="h-[140px] w-full mb-3 rounded" />
         <Skeleton className="h-4 w-3/4 mb-2" />
         <Skeleton className="h-3 w-1/2" />
       </CardContent>
@@ -102,7 +111,7 @@ const Templates = () => {
     <div className="flex flex-col h-full p-4 md:p-6">
       <ScreenLoader isLoading={loading && templates.length === 0} />
 
-      {/* Header — compact row with title, pills, and search */}
+      {/* Header -- compact row with title, pills, and search */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold">Templates</h1>
@@ -139,7 +148,7 @@ const Templates = () => {
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive mb-3">{error}</div>
       )}
 
-      {/* Template grid — fills remaining space */}
+      {/* Template grid -- fills remaining space */}
       <div className="flex-1 overflow-y-auto">
         {loading && templates.length === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -157,11 +166,18 @@ const Templates = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {templates.map((template) => (
-              <Card key={template.id} className="overflow-hidden">
+              <Card
+                key={template.id}
+                className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-ring/20"
+                onClick={() => handleCardClick(template)}
+              >
                 <CardContent className="p-3">
-                  {/* Sketch preview */}
-                  <div className="flex justify-center rounded bg-muted/30 p-1 mb-2">
-                    <MiniSketchPreview sketch={template.sketchData} widthPx={180} heightPx={100} />
+                  {/* Sketch preview via ShapeCanvas */}
+                  <div className="rounded bg-muted/30 p-1 mb-2 h-[140px] flex items-center justify-center overflow-hidden">
+                    <ShapeCanvas
+                      {...extractShapeCanvasProps(template.sketchData)}
+                      svgStyle={{ width: '100%', height: '100%' }}
+                    />
                   </div>
 
                   {/* Info */}
@@ -181,7 +197,7 @@ const Templates = () => {
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDate(template.createdAt)}
+                        {formatTemplateDate(template.createdAt)}
                       </p>
                     </div>
 
@@ -189,7 +205,7 @@ const Templates = () => {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => handleDelete(template.id)}
+                        onClick={(e) => handleDelete(template.id, e)}
                         className="text-muted-foreground hover:text-destructive shrink-0"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -227,6 +243,13 @@ const Templates = () => {
           </div>
         )}
       </div>
+
+      {/* Detail modal */}
+      <TemplateDetailModal
+        template={selectedTemplate}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </div>
   );
 };

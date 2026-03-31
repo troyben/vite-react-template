@@ -18,7 +18,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Material, MaterialCategory, MaterialUnit, CreateMaterialData } from '@/services/materialService';
-import { CURRENCY } from '@/config/currency';
+import { CURRENCY_SYMBOLS } from '@/hooks/useMaterials';
+
+const CURRENCY_OPTIONS = [
+  { value: 'USD', label: 'USD — US Dollar' },
+  { value: 'ZAR', label: 'ZAR — South African Rand' },
+  { value: 'EUR', label: 'EUR — Euro' },
+  { value: 'GBP', label: 'GBP — British Pound' },
+  { value: 'INR', label: 'INR — Indian Rupee' },
+  { value: 'AUD', label: 'AUD — Australian Dollar' },
+  { value: 'CAD', label: 'CAD — Canadian Dollar' },
+  { value: 'CNY', label: 'CNY — Chinese Yuan' },
+];
 
 interface MaterialFormDialogProps {
   open: boolean;
@@ -58,16 +69,19 @@ export function MaterialFormDialog({
 }: MaterialFormDialogProps) {
   const [category, setCategory] = useState<MaterialCategory>('frame_profile');
   const [unit, setUnit] = useState<MaterialUnit>('per_meter');
+  const [currency, setCurrency] = useState('USD');
   const [properties, setProperties] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (editingMaterial) {
       setCategory(editingMaterial.category);
       setUnit(editingMaterial.unit);
+      setCurrency(editingMaterial.currency || 'USD');
       setProperties(editingMaterial.properties ?? {});
     } else {
       setCategory('frame_profile');
       setUnit('per_meter');
+      setCurrency('USD');
       setProperties({});
     }
   }, [editingMaterial, open]);
@@ -90,6 +104,7 @@ export function MaterialFormDialog({
       description: (formData.get('description') as string) || undefined,
       unit,
       costPrice: parseFloat(formData.get('costPrice') as string),
+      currency,
       properties: Object.keys(properties).length > 0 ? properties : undefined,
     };
 
@@ -133,7 +148,7 @@ export function MaterialFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="unit">Unit *</Label>
               <Select value={unit} onValueChange={(v) => setUnit(v as MaterialUnit)}>
@@ -150,7 +165,22 @@ export function MaterialFormDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="costPrice">Cost Price ({CURRENCY.code}) *</Label>
+              <Label htmlFor="currency">Currency *</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCY_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="costPrice">Cost Price ({CURRENCY_SYMBOLS[currency] || currency}) *</Label>
               <Input
                 id="costPrice"
                 name="costPrice"
@@ -209,24 +239,33 @@ function CategoryProperties({
   };
 
   if (category === 'frame_profile') {
+    const profileHelp: Record<string, string> = {
+      outer_frame: 'The main perimeter frame that runs around the entire window or door opening.',
+      mullion: 'Vertical divider bars between panels within the frame.',
+      transom: 'Horizontal or vertical bars that subdivide individual panels into smaller panes.',
+    };
     return (
       <div className="rounded-md border p-3 space-y-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Frame Profile Properties</p>
         <div className="grid gap-2">
           <Label htmlFor="profileType">Profile Type</Label>
           <Select
-            value={properties.profileType || ''}
-            onValueChange={(v) => update('profileType', v)}
+            value={properties.profileType || 'none'}
+            onValueChange={(v) => update('profileType', v === 'none' ? undefined : v)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select profile type" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">— None —</SelectItem>
               <SelectItem value="outer_frame">Outer Frame</SelectItem>
               <SelectItem value="mullion">Mullion</SelectItem>
               <SelectItem value="transom">Transom</SelectItem>
             </SelectContent>
           </Select>
+          {properties.profileType && profileHelp[properties.profileType] && (
+            <p className="text-xs text-muted-foreground">{profileHelp[properties.profileType]}</p>
+          )}
         </div>
       </div>
     );

@@ -39,6 +39,7 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
     rowIndex: number;
     colIndex: number;
     openingDirection?: OpeningDirection;
+    openingType?: 'hinged' | 'sliding';
   }>>(initialData?.openingPanes || []);
 
   const [activeHingeSelector, setActiveHingeSelector] = useState<ActiveHingeSelector | null>(null);
@@ -51,8 +52,13 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
   );
 
   // New: panel division heights state
-  const [panelDivisionHeights] = useState<Array<{ panelIndex: number; rowHeights: number[] }>>(
+  const [panelDivisionHeights, setPanelDivisionHeights] = useState<Array<{ panelIndex: number; rowHeights: number[] }>>(
     initialData?.panelDivisionHeights || []
+  );
+
+  // New: panel division widths state
+  const [panelDivisionWidths, setPanelDivisionWidths] = useState<Array<{ panelIndex: number; colWidths: number[] }>>(
+    initialData?.panelDivisionWidths || []
   );
 
   // Tab state
@@ -84,7 +90,8 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
       openingPanes,
       unit,
       panelWidths: panelWidths.slice(),
-      panelDivisionHeights: newPanelDivisionHeights
+      panelDivisionHeights: newPanelDivisionHeights,
+      panelDivisionWidths: panelDivisionWidths.length > 0 ? panelDivisionWidths.map(w => ({ ...w, colWidths: w.colWidths.slice() })) : undefined,
     };
     onSave(data);
   };
@@ -208,6 +215,7 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
     activeHingeSelector,
     panelWidths,
     panelDivisionHeights,
+    panelDivisionWidths,
     activeTab,
     isSliding,
 
@@ -228,6 +236,8 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
     setOpeningPanes,
     setActiveHingeSelector,
     setPanelWidths,
+    setPanelDivisionHeights,
+    setPanelDivisionWidths,
     setActiveTab,
 
     // Handlers

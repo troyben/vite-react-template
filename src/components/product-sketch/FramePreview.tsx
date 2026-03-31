@@ -26,6 +26,7 @@ interface FramePreviewProps {
     rowIndex: number;
     colIndex: number;
     openingDirection?: OpeningDirection;
+    openingType?: 'hinged' | 'sliding';
   }>;
   type: 'window' | 'door';
   doorType: 'hinged' | 'sliding';

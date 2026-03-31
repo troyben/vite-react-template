@@ -37,11 +37,13 @@ export interface ProductData {
     rowIndex: number;
     colIndex: number;
     openingDirection?: OpeningDirection;
+    openingType?: 'hinged' | 'sliding';
   }>;
   sketchSvg?: string;
   unit: Unit;
   panelWidths?: number[]; // New: width for each panel (cm, mm, m)
   panelDivisionHeights?: Array<{ panelIndex: number; rowHeights: number[] }>;
+  panelDivisionWidths?: Array<{ panelIndex: number; colWidths: number[] }>;
   shape?: ShapeConfig;
 }
 

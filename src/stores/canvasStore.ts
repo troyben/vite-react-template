@@ -6,8 +6,6 @@ const generateThumbnail = async (shapes: Shape[]): Promise<string> => {
   // 1. Create a small offscreen canvas
   // 2. Draw the shapes on it
   // 3. Convert to base64
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  console.log('Generating thumbnail for shapes:', shapes.length);
   return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 };
 

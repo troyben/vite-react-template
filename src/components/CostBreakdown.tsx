@@ -78,6 +78,83 @@ function CostSection({
   );
 }
 
+function MaterialSection({
+  title,
+  items,
+  color,
+}: {
+  title: string;
+  items: CostLineItem[];
+  color: string;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <Badge variant="secondary" className={color}>
+        {title}
+      </Badge>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="h-8 text-xs">Material</TableHead>
+            <TableHead className="h-8 text-xs text-right">Quantity</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, idx) => (
+            <TableRow key={idx} className="hover:bg-muted/50">
+              <TableCell className="py-1.5 text-sm">{item.material}</TableCell>
+              <TableCell className="py-1.5 text-sm text-right">
+                {formatQuantity(item.quantity, item.unit)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+export function MaterialBreakdownView({ breakdown }: CostBreakdownProps) {
+  const hasItems =
+    breakdown.frameItems.length > 0 ||
+    breakdown.glassItems.length > 0 ||
+    breakdown.hardwareItems.length > 0 ||
+    breakdown.accessoryItems.length > 0;
+
+  if (!hasItems) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+          No matching materials found for this product configuration.
+          Add materials in the Materials management page.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {SECTION_CONFIG.map((section) => {
+        const items = breakdown[section.key];
+        if (items.length === 0) return null;
+        return (
+          <Card key={section.key}>
+            <CardContent className="p-4">
+              <MaterialSection
+                title={section.title}
+                items={items}
+                color={section.color}
+              />
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CostBreakdownView({ breakdown }: CostBreakdownProps) {
   const hasItems =
     breakdown.frameItems.length > 0 ||

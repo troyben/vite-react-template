@@ -43,14 +43,16 @@ function byCategory(materials: Material[], category: MaterialCategory): Material
 
 /**
  * Find a material whose properties match a predicate.
- * Falls back to the first material in the list if no match is found.
+ * Among matches, prefer one with isDefault=true.
+ * Falls back to first match, then first material in the list.
  */
 function findMaterial(
   materials: Material[],
   predicate: (props: Record<string, any>) => boolean
 ): Material | undefined {
-  const match = materials.find(m => m.properties && predicate(m.properties));
-  return match ?? materials[0];
+  const matches = materials.filter(m => m.properties && predicate(m.properties));
+  if (matches.length === 0) return materials[0];
+  return matches.find(m => m.isDefault) ?? matches[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -208,11 +210,21 @@ function calculateHardwareItems(product: ProductData, materials: Material[]): Co
   const isSliding = operationType === 'sliding';
   const isDoor = productType === 'door';
 
-  // Count openings
+  // Count panel-level openings (use global isSliding for these)
   const openingPanelCount = product.openingPanels?.length ?? 0;
-  const openingPaneCount = product.openingPanes?.length ?? 0;
-  const totalOpenings = openingPanelCount + openingPaneCount;
 
+  // Count pane-level openings, separated by type
+  let paneHingedCount = 0;
+  let paneSlidingCount = 0;
+  for (const pane of (product.openingPanes ?? [])) {
+    if (pane.openingType === 'sliding') {
+      paneSlidingCount++;
+    } else {
+      paneHingedCount++;
+    }
+  }
+
+  const totalOpenings = openingPanelCount + paneHingedCount + paneSlidingCount;
   if (totalOpenings === 0) return items;
 
   // Filter hardware applicable to this product type
@@ -221,7 +233,7 @@ function calculateHardwareItems(product: ProductData, materials: Material[]): Co
     return !applicableTo || applicableTo === 'both' || applicableTo === productType;
   });
 
-  // Handles: 1 per opening
+  // Handles: 1 per opening (all types)
   const handleMat = findMaterial(
     applicable.filter(m => m.properties?.hardwareType === 'handle'),
     () => true
@@ -237,31 +249,15 @@ function calculateHardwareItems(product: ProductData, materials: Material[]): Co
     });
   }
 
-  if (isSliding) {
-    // Rollers: 2 per opening
-    const rollerMat = findMaterial(
-      applicable.filter(m => m.properties?.hardwareType === 'roller'),
-      () => true
-    );
-    if (rollerMat) {
-      const qty = totalOpenings * 2;
-      items.push({
-        material: rollerMat.name,
-        category: 'Hardware',
-        quantity: qty,
-        unit: 'pcs',
-        unitCost: rollerMat.costPrice,
-        total: round(qty * rollerMat.costPrice),
-      });
-    }
-  } else {
-    // Hinges: 2 per opening
+  // Hinges: 2 per hinged opening (panel-level hinged + pane-level hinged)
+  const hingedCount = (isSliding ? 0 : openingPanelCount) + paneHingedCount;
+  if (hingedCount > 0) {
     const hingeMat = findMaterial(
       applicable.filter(m => m.properties?.hardwareType === 'hinge'),
       () => true
     );
     if (hingeMat) {
-      const qty = totalOpenings * 2;
+      const qty = hingedCount * 2;
       items.push({
         material: hingeMat.name,
         category: 'Hardware',
@@ -269,6 +265,26 @@ function calculateHardwareItems(product: ProductData, materials: Material[]): Co
         unit: 'pcs',
         unitCost: hingeMat.costPrice,
         total: round(qty * hingeMat.costPrice),
+      });
+    }
+  }
+
+  // Rollers: 2 per sliding opening (panel-level sliding + pane-level sliding)
+  const slidingCount = (isSliding ? openingPanelCount : 0) + paneSlidingCount;
+  if (slidingCount > 0) {
+    const rollerMat = findMaterial(
+      applicable.filter(m => m.properties?.hardwareType === 'roller'),
+      () => true
+    );
+    if (rollerMat) {
+      const qty = slidingCount * 2;
+      items.push({
+        material: rollerMat.name,
+        category: 'Hardware',
+        quantity: qty,
+        unit: 'pcs',
+        unitCost: rollerMat.costPrice,
+        total: round(qty * rollerMat.costPrice),
       });
     }
   }

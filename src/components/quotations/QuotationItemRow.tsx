@@ -1,5 +1,6 @@
 import type { QuotationItem } from '@/services/quotationService';
-import MiniSketchPreview from '@/components/MiniSketchPreview';
+import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 
 interface QuotationItemRowProps {
   item: QuotationItem;
@@ -69,7 +70,9 @@ export function QuotationItemRow({ item }: QuotationItemRowProps) {
               <div className="sketch-preview-specs">
                 <SketchDetails sketchData={sketchData} />
               </div>
-              <MiniSketchPreview sketch={sketchData} widthPx={320} heightPx={160} />
+              <div className="w-[320px] h-[160px]">
+                <ShapeCanvas {...extractShapeCanvasProps(sketchData)} svgStyle={{ width: '100%', height: '100%' }} />
+              </div>
             </div>
           </div>
         )}

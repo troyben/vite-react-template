@@ -15,7 +15,7 @@ export interface DividerLine {
 
 // Layout
 export const MARGIN = 40;               // space around shape for dimension labels
-export const BOTTOM_LABEL_SPACE = 20;   // extra room below shape for bottom dimension
+export const BOTTOM_LABEL_SPACE = 40;   // extra room below shape for inner + outer bottom dimensions
 
 // Dimension lines
 export const DIM_COLOR = '#7E88C3';

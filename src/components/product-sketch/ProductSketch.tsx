@@ -211,10 +211,17 @@ const ProductSketch: React.FC<ProductSketchProps> = (props) => {
               {state.activeTab === 'panels' && (
                 <PanelsTab
                   panels={state.panels}
+                  height={state.height}
+                  unit={state.unit}
+                  panelWidths={state.panelWidths}
                   panelDivisions={state.panelDivisions}
+                  panelDivisionHeights={state.panelDivisionHeights}
+                  panelDivisionWidths={state.panelDivisionWidths}
                   openingPanes={state.openingPanes}
                   activeHingeSelector={state.activeHingeSelector}
                   setPanelDivisions={state.setPanelDivisions}
+                  setPanelDivisionHeights={state.setPanelDivisionHeights}
+                  setPanelDivisionWidths={state.setPanelDivisionWidths}
                   setOpeningPanes={state.setOpeningPanes}
                   setActiveHingeSelector={state.setActiveHingeSelector}
                 />
