@@ -29,14 +29,14 @@ export interface ShapeCanvasProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MARGIN = 50;               // space around shape for dimension labels
-const BOTTOM_LABEL_SPACE = 24;   // extra room below shape for panel-width labels
+const MARGIN = 40;               // space around shape for dimension labels
+const BOTTOM_LABEL_SPACE = 20;   // extra room below shape for bottom dimension
 const DIM_COLOR = '#7E88C3';
-const DIM_FONT = 11;
-const FRAME_STROKE = 6;
-const DIVIDER_STROKE = 2;
-const DIM_OFFSET = 25;           // how far dimension lines sit from the shape edge
-const MARKER_SIZE = 5;
+const DIM_FONT = 8;
+const FRAME_STROKE = 4;
+const DIVIDER_STROKE = 1.5;
+const DIM_OFFSET = 16;           // how far dimension lines sit from the shape edge
+const MARKER_SIZE = 4;
 const ARCH_CURVE_STEPS = 24;     // segments for arch curves
 
 // ---------------------------------------------------------------------------
@@ -695,7 +695,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
 }) => {
   // Choose a drawing area size that preserves the real-world aspect ratio.
   // We pick a base dimension and scale the other to match.
-  const BASE = 300;
+  const BASE = 160;
   const aspect = width / height;
   let drawW: number, drawH: number;
   if (aspect >= 1) {
@@ -707,8 +707,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   }
 
   // Ensure minimum legible size
-  drawW = Math.max(drawW, 120);
-  drawH = Math.max(drawH, 100);
+  drawW = Math.max(drawW, 100);
+  drawH = Math.max(drawH, 80);
 
   const totalW = drawW + 2 * MARGIN;
   const totalH = drawH + 2 * MARGIN + BOTTOM_LABEL_SPACE;
@@ -759,7 +759,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   return (
     <svg
       viewBox={`0 0 ${totalW} ${totalH}`}
-      style={{ width: '100%', maxHeight: '100%' }}
+      style={{ width: '100%', height: '100vh' }}
       preserveAspectRatio="xMidYMid meet"
     >
       {/* Defs: arrow markers for dimension lines */}
@@ -847,70 +847,84 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       })}
 
       {/* --- Layer 5: Dimension lines for each non-bottom edge --- */}
-      {edges.map((edge, i) => {
-        const { nx, ny } = getOutwardNormal(
-          edge.sv1.x, edge.sv1.y,
-          edge.sv2.x, edge.sv2.y,
-          svgCenterX, svgCenterY,
-        );
+      {(() => {
+        // Pre-compute all label positions, then stagger any that overlap
+        const dimData = edges.map((edge, i) => {
+          const { nx, ny } = getOutwardNormal(
+            edge.sv1.x, edge.sv1.y,
+            edge.sv2.x, edge.sv2.y,
+            svgCenterX, svgCenterY,
+          );
+          return { edge, nx, ny, idx: i };
+        });
 
-        // Offset line endpoints
-        const lx1 = edge.sv1.x + nx * DIM_OFFSET;
-        const ly1 = edge.sv1.y + ny * DIM_OFFSET;
-        const lx2 = edge.sv2.x + nx * DIM_OFFSET;
-        const ly2 = edge.sv2.y + ny * DIM_OFFSET;
+        // Check if two label positions are too close and stagger offsets
+        const offsets = dimData.map(() => DIM_OFFSET);
+        for (let a = 0; a < dimData.length; a++) {
+          for (let b = a + 1; b < dimData.length; b++) {
+            const da = dimData[a], db = dimData[b];
+            const midAx = (da.edge.sv1.x + da.edge.sv2.x) / 2 + da.nx * offsets[a];
+            const midAy = (da.edge.sv1.y + da.edge.sv2.y) / 2 + da.ny * offsets[a];
+            const midBx = (db.edge.sv1.x + db.edge.sv2.x) / 2 + db.nx * offsets[b];
+            const midBy = (db.edge.sv1.y + db.edge.sv2.y) / 2 + db.ny * offsets[b];
+            const dist = Math.sqrt((midAx - midBx) ** 2 + (midAy - midBy) ** 2);
+            if (dist < 28) {
+              // Push the shorter edge further out
+              if (da.edge.realLen <= db.edge.realLen) {
+                offsets[a] = offsets[a] + 14;
+              } else {
+                offsets[b] = offsets[b] + 14;
+              }
+            }
+          }
+        }
 
-        // Label midpoint, slightly further out
-        const labelX = (lx1 + lx2) / 2 + nx * 12;
-        const labelY = (ly1 + ly2) / 2 + ny * 12;
+        return dimData.map(({ edge, nx, ny, idx }, i) => {
+          const off = offsets[i];
+          const lx1 = edge.sv1.x + nx * off;
+          const ly1 = edge.sv1.y + ny * off;
+          const lx2 = edge.sv2.x + nx * off;
+          const ly2 = edge.sv2.y + ny * off;
 
-        // Rotation for readable label
-        const angle = Math.atan2(ly2 - ly1, lx2 - lx1) * (180 / Math.PI);
-        const readableAngle = angle > 90 || angle < -90 ? angle + 180 : angle;
+          // Label midpoint along the dimension line
+          const labelX = (lx1 + lx2) / 2 + nx * 8;
+          const labelY = (ly1 + ly2) / 2 + ny * 8;
 
-        return (
-          <g key={`dim-${i}`}>
-            {/* Extension lines */}
-            <line
-              x1={edge.sv1.x} y1={edge.sv1.y}
-              x2={lx1} y2={ly1}
-              stroke={DIM_COLOR}
-              strokeWidth={0.5}
-              strokeDasharray="2,2"
-              opacity={0.5}
-            />
-            <line
-              x1={edge.sv2.x} y1={edge.sv2.y}
-              x2={lx2} y2={ly2}
-              stroke={DIM_COLOR}
-              strokeWidth={0.5}
-              strokeDasharray="2,2"
-              opacity={0.5}
-            />
-            {/* Dimension line */}
-            <line
-              x1={lx1} y1={ly1} x2={lx2} y2={ly2}
-              stroke={DIM_COLOR}
-              strokeWidth={1.2}
-              markerStart="url(#sc-arrowL)"
-              markerEnd="url(#sc-arrowR)"
-            />
-            {/* Label */}
-            <text
-              x={labelX}
-              y={labelY}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize={DIM_FONT}
-              fill={DIM_COLOR}
-              fontWeight={600}
-              transform={`rotate(${readableAngle}, ${labelX}, ${labelY})`}
-            >
-              {edge.realLen} {unit}
-            </text>
-          </g>
-        );
-      })}
+          const angle = Math.atan2(ly2 - ly1, lx2 - lx1) * (180 / Math.PI);
+          const readableAngle = angle > 90 || angle < -90 ? angle + 180 : angle;
+
+          return (
+            <g key={`dim-${idx}`}>
+              {/* Extension lines */}
+              <line
+                x1={edge.sv1.x} y1={edge.sv1.y}
+                x2={lx1} y2={ly1}
+                stroke={DIM_COLOR} strokeWidth={0.4} strokeDasharray="2,2" opacity={0.4}
+              />
+              <line
+                x1={edge.sv2.x} y1={edge.sv2.y}
+                x2={lx2} y2={ly2}
+                stroke={DIM_COLOR} strokeWidth={0.4} strokeDasharray="2,2" opacity={0.4}
+              />
+              {/* Dimension line */}
+              <line
+                x1={lx1} y1={ly1} x2={lx2} y2={ly2}
+                stroke={DIM_COLOR} strokeWidth={0.8}
+                markerStart="url(#sc-arrowL)" markerEnd="url(#sc-arrowR)"
+              />
+              {/* Label */}
+              <text
+                x={labelX} y={labelY}
+                textAnchor="middle" dominantBaseline="middle"
+                fontSize={DIM_FONT} fill={DIM_COLOR} fontWeight={600}
+                transform={`rotate(${readableAngle}, ${labelX}, ${labelY})`}
+              >
+                {edge.realLen} {unit}
+              </text>
+            </g>
+          );
+        });
+      })()}
 
       {/* --- Layer 5b: Arch height annotation --- */}
       {shape.type === 'arch' && (() => {
@@ -943,91 +957,72 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         );
       })()}
 
-      {/* --- Layer 6: Panel width labels along the bottom --- */}
+      {/* --- Layer 6: Bottom edge dimension (same style as other edges) --- */}
       {(() => {
-        const bottomLineY = MARGIN + drawH + DIM_OFFSET;
+        // Find the bottom edge from real vertices
+        const bottomRV1 = realVerts.find((_, i) => {
+          const j = (i + 1) % realVerts.length;
+          return isBottomEdge(realVerts[i], realVerts[j], maxRealY);
+        });
+        const bottomIdx = realVerts.indexOf(bottomRV1!);
+        if (bottomIdx < 0) return null;
 
-        if (panels === 1) {
-          const startX = MARGIN;
-          const endX = MARGIN + drawW;
-          const midX = (startX + endX) / 2;
-          return (
-            <g>
-              <line
-                x1={startX} y1={bottomLineY - 4}
-                x2={startX} y2={bottomLineY + 4}
-                stroke={DIM_COLOR} strokeWidth={0.8}
-              />
-              <line
-                x1={endX} y1={bottomLineY - 4}
-                x2={endX} y2={bottomLineY + 4}
-                stroke={DIM_COLOR} strokeWidth={0.8}
-              />
-              <line
-                x1={startX + 4} y1={bottomLineY}
-                x2={endX - 4} y2={bottomLineY}
-                stroke={DIM_COLOR} strokeWidth={1}
-                markerStart="url(#sc-arrowL)"
-                markerEnd="url(#sc-arrowR)"
-              />
-              <text
-                x={midX} y={bottomLineY + 14}
-                textAnchor="middle"
-                fontSize={DIM_FONT}
-                fill={DIM_COLOR}
-                fontWeight={600}
-              >
-                {pwTotal} {unit}
-              </text>
-            </g>
-          );
-        }
+        const j = (bottomIdx + 1) % svgVerts.length;
+        const sv1 = svgVerts[bottomIdx];
+        const sv2 = svgVerts[j];
+        const rv1 = realVerts[bottomIdx];
+        const rv2 = realVerts[j];
+        const len = realEdgeLength(rv1, rv2);
 
-        // Multiple panels
-        let xAcc = 0;
+        // Outward normal (pointing down for bottom edge)
+        const { nx, ny } = getOutwardNormal(
+          sv1.x, sv1.y, sv2.x, sv2.y,
+          svgCenterX, svgCenterY,
+        );
+
+        const lx1 = sv1.x + nx * DIM_OFFSET;
+        const ly1 = sv1.y + ny * DIM_OFFSET;
+        const lx2 = sv2.x + nx * DIM_OFFSET;
+        const ly2 = sv2.y + ny * DIM_OFFSET;
+
+        const labelX = (lx1 + lx2) / 2 + nx * 8;
+        const labelY = (ly1 + ly2) / 2 + ny * 8;
+
+        const angle = Math.atan2(ly2 - ly1, lx2 - lx1) * (180 / Math.PI);
+        const readableAngle = angle > 90 || angle < -90 ? angle + 180 : angle;
+
         return (
           <g>
-            {Array.from({ length: panels }).map((_, i) => {
-              const pw = panelWidths[i] ?? 0;
-              const frac = pwTotal > 0 ? pw / pwTotal : 1 / panels;
-              const pxW = frac * drawW;
-              const startX = MARGIN + xAcc;
-              const endX = MARGIN + xAcc + pxW;
-              const midX = (startX + endX) / 2;
-              xAcc += pxW;
-
-              return (
-                <g key={`pw-${i}`}>
-                  <line
-                    x1={startX} y1={bottomLineY - 4}
-                    x2={startX} y2={bottomLineY + 4}
-                    stroke={DIM_COLOR} strokeWidth={0.8}
-                  />
-                  <line
-                    x1={endX} y1={bottomLineY - 4}
-                    x2={endX} y2={bottomLineY + 4}
-                    stroke={DIM_COLOR} strokeWidth={0.8}
-                  />
-                  <line
-                    x1={startX + 4} y1={bottomLineY}
-                    x2={endX - 4} y2={bottomLineY}
-                    stroke={DIM_COLOR} strokeWidth={0.8}
-                    strokeDasharray="3,2"
-                    markerStart="url(#sc-arrowL)"
-                    markerEnd="url(#sc-arrowR)"
-                  />
-                  <text
-                    x={midX} y={bottomLineY + 14}
-                    textAnchor="middle"
-                    fontSize={DIM_FONT - 1}
-                    fill={DIM_COLOR}
-                    fontWeight={500}
-                  >
-                    {pw} {unit}
-                  </text>
-                </g>
-              );
-            })}
+            {/* Extension lines */}
+            <line
+              x1={sv1.x} y1={sv1.y}
+              x2={lx1} y2={ly1}
+              stroke={DIM_COLOR} strokeWidth={0.4} strokeDasharray="2,2" opacity={0.4}
+            />
+            <line
+              x1={sv2.x} y1={sv2.y}
+              x2={lx2} y2={ly2}
+              stroke={DIM_COLOR} strokeWidth={0.4} strokeDasharray="2,2" opacity={0.4}
+            />
+            {/* Dimension line */}
+            <line
+              x1={lx1} y1={ly1} x2={lx2} y2={ly2}
+              stroke={DIM_COLOR} strokeWidth={0.8}
+              markerStart="url(#sc-arrowL)"
+              markerEnd="url(#sc-arrowR)"
+            />
+            {/* Label */}
+            <text
+              x={labelX} y={labelY}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={DIM_FONT}
+              fill={DIM_COLOR}
+              fontWeight={600}
+              transform={`rotate(${readableAngle}, ${labelX}, ${labelY})`}
+            >
+              {len} {unit}
+            </text>
           </g>
         );
       })()}

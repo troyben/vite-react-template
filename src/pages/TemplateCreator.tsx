@@ -17,6 +17,7 @@ import OpeningsTab from '@/components/product-sketch/tabs/OpeningsTab';
 import PanelsTab from '@/components/product-sketch/tabs/PanelsTab';
 import ShapeSelector from '@/components/template-creator/ShapeSelector';
 import ShapeTab from '@/components/template-creator/tabs/ShapeTab';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { getTemplateById, createTemplate, updateTemplate } from '@/services/templateService';
 import { notify } from '@/utils/notifications';
 import type {
@@ -339,19 +340,32 @@ const TemplateCreator: React.FC = () => {
 
       {/* Main content */}
       <div className="flex flex-1 min-h-0">
-        {/* Left column — shape selector + preview */}
-        <div className="flex flex-1 flex-col p-4 overflow-y-auto">
-          {/* Shape selector */}
-          <div className="mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Shape</h3>
-            <ShapeSelector
-              selected={state.shape.type}
-              onSelect={state.setShapeType}
-            />
-          </div>
+        {/* Left column — controls bar + preview, no scroll */}
+        <div className="flex flex-1 flex-col p-3 min-h-0 overflow-hidden">
+          {/* Controls bar — compact, shrinks to fit */}
+          <div className="flex flex-wrap items-center gap-3 mb-2 shrink-0">
+            {/* Shape picker popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-md border border-input bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  <span className="text-muted-foreground text-xs">Shape:</span>
+                  <span className="capitalize">{state.shape.type.replace('-', ' ')}</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
+                    <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[280px] p-3">
+                <ShapeSelector
+                  selected={state.shape.type}
+                  onSelect={state.setShapeType}
+                />
+              </PopoverContent>
+            </Popover>
 
-          {/* Product type + panels quick controls */}
-          <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Type:</span>
               <div className="flex gap-1">
@@ -421,8 +435,8 @@ const TemplateCreator: React.FC = () => {
             </div>
           </div>
 
-          {/* Live preview — single unified SVG canvas */}
-          <div className="flex items-center justify-center flex-1 min-h-[300px]">
+          {/* Live preview — fills all remaining vertical space */}
+          <div className="flex items-center justify-center flex-1 min-h-0">
             <ShapeCanvas
               shape={state.shape}
               width={state.width}
