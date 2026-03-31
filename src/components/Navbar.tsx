@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, FileText, Building2, Users, Shapes, LayoutTemplate, Settings, CircleUser, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Building2, Users, Shapes, LayoutTemplate, Settings, CircleUser, LogOut, Package } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,8 @@ const Navbar = () => {
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
+    // Exact match only for paths that have sibling sub-routes (e.g. /templates vs /templates/create)
+    if (path === '/templates') return location.pathname === '/templates';
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
@@ -48,6 +50,11 @@ const Navbar = () => {
       path: '/users',
       title: 'Users',
       icon: Users
+    }] : []),
+    ...(user?.role === 'admin' ? [{
+      path: '/materials',
+      title: 'Materials',
+      icon: Package
     }] : []),
     {
       path: '/templates/create',

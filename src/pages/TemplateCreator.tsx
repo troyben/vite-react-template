@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Shapes, Ruler, Palette, DoorOpen, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,16 +29,15 @@ import type {
   ProductData,
   ActiveHingeSelector,
 } from '@/components/product-sketch/types';
-import '../styles/ProductSketch.css';
 
 type TabKey = 'shape' | 'dimensions' | 'appearance' | 'openings' | 'panels';
 
-const TAB_CONFIG: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'shape', label: 'Shape', icon: '/ruler.png' },
-  { key: 'dimensions', label: 'Dims', icon: '/ruler.png' },
-  { key: 'appearance', label: 'Look', icon: '/painting.png' },
-  { key: 'openings', label: 'Open', icon: '/cogs.svg' },
-  { key: 'panels', label: 'Panes', icon: '/grid.svg' },
+const TAB_CONFIG: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: 'shape', label: 'Shape', icon: <Shapes className="h-3.5 w-3.5" /> },
+  { key: 'dimensions', label: 'Dims', icon: <Ruler className="h-3.5 w-3.5" /> },
+  { key: 'appearance', label: 'Look', icon: <Palette className="h-3.5 w-3.5" /> },
+  { key: 'openings', label: 'Open', icon: <DoorOpen className="h-3.5 w-3.5" /> },
+  { key: 'panels', label: 'Panes', icon: <LayoutGrid className="h-3.5 w-3.5" /> },
 ];
 
 function useTemplateCreatorState() {
@@ -93,9 +92,15 @@ function useTemplateCreatorState() {
     setShapeState((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Dimension handlers
+  // Dimension handlers — allow empty fields for free editing
   const handleDimensionChange = useCallback((value: string, dimension: 'width' | 'height') => {
-    const numValue = parseInt(value);
+    if (value === '' || value === '-') {
+      // Allow clearing — set to 0 temporarily, UI shows empty via controlled input
+      if (dimension === 'width') setWidth(0);
+      else setHeight(0);
+      return;
+    }
+    const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
     if (dimension === 'width') {
       setWidth(numValue);
@@ -136,12 +141,19 @@ function useTemplateCreatorState() {
   }, [panelDivisions, width]);
 
   const handlePanelWidthChange = useCallback((panelIndex: number, value: string) => {
-    let num = parseInt(value);
-    if (isNaN(num) || num <= 0) return;
+    if (value === '') {
+      // Allow clearing — set panel to 0 temporarily
+      const newWidths = [...panelWidths];
+      newWidths[panelIndex] = 0;
+      setPanelWidths(newWidths);
+      return;
+    }
+    let num = parseFloat(value);
+    if (isNaN(num) || num < 0) return;
     let newWidths = [...panelWidths];
     if (panelIndex === panels - 1) {
       const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
-      num = Math.max(width - sumExceptLast, 1);
+      num = Math.max(width - sumExceptLast, 0);
       newWidths[panelIndex] = num;
     } else {
       newWidths[panelIndex] = num;
@@ -450,12 +462,13 @@ const TemplateCreator: React.FC = () => {
               openingPanels={state.openingPanels}
               openingDirections={state.openingDirections}
               isSliding={state.isSliding}
+              panelDivisions={state.panelDivisions}
             />
           </div>
         </div>
 
         {/* Right column — tabs */}
-        <div className="w-80 border-l flex flex-col bg-card">
+        <div className="w-96 border-l flex flex-col bg-card">
           {/* Tab buttons */}
           <div className="flex border-b px-2 py-2 gap-1">
             {TAB_CONFIG.map((tab) => (
@@ -463,12 +476,13 @@ const TemplateCreator: React.FC = () => {
                 key={tab.key}
                 type="button"
                 onClick={() => state.setActiveTab(tab.key)}
-                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
                   state.activeTab === tab.key
                     ? 'bg-violet-100 text-violet-700'
                     : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
+                {tab.icon}
                 {tab.label}
               </button>
             ))}

@@ -10,10 +10,7 @@ export const statusMap: Record<string, string> = {
   'paid': 'Paid',
 };
 
-export function formatCurrency(amount: any): string {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
-}
+export { formatCurrency } from '@/config/currency';
 
 function calculateAmount(quotations: Quotation[]): number {
   return quotations.reduce((sum, quotation) => {

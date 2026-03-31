@@ -6,6 +6,7 @@ import { quotationRoutes } from './quotationRoutes';
 import { templateRoutes } from './templateRoutes';
 import { adminRoutes } from './adminRoutes';
 import { clientRoutes } from './clientRoutes';
+import { materialRoutes } from './materialRoutes';
 import Unauthorized from '@/pages/Unauthorized';
 import { AdminOnlyRoute } from './guards';
 
@@ -15,6 +16,7 @@ const allRoutes = [
   ...templateRoutes,
   ...adminRoutes,
   ...clientRoutes,
+  ...materialRoutes,
 ];
 
 export default function AppRoutes() {

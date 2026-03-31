@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { formatCurrency } from '@/config/currency';
 
 const emptyItem: QuotationItem = {
   item: '',
@@ -257,10 +258,7 @@ const QuotationForm = () => {
     setFormData({ ...formData, items: updatedItems });
   };
 
-  const formatAmount = (amount: any): string => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
-  };
+  const formatAmount = formatCurrency;
 
   const renderSketchDetails = (sketchData: ProductData) => (
     <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
@@ -696,7 +694,7 @@ const QuotationForm = () => {
                         )}
                       </td>
                       <td>{item.quantity}</td>
-                      <td>${item.price.toFixed(2)}</td>
+                      <td>{formatAmount(item.price)}</td>
                       <td className="text-right">{formatAmount(item.total)}</td>
                     </tr>
                   ))}

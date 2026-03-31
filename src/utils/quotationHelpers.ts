@@ -1,9 +1,6 @@
 export type QuotationStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
 
-export const formatAmount = (amount: unknown): string => {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return typeof num === 'number' && !isNaN(num) ? `$${num.toFixed(2)}` : '$0.00';
-};
+export { formatCurrency as formatAmount } from '@/config/currency';
 
 export const formatStatus = (status: string | undefined): string => {
   if (!status) return 'Draft';

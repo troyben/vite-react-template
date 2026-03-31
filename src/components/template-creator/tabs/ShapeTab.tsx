@@ -1,4 +1,6 @@
 import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { ShapeConfig } from '@/components/product-sketch/types';
 
 interface ShapeTabProps {
@@ -6,32 +8,44 @@ interface ShapeTabProps {
   onChange: (updates: Partial<ShapeConfig>) => void;
 }
 
+const handleNumericChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  field: keyof ShapeConfig,
+  onChange: (updates: Partial<ShapeConfig>) => void,
+) => {
+  const val = e.target.value;
+  if (val === '') {
+    onChange({ [field]: undefined });
+    return;
+  }
+  const num = parseFloat(val);
+  if (!isNaN(num)) {
+    onChange({ [field]: num });
+  }
+};
+
 const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
   switch (shape.type) {
     case 'arch':
       return (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Arch Height (px)
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Arch Height (mm)</Label>
+            <Input
               type="number"
-              min={10}
               step={5}
-              value={shape.archHeight ?? 100}
-              onChange={(e) => onChange({ archHeight: Number(e.target.value) })}
-              className="dimension-input w-full"
+              value={shape.archHeight ?? ''}
+              onChange={(e) => handleNumericChange(e, 'archHeight', onChange)}
+              placeholder="100"
+              className="h-8 text-sm"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Arch Type
-            </label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Arch Type</Label>
             <select
               value={shape.archType ?? 'semicircle'}
               onChange={(e) => onChange({ archType: e.target.value as 'semicircle' | 'segmental' })}
-              className="styled-select w-full"
+              className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="semicircle">Semicircle</option>
               <option value="segmental">Segmental</option>
@@ -43,17 +57,15 @@ const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
     case 'trapezoid':
       return (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Top Width (mm)
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Top Width (mm)</Label>
+            <Input
               type="number"
-              min={50}
               step={10}
-              value={shape.topWidth ?? 600}
-              onChange={(e) => onChange({ topWidth: Number(e.target.value) })}
-              className="dimension-input w-full"
+              value={shape.topWidth ?? ''}
+              onChange={(e) => handleNumericChange(e, 'topWidth', onChange)}
+              placeholder="600"
+              className="h-8 text-sm"
             />
             <p className="text-xs text-muted-foreground mt-1">
               Bottom width is the main width set in the Dimensions tab.
@@ -65,40 +77,34 @@ const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
     case 'l-shape':
       return (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Cutout Width (mm)
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Cutout Width (mm)</Label>
+            <Input
               type="number"
-              min={50}
               step={10}
-              value={shape.cutoutWidth ?? 400}
-              onChange={(e) => onChange({ cutoutWidth: Number(e.target.value) })}
-              className="dimension-input w-full"
+              value={shape.cutoutWidth ?? ''}
+              onChange={(e) => handleNumericChange(e, 'cutoutWidth', onChange)}
+              placeholder="400"
+              className="h-8 text-sm"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Cutout Height (mm)
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Cutout Height (mm)</Label>
+            <Input
               type="number"
-              min={50}
               step={10}
-              value={shape.cutoutHeight ?? 400}
-              onChange={(e) => onChange({ cutoutHeight: Number(e.target.value) })}
-              className="dimension-input w-full"
+              value={shape.cutoutHeight ?? ''}
+              onChange={(e) => handleNumericChange(e, 'cutoutHeight', onChange)}
+              placeholder="400"
+              className="h-8 text-sm"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Cutout Position
-            </label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Cutout Position</Label>
             <select
               value={shape.cutoutPosition ?? 'top-right'}
               onChange={(e) => onChange({ cutoutPosition: e.target.value as ShapeConfig['cutoutPosition'] })}
-              className="styled-select w-full"
+              className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="top-right">Top Right</option>
               <option value="top-left">Top Left</option>
@@ -112,10 +118,8 @@ const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
     case 'triangle':
       return (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Peak Position
-            </label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Peak Position</Label>
             <input
               type="range"
               min={0}

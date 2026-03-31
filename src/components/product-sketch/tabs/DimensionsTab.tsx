@@ -1,4 +1,6 @@
 import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { Unit } from '../types';
 
 interface DimensionsTabProps {
@@ -19,127 +21,98 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
   unit,
   panels,
   panelWidths,
-  setWidth,
   setUnit,
   handleDimensionChange,
   handlePanelWidthChange,
 }) => {
   return (
-    <>
-      <div className="dimensions">
-        <div className="dimensions-header">
-          <label>Dimensions</label>
-          <select
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as Unit)}
-            className="unit-select"
-          >
-            <option value="mm">millimeters</option>
-            <option value="cm">centimeters</option>
-            <option value="m">meters</option>
-          </select>
-        </div>
-        <div className="dimensions-inputs">
-          <div className="form-group">
-            <label>Width ({unit})</label>
-            <input
-              type="number"
-              value={width}
-              onChange={e => setWidth(Number(e.target.value))}
-              step="0.1"
-              className="dimension-input"
-            />
-          </div>
-          <div className="form-group">
-            <label>Height ({unit})</label>
-            <input
-              type="number"
-              value={height}
-              onChange={e => handleDimensionChange(e.target.value, 'height')}
-              step="0.1"
-              className="dimension-input"
-            />
-          </div>
-        </div>
-      </div>
-      {/* Panel Widths */}
-      <div className="control-group">
-        <label style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, display: 'block' }}>
-          Panel Widths ({unit})
-        </label>
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            marginBottom: 6,
-            flexWrap: 'wrap',
-            background: '#f9fafe',
-            borderRadius: 6,
-            padding: '10px 8px',
-            border: '1px solid #DFE3FA',
-            alignItems: 'center'
-          }}
-        >
-          {Array.from({ length: panels }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: 60,
-                marginRight: 4
-              }}
-            >
-              <label
-                style={{
-                  fontSize: 12,
-                  color: '#7E88C3',
-                  marginBottom: 2,
-                  fontWeight: 500
-                }}
+    <div className="space-y-6">
+      {/* Overall Dimensions */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Overall Dimensions</h4>
+          <div className="flex gap-1">
+            {(['mm', 'cm', 'm'] as Unit[]).map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() => setUnit(u)}
+                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                  unit === u
+                    ? 'bg-violet-100 text-violet-700'
+                    : 'text-muted-foreground hover:bg-muted'
+                }`}
               >
-                P{i + 1}
-              </label>
-              <input
-                type="number"
-                min={0.01}
-                step="any"
-                value={panelWidths[i] || ''}
-                onChange={e => handlePanelWidthChange(i, e.target.value)}
-                style={{
-                  width: 60,
-                  textAlign: 'center',
-                  fontWeight: 600,
-                  background: i === panels - 1 && panels > 1 ? '#f3f3f3' : 'white',
-                  border: i === panels - 1 && panels > 1 ? '1px solid #e0e0e0' : '1px solid #DFE3FA',
-                  color: i === panels - 1 && panels > 1 ? '#b0b0b0' : '#373B53',
-                  borderRadius: 4,
-                  outline: 'none',
-                  fontSize: 14,
-                  padding: '4px 0'
-                }}
-                disabled={i === panels - 1 && panels > 1}
-              />
-            </div>
-          ))}
-          <div
-            style={{
-              marginLeft: 12,
-              fontSize: 13,
-              color: '#7E88C3',
-              fontWeight: 500,
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Total: <span style={{ color: '#373B53', fontWeight: 700 }}>{panelWidths.reduce((a, b) => a + b, 0)}</span> {unit}
+                {u}
+              </button>
+            ))}
           </div>
         </div>
-        <small style={{ color: '#7E88C3', fontSize: 12 }}>
-          Set each panel width. Last panel auto-adjusts to match total width.
-        </small>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Width ({unit})</Label>
+            <Input
+              type="number"
+              value={width || ''}
+              onChange={(e) => handleDimensionChange(e.target.value, 'width')}
+              step="0.1"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Height ({unit})</Label>
+            <Input
+              type="number"
+              value={height || ''}
+              onChange={(e) => handleDimensionChange(e.target.value, 'height')}
+              step="0.1"
+              className="h-8 text-sm"
+            />
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* Panel Widths */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium">Panel Widths ({unit})</h4>
+
+        <div className={`grid gap-2 ${panels >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {Array.from({ length: panels }).map((_, i) => {
+            const isLast = i === panels - 1 && panels > 1;
+            return (
+              <div key={i} className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">P{i + 1}</Label>
+                <Input
+                  type="number"
+                  min={0.01}
+                  step="any"
+                  value={panelWidths[i] || ''}
+                  onChange={(e) => handlePanelWidthChange(i, e.target.value)}
+                  disabled={isLast}
+                  className={`h-8 text-sm text-center ${
+                    isLast ? 'bg-muted/50 text-muted-foreground' : ''
+                  }`}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-xs text-muted-foreground">
+            Last panel auto-adjusts to match total.
+          </p>
+          <span className="text-xs font-medium">
+            Total:{' '}
+            <span className="text-foreground font-semibold">
+              {panelWidths.reduce((a, b) => a + b, 0)}
+            </span>{' '}
+            {unit}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 };
 
