@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { MoreHorizontal, Pencil, KeyRound, Trash2, Loader2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as userService from '@/services/userService';
-import { notify, confirm, alert } from '@/utils/notifications';
+import { notify, confirm } from '@/utils/notifications';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +47,8 @@ export function useUsers(currentUserId: number | undefined) {
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<number | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchUsers = useCallback(async (page: number, search?: string) => {
@@ -130,34 +132,27 @@ export function useUsers(currentUserId: number | undefined) {
     }
   }, [fetchUsers, currentPage, searchTerm]);
 
-  const handleResetPassword = useCallback(async (userId: number) => {
-    const willReset = await confirm({
-      title: 'Reset Password',
-      text: "Are you sure you want to reset this user's password? A new password will be generated.",
-      icon: 'warning',
-      confirmButtonText: 'Yes, reset it',
-      cancelButtonText: 'Cancel',
-    });
+  const openResetPassword = useCallback((user: User) => {
+    setResetPasswordUser(user);
+  }, []);
 
-    if (willReset) {
-      setLoading(true);
-      setActionId(userId);
-      try {
-        await userService.resetUserPassword(userId);
-        await alert({
-          title: 'Password Reset',
-          text: 'Password has been reset successfully. The user will receive an email with the new password.',
-          icon: 'success',
-        });
-        await fetchUsers(currentPage, searchTerm);
-      } catch (err: any) {
-        notify.error(err.message || 'Failed to reset password');
-      } finally {
-        setLoading(false);
-        setActionId(null);
-      }
+  const closeResetPassword = useCallback(() => {
+    setResetPasswordUser(null);
+  }, []);
+
+  const handleResetPasswordSubmit = useCallback(async (password: string) => {
+    if (!resetPasswordUser) return;
+    setResettingPassword(true);
+    try {
+      await userService.resetUserPassword(resetPasswordUser.id, password);
+      notify.success(`Password reset for ${resetPasswordUser.name}`);
+      setResetPasswordUser(null);
+    } catch (err: any) {
+      notify.error(err.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
     }
-  }, [fetchUsers, currentPage, searchTerm]);
+  }, [resetPasswordUser]);
 
   const handleFormSubmit = useCallback(async (formValues: FormValues) => {
     setFormError(null);
@@ -204,11 +199,11 @@ export function useUsers(currentUserId: number | undefined) {
                     <div className="text-xs text-muted-foreground">Modify user details</div>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleResetPassword(row.original.id)} className="cursor-pointer" disabled={actionId === row.original.id}>
-                  {actionId === row.original.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                <DropdownMenuItem onClick={() => openResetPassword(row.original)} className="cursor-pointer">
+                  <KeyRound className="mr-2 h-4 w-4" />
                   <div>
                     <div className="text-sm">Reset Password</div>
-                    <div className="text-xs text-muted-foreground">Generate a new password</div>
+                    <div className="text-xs text-muted-foreground">Set a new password</div>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -227,7 +222,7 @@ export function useUsers(currentUserId: number | undefined) {
         ),
       },
     ],
-    [openEditForm, handleResetPassword, handleDelete, actionId]
+    [openEditForm, openResetPassword, handleDelete, actionId]
   );
 
   return {
@@ -248,5 +243,9 @@ export function useUsers(currentUserId: number | undefined) {
     handlePageChange,
     handleSearch,
     submitting,
+    resetPasswordUser,
+    resettingPassword,
+    closeResetPassword,
+    handleResetPasswordSubmit,
   };
 }

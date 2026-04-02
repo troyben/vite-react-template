@@ -59,9 +59,9 @@ export const deleteUser = async (id: number): Promise<AxiosResponse<ApiResponse<
   }
 };
 
-export const resetUserPassword = async (userId: number): Promise<AxiosResponse<ApiResponse<void>>> => {
+export const resetUserPassword = async (userId: number, password: string): Promise<AxiosResponse<ApiResponse<void>>> => {
   try {
-    return await api.post(`/auth/reset-password/${userId}`);
+    return await api.post(`/auth/reset-password/${userId}`, { password });
   } catch (error) {
     return handleServiceError(error);
   }

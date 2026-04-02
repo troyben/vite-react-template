@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Eye, EyeOff } from 'lucide-react';
 import * as clientApi from '@/services/clientService';
 import type { Client } from '@/services/clientService';
 import type { User, FormValues } from '@/hooks/useUsers';
@@ -40,11 +41,15 @@ export function UserFormDialog({
   const [role, setRole] = useState<string>(editingUser?.role || 'user');
   const [clientId, setClientId] = useState<string>(editingUser?.clientId?.toString() || '');
   const [clients, setClients] = useState<Client[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setRole(editingUser?.role || 'user');
       setClientId(editingUser?.clientId?.toString() || '');
+      setShowPassword(false);
+      setPasswordError(null);
     }
   }, [open, editingUser]);
 
@@ -79,7 +84,14 @@ export function UserFormDialog({
     };
 
     if (!editingUser) {
-      values.password = formData.get('password') as string;
+      const password = formData.get('password') as string;
+      const confirmPassword = formData.get('confirmPassword') as string;
+      if (password !== confirmPassword) {
+        setPasswordError('Passwords do not match');
+        return;
+      }
+      setPasswordError(null);
+      values.password = password;
     }
 
     onSubmit(values);
@@ -158,17 +170,47 @@ export function UserFormDialog({
             </div>
           )}
           {!editingUser && (
-            <div className="grid gap-2">
-              <Label htmlFor="user-password">Password</Label>
-              <Input
-                id="user-password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                placeholder="Minimum 6 characters"
-              />
-            </div>
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="user-password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="user-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Minimum 6 characters"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-confirm-password">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="user-confirm-password"
+                    name="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Re-enter password"
+                    className="pr-10"
+                  />
+                </div>
+              </div>
+              {passwordError && (
+                <div className="text-sm text-destructive">{passwordError}</div>
+              )}
+            </>
           )}
           {formError && (
             <div className="text-sm text-destructive">{formError}</div>

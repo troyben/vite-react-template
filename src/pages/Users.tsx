@@ -4,6 +4,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import BaseDataTable from '@/components/BaseDataTable';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
+import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
 import { Button } from '@/components/ui/button';
 
 const Users = () => {
@@ -43,6 +44,10 @@ function UsersContent({ currentUserId }: { currentUserId: number }) {
     handlePageChange,
     handleSearch,
     submitting,
+    resetPasswordUser,
+    resettingPassword,
+    closeResetPassword,
+    handleResetPasswordSubmit,
   } = useUsers(currentUserId);
 
   return (
@@ -76,6 +81,13 @@ function UsersContent({ currentUserId }: { currentUserId: number }) {
         onClose={closeForm}
         onSubmit={handleFormSubmit}
         submitting={submitting}
+      />
+      <ResetPasswordDialog
+        open={!!resetPasswordUser}
+        userName={resetPasswordUser?.name || ''}
+        submitting={resettingPassword}
+        onClose={closeResetPassword}
+        onSubmit={handleResetPasswordSubmit}
       />
     </div>
   );
