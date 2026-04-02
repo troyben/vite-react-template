@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, FileText, Building2, Users, Shapes, LayoutTemplate, Settings, CircleUser, LogOut, Package } from 'lucide-react';
+import { LayoutDashboard, FileText, Building2, Users, Shapes, LayoutTemplate, Settings, CircleUser, LogOut, Package, SlidersHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,11 +61,11 @@ const Navbar = () => {
       title: 'Create Template',
       icon: Shapes
     }] : []),
-    {
-      path: '/settings',
-      title: 'Settings',
-      icon: Settings
-    }
+    ...(user?.role === 'admin' ? [{
+      path: '/system-settings',
+      title: 'System Settings',
+      icon: SlidersHorizontal
+    }] : [])
   ];
 
   return (
@@ -121,7 +121,7 @@ const Navbar = () => {
               <img
                 src={user.avatar}
                 alt={user.name}
-                className="h-10 w-10 rounded-full object-cover"
+                className="h-10 w-10 rounded-full object-cover border-2 border-primary"
               />
             ) : (
               <CircleUser className="h-8 w-8 text-primary" />

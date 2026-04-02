@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { formatCurrency } from '@/config/currency';
 import { notify } from '@/utils/notifications';
+import { useSystemSettingsStore } from '@/stores/systemSettingsStore';
 
 const emptyItem: QuotationItem = {
   item: '',
@@ -163,14 +164,36 @@ const QuotationForm = () => {
         : '';
       const shouldAutoFillName = !currentName || currentName === previousAutoName;
       const shouldAutoFillDesc = !currentDesc || currentDesc === previousAutoDesc;
-      return {
+      const updatedItem: any = {
         ...item,
         productSketch: { ...productData },
         ...(shouldAutoFillName ? { item: autoName } : {}),
         ...(shouldAutoFillDesc ? { description: autoDescription } : {}),
       };
+      // Auto-fill rate from system settings if empty
+      if (!updatedItem.rate || updatedItem.rate === 0) {
+        const { getNumberSetting } = useSystemSettingsStore.getState();
+        const defaultRate = productData.type === 'door'
+          ? getNumberSetting('default_door_rate')
+          : getNumberSetting('default_window_rate');
+        if (defaultRate && defaultRate > 0) {
+          updatedItem.rate = defaultRate;
+        }
+      }
+      // Always recalculate price from rate + new dimensions
+      if (updatedItem.rate && Number(updatedItem.rate) > 0) {
+        const { width, height, unit } = productData;
+        const widthM = toMeters(Number(width), unit);
+        const heightM = toMeters(Number(height), unit);
+        const rate = Number(updatedItem.rate);
+        if (!isNaN(widthM) && !isNaN(heightM)) {
+          updatedItem.price = +(widthM * heightM * rate).toFixed(2);
+          updatedItem.total = updatedItem.quantity * updatedItem.price;
+        }
+      }
+      return updatedItem;
     });
-    setFormData({ ...formData, items: updatedItems });
+    setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
     setShowSketchDialog(false);
     setCurrentItemIndex(-1);
   };
@@ -200,14 +223,36 @@ const QuotationForm = () => {
         : '';
       const shouldAutoFillName = !currentName || currentName === previousAutoName;
       const shouldAutoFillDesc = !currentDesc || currentDesc === previousAutoDesc;
-      return {
+      const updatedItem: any = {
         ...item,
         productSketch: { ...productData },
         ...(shouldAutoFillName ? { item: autoName } : {}),
         ...(shouldAutoFillDesc ? { description: autoDescription } : {}),
       };
+      // Auto-fill rate from system settings if empty
+      if (!updatedItem.rate || updatedItem.rate === 0) {
+        const { getNumberSetting } = useSystemSettingsStore.getState();
+        const defaultRate = productData.type === 'door'
+          ? getNumberSetting('default_door_rate')
+          : getNumberSetting('default_window_rate');
+        if (defaultRate && defaultRate > 0) {
+          updatedItem.rate = defaultRate;
+        }
+      }
+      // Always recalculate price from rate + new dimensions
+      if (updatedItem.rate && Number(updatedItem.rate) > 0) {
+        const { width, height, unit } = productData;
+        const widthM = toMeters(Number(width), unit);
+        const heightM = toMeters(Number(height), unit);
+        const rate = Number(updatedItem.rate);
+        if (!isNaN(widthM) && !isNaN(heightM)) {
+          updatedItem.price = +(widthM * heightM * rate).toFixed(2);
+          updatedItem.total = updatedItem.quantity * updatedItem.price;
+        }
+      }
+      return updatedItem;
     });
-    setFormData({ ...formData, items: updatedItems });
+    setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
     setShowTemplatePicker(false);
     setTemplateTargetIndex(-1);
   };
@@ -322,11 +367,10 @@ const QuotationForm = () => {
   };
 
   const handleRemoveSketch = (index: number) => {
-    const updatedItems = formData.items.map((item, i) => {
-      if (i === index) { const { productSketch, ...rest } = item; return rest; }
-      return item;
-    });
-    setFormData({ ...formData, items: updatedItems });
+    const updatedItems = formData.items.map((item, i) =>
+      i === index ? { ...emptyItem } : item
+    );
+    setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
   };
 
   const formatAmount = formatCurrency;
