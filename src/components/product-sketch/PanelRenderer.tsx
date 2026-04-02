@@ -1,5 +1,6 @@
 import React from 'react';
 import PanelDivisions from './PanelDivisions';
+import { getGlassCssStyle } from '@/components/template-creator/utils/glass-color';
 import type { OpeningDirection, ActiveHingeSelector } from './types';
 
 interface PanelRendererProps {
@@ -85,17 +86,7 @@ const PanelRenderer: React.FC<PanelRendererProps> = ({
     }
   };
 
-  const getGlassStyle = () => {
-    switch (glassType) {
-      case 'clear':
-        return frameColor === '#C0C0C0'
-          ? 'rgba(220, 225, 255, 0.15)' // Lighter, more subtle blue for silver frame
-          : 'rgba(200, 200, 255, 0.3)';
-      case 'frosted': return 'rgba(255, 255, 255, 0.8)';
-      case 'custom-tint': return `${customGlassTint}80`;
-      default: return 'transparent';
-    }
-  };
+  const glassStyle = getGlassCssStyle(glassType, frameColor, customGlassTint);
 
   return (
     <div
@@ -112,8 +103,10 @@ const PanelRenderer: React.FC<PanelRendererProps> = ({
                       openingDirection === 'top' ? 'center top' : 'center bottom',
         transition: 'transform 0.3s ease, z-index 0s',
         zIndex: getZIndex(),
-        backgroundColor: getGlassStyle(),
-        boxShadow: isOpening ? '2px 2px 8px rgba(0,0,0,0.2)' : 'none',
+        ...glassStyle,
+        boxShadow: isOpening
+          ? `2px 2px 8px rgba(0,0,0,0.2), ${(glassStyle.boxShadow as string) || ''}`
+          : (glassStyle.boxShadow as string) || 'none',
         margin: 0,
         boxSizing: 'border-box'
       }}

@@ -10,7 +10,7 @@ import {
   DIVIDER_STROKE,
   MARKER_SIZE,
 } from './utils/types';
-import { getGlassColor } from './utils/glass-color';
+import { getGlassSvgDefs, getGlassSvgFill, getGlassSvgFilter, getGlassSvgHighlight } from './utils/glass-color';
 import { getRealVertices, scaleVertices, getShapePath } from './utils/shape-path';
 import { getPanelDividers, getPanelPolygonPoints, getPanelCenter } from './utils/panels';
 import { getOpeningIndicator } from './utils/opening-indicators';
@@ -222,8 +222,10 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     ? svgVertsToReal(effectiveSvgVerts, drawW, drawH, width, height)
     : undefined;
 
-  // Glass color
-  const glassColor = getGlassColor(glassType, frameColor, customGlassTint);
+  // Glass fill references
+  const glassFill = getGlassSvgFill(glassType, uid);
+  const glassFilter = getGlassSvgFilter(glassType, uid);
+  const glassHighlight = getGlassSvgHighlight(glassType, uid);
 
   // Panel dividers
   const dividers = getPanelDividers(shape, panels, panelWidths, svgVerts, drawW, drawH, width, height);
@@ -399,6 +401,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         <clipPath id={clipId}>
           <path d={effectivePath} />
         </clipPath>
+        {getGlassSvgDefs(glassType, uid, frameColor, customGlassTint)}
       </defs>
 
       {/* --- Clipped glass group (respects removed sections) --- */}
@@ -422,8 +425,15 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         if (!pts) return null;
         const isOpening = openingPanels.includes(i);
         return (
-          <polygon key={`glass-${i}`} points={pts}
-            fill={isOpening ? '#44D5B880' : glassColor} stroke="none" />
+          <React.Fragment key={`glass-${i}`}>
+            <polygon points={pts}
+              fill={isOpening ? '#44D5B880' : glassFill}
+              filter={isOpening ? undefined : glassFilter}
+              stroke="none" />
+            {!isOpening && glassHighlight && (
+              <polygon points={pts} fill={glassHighlight} stroke="none" />
+            )}
+          </React.Fragment>
         );
       })}
 
