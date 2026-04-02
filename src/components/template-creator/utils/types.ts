@@ -15,13 +15,14 @@ export interface DividerLine {
 
 // Layout
 export const MARGIN = 40;               // space around shape for dimension labels
-export const BOTTOM_LABEL_SPACE = 40;   // extra room below shape for inner + outer bottom dimensions
+export const BOTTOM_LABEL_SPACE = 55;   // extra room below shape for inner + outer bottom dimensions
 
 // Dimension lines
 export const DIM_COLOR = '#7E88C3';
-export const DIM_FONT = 8;
-export const DIM_OFFSET = 16;           // how far dimension lines sit from the shape edge
-export const MARKER_SIZE = 4;
+export const DIM_FONT = 11;
+export const DIM_OFFSET = 22;           // how far dimension lines sit from the shape edge
+export const MARKER_SIZE = 5;
+export const DIM_LABEL_GAP = 11;        // gap between dimension line and label text
 
 // Frame
 export const FRAME_STROKE = 4;

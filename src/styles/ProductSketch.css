@@ -571,10 +571,8 @@
   transform: scale(1);
   transform-origin: center center;
   margin: auto;
-  min-width: 240px;
-  max-width: 90%;
-  width: auto;
-  min-height: 240px;
+  min-width: 100px;
+  min-height: 100px;
   box-shadow: 0 8px 16px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
 }

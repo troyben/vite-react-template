@@ -22,9 +22,8 @@ export function getOpeningIndicator(
   panelH: number,
   keyPrefix: string,
 ): React.ReactNode {
-  const color = isSliding ? '#9333ea' : '#2563eb';
-  const dashArray = isSliding ? '4,3' : '3,2';
-  const dotR = Math.min(panelW, panelH) * 0.06;
+  const color = isSliding ? '#ea580c' : '#16a34a';
+  const dashArray = isSliding ? '6,4' : '3,2';
   const inset = 1; // small inset from panel edges
 
   // Panel bounding box
@@ -85,11 +84,14 @@ export function getOpeningIndicator(
         x1={handleX} y1={handleY} x2={corner2X} y2={corner2Y}
         stroke={color} strokeWidth={1} strokeDasharray={dashArray}
       />
-      {/* Handle dot on the opposite side */}
-      <circle
-        cx={handleX} cy={handleY} r={dotR}
-        fill={color}
-      />
+      {/* Simple handle — lever follows opening direction */}
+      <circle cx={handleX} cy={handleY} r={1.5}
+        fill="#444" stroke="none" />
+      <line
+        x1={handleX} y1={handleY}
+        x2={handleX + (direction === 'right' ? 10 : direction === 'left' ? -10 : 0)}
+        y2={handleY + (direction === 'bottom' ? 10 : direction === 'top' ? -10 : 0)}
+        stroke="#444" strokeWidth={0.7} strokeLinecap="round" />
     </g>
   );
 }

@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import { AdminOnlyRoute } from './guards';
+import { AdminOnlyRoute, PrivateRoute } from './guards';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Users = lazy(() => import('@/pages/Users'));
@@ -17,6 +17,6 @@ export const adminRoutes: RouteObject[] = [
   },
   {
     path: '/settings',
-    element: <Settings />,
+    element: <PrivateRoute><Settings /></PrivateRoute>,
   },
 ];

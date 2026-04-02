@@ -279,7 +279,6 @@ const PanelsTab: React.FC<PanelsTabProps> = ({
                   <Label className="text-[10px] text-muted-foreground">Row Heights ({unit})</Label>
                   <div className={`grid gap-1.5 ${rows >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {Array.from({ length: rows }).map((_, r) => {
-                      const isLast = r === rows - 1;
                       return (
                         <div key={r} className="space-y-0.5">
                           <span className="text-[9px] text-muted-foreground">Row {r + 1}</span>
@@ -289,32 +288,30 @@ const PanelsTab: React.FC<PanelsTabProps> = ({
                             step="any"
                             value={rowHeights[r] ?? ''}
                             onChange={(e) => {
-                              if (isLast) return;
                               const val = e.target.value;
                               if (val === '') return;
                               const num = parseFloat(val);
                               if (isNaN(num) || num < 0) return;
                               const newHeights = [...rowHeights];
+                              const delta = num - newHeights[r];
                               newHeights[r] = num;
-                              // Recalculate last row
-                              const sumExceptLast = newHeights.slice(0, -1).reduce((a, b) => a + b, 0);
-                              newHeights[rows - 1] = Math.max(height - sumExceptLast, 0);
+                              const neighborRow = r < rows - 1 ? r + 1 : r - 1;
+                              if (neighborRow >= 0) {
+                                newHeights[neighborRow] = Math.max(newHeights[neighborRow] - delta, 1);
+                              }
                               setPanelDivisionHeights([
                                 ...panelDivisionHeights.filter((h) => h.panelIndex !== panelIndex),
                                 { panelIndex, rowHeights: newHeights },
                               ]);
                             }}
-                            disabled={isLast}
-                            className={`h-7 text-center text-sm ${
-                              isLast ? 'bg-muted/50 text-muted-foreground' : ''
-                            }`}
+                            className="h-7 text-center text-sm"
                           />
                         </div>
                       );
                     })}
                   </div>
                   <p className="text-[9px] text-muted-foreground">
-                    Last row auto-adjusts. Total: <span className="font-semibold text-foreground">{rowHeights.reduce((a, b) => a + b, 0)}</span> {unit}
+                    Neighbor row adjusts to match total. Total: <span className="font-semibold text-foreground">{rowHeights.reduce((a, b) => a + b, 0)}</span> {unit}
                   </p>
                 </div>
               );
@@ -330,7 +327,6 @@ const PanelsTab: React.FC<PanelsTabProps> = ({
                   <Label className="text-[10px] text-muted-foreground">Column Widths ({unit})</Label>
                   <div className={`grid gap-1.5 ${cols >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {Array.from({ length: cols }).map((_, c) => {
-                      const isLast = c === cols - 1;
                       return (
                         <div key={c} className="space-y-0.5">
                           <span className="text-[9px] text-muted-foreground">Col {c + 1}</span>
@@ -340,32 +336,31 @@ const PanelsTab: React.FC<PanelsTabProps> = ({
                             step="any"
                             value={colWidths[c] ?? ''}
                             onChange={(e) => {
-                              if (isLast) return;
                               const val = e.target.value;
                               if (val === '') return;
                               const num = parseFloat(val);
                               if (isNaN(num) || num < 0) return;
                               const newWidths = [...colWidths];
+                              const delta = num - newWidths[c];
                               newWidths[c] = num;
-                              // Recalculate last column
-                              const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
-                              newWidths[cols - 1] = Math.max(pw - sumExceptLast, 0);
+                              // Adjust neighbor column to maintain total width
+                              const neighborCol = c < cols - 1 ? c + 1 : c - 1;
+                              if (neighborCol >= 0) {
+                                newWidths[neighborCol] = Math.max(newWidths[neighborCol] - delta, 1);
+                              }
                               setPanelDivisionWidths([
                                 ...panelDivisionWidths.filter((w) => w.panelIndex !== panelIndex),
                                 { panelIndex, colWidths: newWidths },
                               ]);
                             }}
-                            disabled={isLast}
-                            className={`h-7 text-center text-sm ${
-                              isLast ? 'bg-muted/50 text-muted-foreground' : ''
-                            }`}
+                            className="h-7 text-center text-sm"
                           />
                         </div>
                       );
                     })}
                   </div>
                   <p className="text-[9px] text-muted-foreground">
-                    Last col auto-adjusts. Total: <span className="font-semibold text-foreground">{colWidths.reduce((a, b) => a + b, 0)}</span> {unit}
+                    Neighbor col adjusts to match total. Total: <span className="font-semibold text-foreground">{colWidths.reduce((a, b) => a + b, 0)}</span> {unit}
                   </p>
                 </div>
               );

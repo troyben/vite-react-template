@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Image, Download, Phone, MapPin, Eye, ArrowLeft, LayoutTemplate } from 'lucide-react';
+import { Plus, X, Image, Download, Phone, MapPin, Eye, ArrowLeft, LayoutTemplate, Loader2 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuotationById, createQuotation, updateQuotation } from '../services/quotationService';
 import { getAllClients } from '../services/clientService';
-import { exportQuotationToPDF } from '../utils/pdfExport';
+import { exportQuotationToPDF } from '../utils/pdf';
 import type { Client } from '../services/clientService';
 import type { QuotationItem, QuotationFormData, Quotation } from '../services/quotationService';
 import type { ProductData } from '@/components/product-sketch/types';
@@ -13,6 +13,7 @@ import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import ClientSelector from '@/components/ClientSelector';
 import TemplatePicker from '@/components/TemplatePicker';
 import QuotationPreviewModal from '@/components/QuotationPreviewModal';
+import QuotationPDFPreview from '@/components/QuotationPDFPreview';
 import { createTemplate } from '@/services/templateService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { formatCurrency } from '@/config/currency';
+import { notify } from '@/utils/notifications';
 
 const emptyItem: QuotationItem = {
   item: '',
@@ -61,6 +63,7 @@ const QuotationForm = () => {
   const [templateTargetIndex, setTemplateTargetIndex] = useState<number>(-1);
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState<boolean>(false);
   const [saveTemplateData, setSaveTemplateData] = useState<ProductData | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
   const [templateName, setTemplateName] = useState('');
 
   useEffect(() => {
@@ -148,7 +151,24 @@ const QuotationForm = () => {
   const handleSaveSketch = (productData: ProductData) => {
     const updatedItems = (formData.items as QuotationItem[]).map((item, i) => {
       if (i !== currentItemIndex) return item;
-      return { ...item, productSketch: { ...productData } };
+      const autoName = buildNameFromSketch(productData);
+      const autoDescription = buildDescriptionFromSketch(productData);
+      const currentName = (item.item || '').trim();
+      const currentDesc = (item.description || '').trim();
+      const previousAutoName = item.productSketch
+        ? buildNameFromSketch(item.productSketch).trim()
+        : '';
+      const previousAutoDesc = item.productSketch
+        ? buildDescriptionFromSketch(item.productSketch).trim()
+        : '';
+      const shouldAutoFillName = !currentName || currentName === previousAutoName;
+      const shouldAutoFillDesc = !currentDesc || currentDesc === previousAutoDesc;
+      return {
+        ...item,
+        productSketch: { ...productData },
+        ...(shouldAutoFillName ? { item: autoName } : {}),
+        ...(shouldAutoFillDesc ? { description: autoDescription } : {}),
+      };
     });
     setFormData({ ...formData, items: updatedItems });
     setShowSketchDialog(false);
@@ -168,7 +188,24 @@ const QuotationForm = () => {
   const handleTemplateSelect = (productData: ProductData) => {
     const updatedItems = (formData.items as QuotationItem[]).map((item, i) => {
       if (i !== templateTargetIndex) return item;
-      return { ...item, productSketch: { ...productData } };
+      const autoName = buildNameFromSketch(productData);
+      const autoDescription = buildDescriptionFromSketch(productData);
+      const currentName = (item.item || '').trim();
+      const currentDesc = (item.description || '').trim();
+      const previousAutoName = item.productSketch
+        ? buildNameFromSketch(item.productSketch).trim()
+        : '';
+      const previousAutoDesc = item.productSketch
+        ? buildDescriptionFromSketch(item.productSketch).trim()
+        : '';
+      const shouldAutoFillName = !currentName || currentName === previousAutoName;
+      const shouldAutoFillDesc = !currentDesc || currentDesc === previousAutoDesc;
+      return {
+        ...item,
+        productSketch: { ...productData },
+        ...(shouldAutoFillName ? { item: autoName } : {}),
+        ...(shouldAutoFillDesc ? { description: autoDescription } : {}),
+      };
     });
     setFormData({ ...formData, items: updatedItems });
     setShowTemplatePicker(false);
@@ -231,24 +268,56 @@ const QuotationForm = () => {
   };
 
   const handleDownloadPDF = async () => {
-    if (!formData || !selectedClient) return;
+    if (!formData || !selectedClient) {
+      notify.error('Please select a client before downloading PDF');
+      return;
+    }
     try {
+      setPdfLoading(true);
+
+      // If unsaved quotation, save first to get a real DB id
+      let quotationId = formData.id;
+      let createdAt = formData.created_at || new Date().toISOString();
+      if (!quotationId) {
+        const saveData = {
+          clientId: selectedClient.id,
+          client_name: selectedClient.name,
+          client_email: selectedClient.email || '',
+          client_phone: selectedClient.phone || undefined,
+          client_address: selectedClient.address || '',
+          items: formData.items.map(item => ({ ...item, total: item.quantity * item.price })),
+          total_amount: calculateTotal(formData.items),
+          status: formData.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'paid',
+          notes: formData.notes || '',
+        };
+        const response = await createQuotation(saveData);
+        if (response.data?.data?.id) {
+          quotationId = response.data.data.id;
+          createdAt = response.data.data.createdAt || createdAt;
+          setFormData(prev => ({ ...prev, id: quotationId }));
+          notify.success('Quotation saved');
+        }
+      }
+
       const quotationData: Quotation = {
-        id: formData.id || Date.now(), clientId: selectedClient.id,
+        id: quotationId!, clientId: selectedClient.id,
         client_name: selectedClient.name, client_email: selectedClient.email || '',
         client_phone: selectedClient.phone || undefined,
         client_address: selectedClient.address || '',
         items: formData.items.map(item => ({ ...item, total: item.quantity * item.price })),
         total_amount: calculateTotal(formData.items), status: formData.status,
         notes: formData.notes || '',
-        created_at: formData.created_at || new Date().toISOString(),
-        updated_at: formData.updated_at || new Date().toISOString(),
-        createdAt: formData.created_at || new Date().toISOString(),
-        updatedAt: formData.updated_at || new Date().toISOString()
+        created_at: createdAt,
+        updated_at: new Date().toISOString(),
+        createdAt: createdAt,
+        updatedAt: new Date().toISOString()
       };
       await exportQuotationToPDF(quotationData);
     } catch (error) {
       console.error('Error generating PDF:', error);
+      notify.error('Failed to generate PDF');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -261,6 +330,35 @@ const QuotationForm = () => {
   };
 
   const formatAmount = formatCurrency;
+
+  const FRAME_COLOR_NAMES: Record<string, string> = {
+    '#C0C0C0': 'Natural/Silver',
+    '#4F4F4F': 'Charcoal Grey',
+    '#CD7F32': 'Bronze',
+  };
+
+  const buildNameFromSketch = (data: ProductData): string => {
+    const openingType = data.type === 'door'
+      ? (data.doorType || 'hinged')
+      : (data.windowType || 'hinged');
+    const productType = data.type === 'door' ? 'Door' : 'Window';
+    return `${openingType.charAt(0).toUpperCase() + openingType.slice(1)} ${productType}`;
+  };
+
+  const buildDescriptionFromSketch = (data: ProductData): string => {
+    const lines: string[] = [];
+    lines.push(`${data.width} x ${data.height} ${data.unit}`);
+    if (data.glassType) {
+      const glass = data.glassType === 'custom-tint'
+        ? `Custom Tint${data.customGlassTint ? ` (${data.customGlassTint})` : ''}`
+        : data.glassType.charAt(0).toUpperCase() + data.glassType.slice(1);
+      lines.push(`Glass: ${glass}`);
+    }
+    if (data.frameColor) {
+      lines.push(`Frame: ${FRAME_COLOR_NAMES[data.frameColor] || 'Custom'}`);
+    }
+    return lines.join('\n');
+  };
 
   const renderSketchDetails = (sketchData: ProductData) => (
     <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
@@ -289,9 +387,9 @@ const QuotationForm = () => {
             <Eye className="h-4 w-4 mr-1.5" />
             Preview
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-            <Download className="h-4 w-4 mr-1.5" />
-            PDF
+          <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={pdfLoading}>
+            {pdfLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+            {pdfLoading ? 'Generating...' : 'PDF'}
           </Button>
         </div>
       </div>
@@ -301,10 +399,17 @@ const QuotationForm = () => {
       )}
 
       <form onSubmit={handleSubmit}>
-        {/* Client Section - compact inline */}
-        <Card className="mb-4">
-          <CardContent className="py-3 px-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Items Table */}
+        <Card>
+          <CardHeader className="py-3 px-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Line Items</CardTitle>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add Item
+              </Button>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t pt-2">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0 flex-1">
                 <span className="text-sm font-medium text-muted-foreground shrink-0">Client:</span>
                 {selectedClient ? (
@@ -329,17 +434,6 @@ const QuotationForm = () => {
                 {selectedClient ? 'Change' : 'Select Client'}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Items Table */}
-        <Card>
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Line Items</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add Item
-            </Button>
           </CardHeader>
           <CardContent className="p-0">
             {/* Mobile cards */}
@@ -362,7 +456,7 @@ const QuotationForm = () => {
                     <div className="shrink-0">
                       {item.productSketch ? (
                         <div className="flex flex-col gap-1">
-                          <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors w-[60px] h-[40px]"
+                          <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors w-[100px] h-[70px]"
                                onClick={() => handleOpenSketch(index)}>
                             <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
                           </div>
@@ -398,8 +492,8 @@ const QuotationForm = () => {
                     <div className="flex-1 space-y-1.5">
                       <Input value={item.item} onChange={(e) => handleItemChange(index, 'item', e.target.value)}
                         placeholder="Item name" className="h-8 text-sm" required />
-                      <Input value={item.description} onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        placeholder="Description" className="h-8 text-sm" />
+                      <Textarea value={item.description ?? ''} onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="Description" className="text-sm min-h-[48px]" rows={2} />
                     </div>
                   </div>
 
@@ -461,7 +555,7 @@ const QuotationForm = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">#</TableHead>
-                  <TableHead className="w-[200px]">Sketch</TableHead>
+                  <TableHead className="w-[250px]">Sketch</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-16">Qty</TableHead>
@@ -483,7 +577,7 @@ const QuotationForm = () => {
                     <TableCell className="pt-3">
                       {item.productSketch ? (
                         <div className="flex flex-col gap-1">
-                          <div className="cursor-pointer w-[120px] h-[70px]" onClick={() => handleOpenSketch(index)}>
+                          <div className="cursor-pointer w-[180px] h-[110px]" onClick={() => handleOpenSketch(index)}>
                             <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
                           </div>
                           <div className="flex gap-1 justify-center">
@@ -526,11 +620,12 @@ const QuotationForm = () => {
 
                     {/* Description */}
                     <TableCell className="pt-3">
-                      <Input
+                      <Textarea
                         value={item.description ?? ''}
                         onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                         placeholder="Add description..."
-                        className="h-8 text-sm"
+                        className="text-sm min-h-[60px]"
+                        rows={3}
                       />
                     </TableCell>
 
@@ -648,66 +743,19 @@ const QuotationForm = () => {
 
       {/* Modals */}
       <QuotationPreviewModal open={showPreviewModal} onClose={() => setShowPreviewModal(false)}>
-        <div className="quotation-preview">
-          <div className="preview-header">
-            <h2 className="preview-title">Preview</h2>
-            <div className="preview-actions">
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-                <Download className="w-4 h-4 mr-1.5" />
-                Download PDF
-              </Button>
-            </div>
-          </div>
-          <div className="preview-content">
-            <div className="preview-section">
-              <div className="preview-section-title">Quotation</div>
-              <div className="preview-client">
-                <div className="preview-client-name">{selectedClient?.name || 'Client Name'}</div>
-                {selectedClient?.phone && (
-                  <div className="preview-client-detail">
-                    <Phone className="preview-icon w-4 h-4" />
-                    <div>{selectedClient.phone}</div>
-                  </div>
-                )}
-                {selectedClient?.address && (
-                  <div className="preview-client-detail">
-                    <MapPin className="preview-icon w-4 h-4" />
-                    <div>{selectedClient.address}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="preview-section">
-              <div className="preview-section-title">Items</div>
-              <table className="preview-items">
-                <thead>
-                  <tr><th>Item</th><th>Qty</th><th>Price</th><th className="text-right">Total</th></tr>
-                </thead>
-                <tbody>
-                  {(formData.items as QuotationItem[]).map((item, index) => (
-                    <tr key={index}>
-                      <td>
-                        <div>{item.item || 'Item name'}</div>
-                        {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
-                        {item.productSketch && (
-                          <div className="mt-2 w-[200px] h-[100px]">
-                            <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
-                          </div>
-                        )}
-                      </td>
-                      <td>{item.quantity}</td>
-                      <td>{formatAmount(item.price)}</td>
-                      <td className="text-right">{formatAmount(item.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="preview-total">
-                <div className="preview-total-label">Total Amount</div>
-                <div className="preview-total-value">{formatAmount(formData.total_amount)}</div>
-              </div>
-            </div>
-          </div>
+        <div className="mb-4 px-2">
+          <h2 className="text-lg font-semibold">Quotation Preview</h2>
+        </div>
+        <div className="overflow-auto max-h-[80vh]">
+          <QuotationPDFPreview
+            clientName={selectedClient?.name || 'Client Name'}
+            clientPhone={selectedClient?.phone}
+            clientAddress={selectedClient?.address}
+            items={formData.items.map(item => ({ ...item, total: item.quantity * item.price }))}
+            totalAmount={calculateTotal(formData.items)}
+            quotationId={formData.id}
+            createdAt={formData.created_at}
+          />
         </div>
       </QuotationPreviewModal>
 

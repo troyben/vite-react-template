@@ -36,16 +36,16 @@ const Navbar = () => {
       title: 'Quotations',
       icon: FileText
     },
-    {
+    ...(user?.role !== 'client' ? [{
       path: '/clients',
       title: 'Clients',
       icon: Building2
-    },
-    {
+    }] : []),
+    ...(user?.role !== 'client' ? [{
       path: '/templates',
       title: 'Templates',
       icon: LayoutTemplate
-    },
+    }] : []),
     ...(user?.role === 'admin' ? [{
       path: '/users',
       title: 'Users',
@@ -56,11 +56,11 @@ const Navbar = () => {
       title: 'Materials',
       icon: Package
     }] : []),
-    {
+    ...(user?.role !== 'client' ? [{
       path: '/templates/create',
       title: 'Create Template',
       icon: Shapes
-    },
+    }] : []),
     {
       path: '/settings',
       title: 'Settings',

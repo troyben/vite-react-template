@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuotationById, deleteQuotation, updateQuotation, type Quotation } from '@/services/quotationService';
 import { notify } from '@/utils/notifications';
-import { exportQuotationToPDF } from '@/utils/pdfExport';
+import { exportQuotationToPDF } from '@/utils/pdf';
 import type { QuotationStatus } from '@/utils/quotationHelpers';
 
 export function useQuotationDetail() {

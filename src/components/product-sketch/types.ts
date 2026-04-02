@@ -45,6 +45,7 @@ export interface ProductData {
   panelDivisionHeights?: Array<{ panelIndex: number; rowHeights: number[] }>;
   panelDivisionWidths?: Array<{ panelIndex: number; colWidths: number[] }>;
   shape?: ShapeConfig;
+  removedSections?: Array<{ panelIndex: number; rowIndex: number; colIndex: number }>;
 }
 
 export interface ProductSketchProps {

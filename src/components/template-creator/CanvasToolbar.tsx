@@ -1,5 +1,5 @@
 import React from 'react';
-import { GripHorizontal, Minus, MousePointer2 } from 'lucide-react';
+import { GripHorizontal, Minus, MousePointer2, Eraser, RotateCcw } from 'lucide-react';
 import type { CanvasTool } from './utils/canvas-tools';
 
 interface CanvasToolbarProps {
@@ -9,6 +9,7 @@ interface CanvasToolbarProps {
   onLineOrientationChange: (o: 'horizontal' | 'vertical') => void;
   lineTarget: 'panel' | 'pane';
   onLineTargetChange: (t: 'panel' | 'pane') => void;
+  onReset?: () => void;
 }
 
 const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
@@ -18,6 +19,7 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onLineOrientationChange,
   lineTarget,
   onLineTargetChange,
+  onReset,
 }) => {
   function toggleTool(tool: CanvasTool) {
     onToolChange(activeTool === tool ? null : tool);
@@ -26,6 +28,7 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   const btnBase =
     'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors';
   const btnActive = 'border-violet-400 bg-violet-50 text-violet-700';
+  const btnActiveRemove = 'border-red-400 bg-red-50 text-red-700';
   const btnInactive = 'border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground';
 
   return (
@@ -140,6 +143,30 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         </svg>
         <span>Arc</span>
       </button>
+
+      {/* Remove tool */}
+      <button
+        type="button"
+        className={`${btnBase} ${activeTool === 'remove' ? btnActiveRemove : btnInactive}`}
+        onClick={() => toggleTool('remove')}
+        title="Remove tool -- click on dividers, handles, or arcs to remove them"
+      >
+        <Eraser className="h-3.5 w-3.5" />
+        <span>Remove</span>
+      </button>
+
+      {/* Reset */}
+      {onReset && (
+        <button
+          type="button"
+          className={`${btnBase} ${btnInactive}`}
+          onClick={onReset}
+          title="Reset canvas to a default square shape"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span>Reset</span>
+        </button>
+      )}
     </div>
   );
 };

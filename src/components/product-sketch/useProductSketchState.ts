@@ -141,11 +141,16 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
     setPanelWidths(widths);
   };
 
-  // Helper to keep panelWidths sum in sync with total width
+  // Helper to keep panelWidths sum in sync with total width (proportional scaling)
   const syncPanelWidths = (newWidths: number[], totalWidth: number) => {
-    const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
-    const lastWidth = Math.max(totalWidth - sumExceptLast, 1);
-    return [...newWidths.slice(0, -1), lastWidth];
+    const currentSum = newWidths.reduce((a, b) => a + b, 0);
+    if (currentSum === 0) return newWidths.map(() => Math.round(totalWidth / newWidths.length));
+    const scale = totalWidth / currentSum;
+    const scaled = newWidths.map(w => Math.round(w * scale));
+    // Fix rounding: adjust last panel to hit exact total
+    const roundedSum = scaled.reduce((a, b) => a + b, 0);
+    scaled[scaled.length - 1] += totalWidth - roundedSum;
+    return scaled;
   };
 
   // When panels or width changes, update panelWidths
@@ -179,19 +184,17 @@ export function useProductSketchState({ onSave, onCancel, initialData }: Product
     }
   };
 
-  // When user edits a panel width (except last), update last panel to keep sum = width
+  // When user edits a panel width, adjust the neighbor panel to keep sum = width
   const handlePanelWidthChange = (panelIndex: number, value: string) => {
-    let num = parseInt(value);
+    const num = parseInt(value);
     if (isNaN(num) || num <= 0) return;
-    let newWidths = [...panelWidths];
-    if (panelIndex === panels - 1) {
-      // Last panel: just set, but clamp so sum doesn't exceed width
-      const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
-      num = Math.max(width - sumExceptLast, 1);
-      newWidths[panelIndex] = num;
-    } else {
-      newWidths[panelIndex] = num;
-      newWidths = syncPanelWidths(newWidths, width);
+    const newWidths = [...panelWidths];
+    const delta = num - newWidths[panelIndex];
+    newWidths[panelIndex] = num;
+    // Adjust neighbor: next panel, or previous if editing last
+    const neighborIdx = panelIndex < panels - 1 ? panelIndex + 1 : panelIndex - 1;
+    if (neighborIdx >= 0) {
+      newWidths[neighborIdx] = Math.max(newWidths[neighborIdx] - delta, 1);
     }
     setPanelWidths(newWidths);
   };

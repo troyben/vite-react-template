@@ -45,13 +45,14 @@ export interface Quotation {
   client_address?: string;
   items: QuotationItem[];
   total_amount: number;
-  rate?: number; // Optional, if applicable
+  rate?: number;
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
   notes?: string;
   created_at: string;
   updated_at: string;
   createdAt: string;
   updatedAt: string;
+  createdBy?: number | null;
 }
 
 export const getAllQuotations = async (

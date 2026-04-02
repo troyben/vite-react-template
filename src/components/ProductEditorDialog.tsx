@@ -506,9 +506,13 @@ const ProductEditorDialog: React.FC<ProductEditorDialogProps> = ({
                   onShapeConfigChange={(updates) => state.updateShapeConfig(updates)}
                   onPanelWidthChange={(i, v) => {
                     const newWidths = [...state.panelWidths];
+                    const delta = v - newWidths[i];
                     newWidths[i] = v;
-                    const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
-                    newWidths[newWidths.length - 1] = Math.max(state.width - sumExceptLast, 1);
+                    // Adjust neighbor panel to maintain total width
+                    const neighborIdx = i < newWidths.length - 1 ? i + 1 : i - 1;
+                    if (neighborIdx >= 0) {
+                      newWidths[neighborIdx] = Math.max(newWidths[neighborIdx] - delta, 1);
+                    }
                     state.setPanelWidths(newWidths);
                   }}
                   onRowHeightChange={(panelIndex, rowIndex, v) => {
@@ -516,9 +520,13 @@ const ProductEditorDialog: React.FC<ProductEditorDialogProps> = ({
                     const entry = heights.find(h => h.panelIndex === panelIndex);
                     if (entry) {
                       const newRowHeights = [...entry.rowHeights];
+                      const delta = v - newRowHeights[rowIndex];
                       newRowHeights[rowIndex] = v;
-                      const sum = newRowHeights.slice(0, -1).reduce((a, b) => a + b, 0);
-                      newRowHeights[newRowHeights.length - 1] = Math.max(state.height - sum, 1);
+                      // Adjust neighbor row to maintain total height
+                      const neighborRow = rowIndex < newRowHeights.length - 1 ? rowIndex + 1 : rowIndex - 1;
+                      if (neighborRow >= 0) {
+                        newRowHeights[neighborRow] = Math.max(newRowHeights[neighborRow] - delta, 1);
+                      }
                       heights[heights.indexOf(entry)] = { ...entry, rowHeights: newRowHeights };
                       state.setPanelDivisionHeights(heights);
                     }
@@ -632,6 +640,54 @@ const ProductEditorDialog: React.FC<ProductEditorDialogProps> = ({
                   }}
                   customArcs={customArcs}
                   onArcPlaced={(arc) => setCustomArcs((prev) => [...prev, arc])}
+                  onPanelDividerRemove={(idx) => {
+                    const nw = [...state.panelWidths];
+                    nw.splice(idx, 2, nw[idx] + nw[idx + 1]);
+                    state.setPanels(nw.length);
+                    state.setPanelWidths(nw);
+                  }}
+                  onPaneRowRemove={(pi, ri) => {
+                    const ex = state.panelDivisions.find(d => d.panelIndex === pi);
+                    if (!ex || ex.horizontalCount <= 1) return;
+                    const nd = state.panelDivisions.filter(d => d.panelIndex !== pi);
+                    nd.push({ panelIndex: pi, horizontalCount: ex.horizontalCount - 1, verticalCount: ex.verticalCount });
+                    state.setPanelDivisions(nd);
+                    const eh = state.panelDivisionHeights.find(h => h.panelIndex === pi);
+                    if (eh) {
+                      const rh = [...eh.rowHeights];
+                      rh.splice(ri, 2, rh[ri] + rh[ri + 1]);
+                      const nh = state.panelDivisionHeights.filter(h => h.panelIndex !== pi);
+                      if (rh.length > 1) nh.push({ panelIndex: pi, rowHeights: rh });
+                      state.setPanelDivisionHeights(nh);
+                    }
+                  }}
+                  onPaneColRemove={(pi, ci) => {
+                    const ex = state.panelDivisions.find(d => d.panelIndex === pi);
+                    if (!ex || ex.verticalCount <= 1) return;
+                    const nd = state.panelDivisions.filter(d => d.panelIndex !== pi);
+                    nd.push({ panelIndex: pi, horizontalCount: ex.horizontalCount, verticalCount: ex.verticalCount - 1 });
+                    state.setPanelDivisions(nd);
+                    const ew = state.panelDivisionWidths.find(w => w.panelIndex === pi);
+                    if (ew) {
+                      const cw = [...ew.colWidths];
+                      cw.splice(ci, 2, cw[ci] + cw[ci + 1]);
+                      const nw = state.panelDivisionWidths.filter(w => w.panelIndex !== pi);
+                      if (cw.length > 1) nw.push({ panelIndex: pi, colWidths: cw });
+                      state.setPanelDivisionWidths(nw);
+                    }
+                  }}
+                  onPanelOpeningRemove={(pi) => {
+                    state.setOpeningPanels(state.openingPanels.filter(p => p !== pi));
+                    const d = { ...state.openingDirections };
+                    delete d[pi];
+                    state.setOpeningDirections(d);
+                  }}
+                  onPaneOpeningRemove={(pi, ri, ci) => {
+                    state.setOpeningPanes(prev => prev.filter(p => !(p.panelIndex === pi && p.rowIndex === ri && p.colIndex === ci)));
+                  }}
+                  onArcRemove={(id) => {
+                    setCustomArcs(prev => prev.filter(a => a.id !== id));
+                  }}
                 />
               </div>
             </div>

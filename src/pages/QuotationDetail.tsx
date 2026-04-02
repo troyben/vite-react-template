@@ -1,12 +1,34 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuotationDetail } from '@/hooks/useQuotationDetail';
+import { useAuth } from '@/contexts/AuthContext';
 import { StatusBadge } from '@/components/quotations/StatusBadge';
-import { QuotationItemRow } from '@/components/quotations/QuotationItemRow';
-import { formatAmount, type QuotationStatus } from '@/utils/quotationHelpers';
+import QuotationPDFPreview from '@/components/QuotationPDFPreview';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Download, Pencil, Trash2, Loader2, ArrowLeft, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { QuotationStatus } from '@/utils/quotationHelpers';
 import type { QuotationItem } from '@/services/quotationService';
-import '@/styles/QuotationDetail.css';
+
+const STATUS_OPTIONS: { value: QuotationStatus; label: string }[] = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'sent', label: 'Sent' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'paid', label: 'Paid' },
+];
+
+const ZOOM_STEPS = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
+const DEFAULT_ZOOM_INDEX = 5; // 1 = 100%
 
 const QuotationDetail = () => {
+  const { user } = useAuth();
   const {
     id,
     quotation,
@@ -18,124 +40,112 @@ const QuotationDetail = () => {
     handleExportPDF,
   } = useQuotationDetail();
 
-  if (loading) return <div>Loading quotation details...</div>;
-  if (error) return <div className="error">{error}</div>;
-  if (!quotation) return <div>Quotation not found.</div>;
+  const canWrite = (() => {
+    if (!user || !quotation) return false;
+    if (user.role === 'admin') return true;
+    if (user.role === 'client') return false;
+    if (quotation.createdBy === null) return false;
+    return quotation.createdBy === user.id;
+  })();
+
+  const [zoomIndex, setZoomIndex] = useState(DEFAULT_ZOOM_INDEX);
+  const zoom = ZOOM_STEPS[zoomIndex];
+
+  const zoomIn = () => setZoomIndex((i) => Math.min(i + 1, ZOOM_STEPS.length - 1));
+  const zoomOut = () => setZoomIndex((i) => Math.max(i - 1, 0));
+  const zoomReset = () => setZoomIndex(DEFAULT_ZOOM_INDEX);
+
+  if (loading) return <div className="p-6 text-muted-foreground">Loading quotation details...</div>;
+  if (error) return <div className="p-6 text-destructive">{error}</div>;
+  if (!quotation) return <div className="p-6 text-muted-foreground">Quotation not found.</div>;
 
   const items: QuotationItem[] = Array.isArray(quotation.items) ? quotation.items : [];
 
   return (
-    <div className="quotation-detail-page" style={{ maxWidth: '100%', width: '100%' }}>
-      <div className="page-header">
-        <h1 className="page-title">Quotation Details</h1>
-        <div className="detail-actions">
-          <button
-            onClick={handleExportPDF}
-            className="btn btn-secondary"
-            style={{ marginRight: '12px', position: 'relative' }}
-            disabled={pdfLoading}
-          >
-            {pdfLoading ? (
-              <span className="loader" style={{
-                display: 'inline-block',
-                width: 18,
-                height: 18,
-                border: '2.5px solid #ccc',
-                borderTop: '2.5px solid #7E88C3',
-                borderRadius: '50%',
-                animation: 'spin 0.7s linear infinite',
-                marginRight: 8,
-                verticalAlign: 'middle'
-              }} />
-            ) : (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{ marginRight: '8px' }}
-              >
-                <path d="M14 6H10V2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M14 6L10 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M14 11V14H2V2H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-            {pdfLoading ? 'Generating PDF...' : 'Download PDF'}
-          </button>
-          <select
-            value={quotation.status || 'draft'}
-            onChange={(e) => handleStatusChange(e.target.value as QuotationStatus)}
-            className={`form-select status-select ${quotation.status ? `status-${quotation.status}` : 'status-draft'}`}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '4px',
-              border: '1px solid #e0e7ff',
-              marginRight: '12px',
-              fontSize: '14px',
-              color: '#495057'
-            }}
-          >
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="paid">Paid</option>
-          </select>
-          <Link to="/" className="btn btn-primary">Back to List</Link>
-          <Link to={`/quotations/edit/${id}`} className="btn btn-primary">Edit</Link>
-          <button onClick={handleDelete} className="btn btn-secondary btn-danger">Delete</button>
+    <div className="p-4 md:p-6 space-y-4">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Link to="/quotations" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-2xl font-semibold">Quotation #{quotation.id}</h1>
+          <StatusBadge status={quotation.status} />
+        </div>
+        <div className="flex items-center gap-2">
+          {canWrite && (
+            <Select
+              value={quotation.status || 'draft'}
+              onValueChange={(val) => handleStatusChange(val as QuotationStatus)}
+            >
+              <SelectTrigger className="w-[130px] h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={pdfLoading}>
+            {pdfLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+            {pdfLoading ? 'Generating...' : 'PDF'}
+          </Button>
+          {canWrite && (
+            <>
+              <Link to={`/quotations/edit/${id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                <Pencil className="h-4 w-4 mr-1.5" />
+                Edit
+              </Link>
+              <Button variant="destructive" size="sm" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Delete
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="quotation-card refined-quotation-card" style={{ maxWidth: '100%', width: '100%' }}>
-        <div className="client-info-row refined-client-info-row">
-          <div className="client-info-block refined-client-info-block">
-            <div className="client-info-header">
-              <span className="client-title">Client</span>
-              <StatusBadge status={quotation.status} />
-            </div>
-            <div className="client-name refined-client-name">{quotation.client_name}</div>
-            <div className="client-email refined-client-email">{quotation.client_email}</div>
-            {quotation.created_at && (
-              <div className="client-date refined-client-date">Created: {new Date(quotation.created_at).toLocaleDateString()}</div>
-            )}
-          </div>
-        </div>
-
-        <div className="items-section refined-items-section">
-          <div className="items-header-row refined-items-header-row">
-            <h3>Items</h3>
-          </div>
-          <table className="items-table modern-table refined-items-table" style={{ width: '100%' }}>
-            <thead>
-              <tr>
-                <th>Item &amp; Description</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th className="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item: QuotationItem, index: number) => (
-                <QuotationItemRow key={index} item={item} />
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="refined-total-row">
-                <td colSpan={3} className="text-right refined-total-label">Total:</td>
-                <td className="text-right refined-total-value">{formatAmount(quotation.total_amount)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+      {/* ── Zoom Controls ── */}
+      <div className="flex items-center gap-1.5">
+        <Button variant="outline" size="icon-xs" onClick={zoomOut} disabled={zoomIndex === 0}>
+          <ZoomOut className="h-3.5 w-3.5" />
+        </Button>
+        <button
+          onClick={zoomReset}
+          className="text-xs text-muted-foreground hover:text-foreground tabular-nums min-w-[3rem] text-center cursor-pointer"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <Button variant="outline" size="icon-xs" onClick={zoomIn} disabled={zoomIndex === ZOOM_STEPS.length - 1}>
+          <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
+        {zoomIndex !== DEFAULT_ZOOM_INDEX && (
+          <Button variant="ghost" size="icon-xs" onClick={zoomReset}>
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+        )}
       </div>
 
-      <style>{`
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }`}</style>
+      {/* ── Quotation Document ── */}
+      <div className="overflow-auto">
+        <div
+          style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: `${100 / zoom}%` }}
+        >
+          <QuotationPDFPreview
+            clientName={quotation.client_name}
+            clientPhone={quotation.client_phone}
+            clientAddress={quotation.client_address}
+            items={items}
+            totalAmount={quotation.total_amount}
+            quotationId={quotation.id}
+            createdAt={quotation.createdAt || quotation.created_at}
+          />
+        </div>
+      </div>
     </div>
   );
 };

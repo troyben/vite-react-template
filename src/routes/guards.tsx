@@ -19,3 +19,12 @@ export function AdminOnlyRoute({ children }: { children: ReactElement }) {
   if (user.role !== 'admin') return <Unauthorized />;
   return children;
 }
+
+export function RoleRoute({ children, allowedRoles }: { children: ReactElement; allowedRoles: string[] }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!allowedRoles.includes(user.role)) return <Unauthorized />;
+  return children;
+}

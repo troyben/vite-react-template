@@ -10,13 +10,14 @@ interface ApiResponse<T> {
 
 export interface Client {
   id: number;
-  name: string;      // Required
-  email?: string;    // Optional
-  phone?: string;    // Optional
-  company?: string;  // Optional
-  address: string;   // Required
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address: string;
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: number | null;
 }
 
 export const getAllClients = async (

@@ -14,6 +14,7 @@ export interface User {
   email: string;
   mobile: string;
   role: 'admin' | 'user' | 'client';
+  clientId?: number | null;
 }
 
 export const getAllUsers = async (

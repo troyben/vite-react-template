@@ -26,6 +26,8 @@ import { MaterialBreakdownView } from '@/components/CostBreakdown';
 import { notify } from '@/utils/notifications';
 import type { CostBreakdown } from '@/utils/costCalculator';
 import type { CanvasTool, PlacedArc } from '@/components/template-creator/utils/canvas-tools';
+import type { SectionId } from '@/components/template-creator/utils/section-outline';
+import { validateRemoval, computeEffectiveBounds } from '@/components/template-creator/utils/section-outline';
 import type {
   ShapeConfig,
   ShapeType,
@@ -84,6 +86,7 @@ function useTemplateCreatorState() {
   const [panelWidths, setPanelWidths] = useState<number[]>([1000]);
   const [panelDivisionHeights, setPanelDivisionHeights] = useState<Array<{ panelIndex: number; rowHeights: number[] }>>([]);
   const [panelDivisionWidths, setPanelDivisionWidths] = useState<Array<{ panelIndex: number; colWidths: number[] }>>([]);
+  const [removedSections, setRemovedSections] = useState<SectionId[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>('dimensions');
 
   const isSliding = (type === 'door' && doorType === 'sliding') || (type === 'window' && windowType === 'sliding');
@@ -205,9 +208,10 @@ function useTemplateCreatorState() {
       panelDivisionHeights: panelDivisionHeights.length > 0 ? panelDivisionHeights : undefined,
       panelDivisionWidths: panelDivisionWidths.length > 0 ? panelDivisionWidths : undefined,
       shape,
+      removedSections: removedSections.length > 0 ? removedSections : undefined,
     };
   }, [type, doorType, windowType, height, panels, openingPanels, openingDirections,
-      frameColor, glassType, customGlassTint, panelDivisions, openingPanes, unit, panelWidths, panelDivisionHeights, panelDivisionWidths, shape]);
+      frameColor, glassType, customGlassTint, panelDivisions, openingPanes, unit, panelWidths, panelDivisionHeights, panelDivisionWidths, shape, removedSections]);
 
   // Load template from API
   const loadTemplate = useCallback(async (id: number) => {
@@ -236,6 +240,7 @@ function useTemplateCreatorState() {
         setPanelWidths(d.panelWidths || [d.width || 1000]);
         setPanelDivisionHeights(d.panelDivisionHeights || []);
         setPanelDivisionWidths(d.panelDivisionWidths || []);
+        setRemovedSections(d.removedSections || []);
         setShapeState(d.shape || { type: 'rectangle' });
       }
     } catch {
@@ -297,6 +302,7 @@ function useTemplateCreatorState() {
     panelWidths, setPanelWidths,
     panelDivisionHeights, setPanelDivisionHeights,
     panelDivisionWidths, setPanelDivisionWidths,
+    removedSections, setRemovedSections,
     activeTab, setActiveTab,
     isSliding,
     // Handlers
@@ -430,7 +436,7 @@ const TemplateCreator: React.FC = () => {
             type="button"
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
               (state.type === 'door' ? state.doorType : state.windowType) === 'hinged'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-green-100 text-green-800 shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             onClick={() => state.type === 'door' ? state.setDoorType('hinged') : state.setWindowType('hinged')}
@@ -441,13 +447,23 @@ const TemplateCreator: React.FC = () => {
             type="button"
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
               (state.type === 'door' ? state.doorType : state.windowType) === 'sliding'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-orange-100 text-orange-800 shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             onClick={() => state.type === 'door' ? state.setDoorType('sliding') : state.setWindowType('sliding')}
           >
             Sliding
           </button>
+        </div>
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-green-800">
+            <span className="inline-block h-1.5 w-3 rounded-sm border border-green-600" style={{ borderStyle: 'dashed' }} />
+            Hinged
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-orange-800">
+            <span className="inline-block h-1.5 w-3 rounded-sm border border-orange-600" style={{ borderStyle: 'dashed', borderSpacing: '4px' }} />
+            Sliding
+          </span>
         </div>
         <div className="flex-1" />
         <Button variant="outline" size="sm" onClick={handleCalculateCost}>
@@ -509,6 +525,22 @@ const TemplateCreator: React.FC = () => {
               onLineOrientationChange={setLineOrientation}
               lineTarget={lineTarget}
               onLineTargetChange={setLineTarget}
+              onReset={() => {
+                state.setWidth(1000);
+                state.setHeight(1000);
+                state.setPanels(1);
+                state.setPanelWidths([1000]);
+                state.setPanelDivisions([]);
+                state.setPanelDivisionHeights([]);
+                state.setPanelDivisionWidths([]);
+                state.setOpeningPanels([]);
+                state.setOpeningDirections({});
+                state.setOpeningPanes([]);
+                state.setRemovedSections([]);
+                state.setShape({ type: 'rectangle' });
+                setCustomArcs([]);
+                setActiveTool(null);
+              }}
             />
           </div>
 
@@ -531,15 +563,58 @@ const TemplateCreator: React.FC = () => {
               panelDivisionHeights={state.panelDivisionHeights}
               panelDivisionWidths={state.panelDivisionWidths}
               openingPanes={state.openingPanes}
-              onWidthChange={(v) => state.setWidth(v)}
-              onHeightChange={(v) => state.setHeight(v)}
+              onWidthChange={(v) => {
+                if (state.removedSections.length > 0) {
+                  // Scale panelWidths so effective bounding width matches desired value
+                  const eff = computeEffectiveBounds(
+                    state.panels, state.panelWidths, state.panelDivisions,
+                    state.panelDivisionHeights, state.panelDivisionWidths,
+                    state.height, state.removedSections,
+                  );
+                  if (eff.width > 0) {
+                    const scale = v / eff.width;
+                    const newWidths = state.panelWidths.map((w) => Math.round(w * scale));
+                    state.setPanelWidths(newWidths);
+                    state.setWidth(newWidths.reduce((a, b) => a + b, 0));
+                  }
+                } else {
+                  state.setWidth(v);
+                }
+              }}
+              onHeightChange={(v) => {
+                if (state.removedSections.length > 0) {
+                  // Scale row heights so effective bounding height matches desired value
+                  const eff = computeEffectiveBounds(
+                    state.panels, state.panelWidths, state.panelDivisions,
+                    state.panelDivisionHeights, state.panelDivisionWidths,
+                    state.height, state.removedSections,
+                  );
+                  if (eff.height > 0) {
+                    const scale = v / eff.height;
+                    state.setHeight(Math.round(state.height * scale));
+                    if (state.panelDivisionHeights.length > 0) {
+                      state.setPanelDivisionHeights(
+                        state.panelDivisionHeights.map((h) => ({
+                          ...h,
+                          rowHeights: h.rowHeights.map((rh) => Math.round(rh * scale)),
+                        })),
+                      );
+                    }
+                  }
+                } else {
+                  state.setHeight(v);
+                }
+              }}
               onShapeConfigChange={(updates) => state.updateShapeConfig(updates)}
               onPanelWidthChange={(i, v) => {
                 const newWidths = [...state.panelWidths];
+                const delta = v - newWidths[i];
                 newWidths[i] = v;
-                // Recalculate last panel to keep total width consistent
-                const sumExceptLast = newWidths.slice(0, -1).reduce((a, b) => a + b, 0);
-                newWidths[newWidths.length - 1] = Math.max(state.width - sumExceptLast, 1);
+                // Adjust neighbor panel to maintain total width
+                const neighborIdx = i < newWidths.length - 1 ? i + 1 : i - 1;
+                if (neighborIdx >= 0) {
+                  newWidths[neighborIdx] = Math.max(newWidths[neighborIdx] - delta, 1);
+                }
                 state.setPanelWidths(newWidths);
               }}
               onRowHeightChange={(panelIndex, rowIndex, v) => {
@@ -547,10 +622,13 @@ const TemplateCreator: React.FC = () => {
                 const entry = heights.find(h => h.panelIndex === panelIndex);
                 if (entry) {
                   const newRowHeights = [...entry.rowHeights];
+                  const delta = v - newRowHeights[rowIndex];
                   newRowHeights[rowIndex] = v;
-                  // Recalculate last row to keep total height consistent
-                  const sum = newRowHeights.slice(0, -1).reduce((a, b) => a + b, 0);
-                  newRowHeights[newRowHeights.length - 1] = Math.max(state.height - sum, 1);
+                  // Adjust neighbor row to maintain total height
+                  const neighborRow = rowIndex < newRowHeights.length - 1 ? rowIndex + 1 : rowIndex - 1;
+                  if (neighborRow >= 0) {
+                    newRowHeights[neighborRow] = Math.max(newRowHeights[neighborRow] - delta, 1);
+                  }
                   heights[heights.indexOf(entry)] = { ...entry, rowHeights: newRowHeights };
                   state.setPanelDivisionHeights(heights);
                 }
@@ -559,19 +637,19 @@ const TemplateCreator: React.FC = () => {
               lineOrientation={lineOrientation}
               lineTarget={lineTarget}
               onHandlePlaced={(panelIdx, dir, paneInfo) => {
+                const openingType = state.isSliding ? 'sliding' : 'hinged';
                 if (paneInfo) {
                   state.setOpeningPanes((prev) => [...prev, {
                     panelIndex: panelIdx,
                     rowIndex: paneInfo.rowIndex,
                     colIndex: paneInfo.colIndex,
                     openingDirection: dir as OpeningDirection,
-                    openingType: 'hinged',
+                    openingType,
                   }]);
                 } else {
                   state.setOpeningPanels([...state.openingPanels, panelIdx]);
                   state.setOpeningDirections({ ...state.openingDirections, [panelIdx]: dir as OpeningDirection });
                 }
-                setActiveTool(null);
               }}
               onPanelSplit={(splitMm) => {
                 const newWidths = [...state.panelWidths];
@@ -663,6 +741,66 @@ const TemplateCreator: React.FC = () => {
               }}
               customArcs={customArcs}
               onArcPlaced={(arc) => setCustomArcs((prev) => [...prev, arc])}
+              onPanelDividerRemove={(idx) => {
+                const nw = [...state.panelWidths];
+                nw.splice(idx, 2, nw[idx] + nw[idx + 1]);
+                state.setPanels(nw.length);
+                state.setPanelWidths(nw);
+                state.setRemovedSections([]);
+              }}
+              onPaneRowRemove={(pi, ri) => {
+                const ex = state.panelDivisions.find(d => d.panelIndex === pi);
+                if (!ex || ex.horizontalCount <= 1) return;
+                const nd = state.panelDivisions.filter(d => d.panelIndex !== pi);
+                nd.push({ panelIndex: pi, horizontalCount: ex.horizontalCount - 1, verticalCount: ex.verticalCount });
+                state.setPanelDivisions(nd);
+                const eh = state.panelDivisionHeights.find(h => h.panelIndex === pi);
+                if (eh) {
+                  const rh = [...eh.rowHeights];
+                  rh.splice(ri, 2, rh[ri] + rh[ri + 1]);
+                  const nh = state.panelDivisionHeights.filter(h => h.panelIndex !== pi);
+                  if (rh.length > 1) nh.push({ panelIndex: pi, rowHeights: rh });
+                  state.setPanelDivisionHeights(nh);
+                }
+                state.setRemovedSections([]);
+              }}
+              onPaneColRemove={(pi, ci) => {
+                const ex = state.panelDivisions.find(d => d.panelIndex === pi);
+                if (!ex || ex.verticalCount <= 1) return;
+                const nd = state.panelDivisions.filter(d => d.panelIndex !== pi);
+                nd.push({ panelIndex: pi, horizontalCount: ex.horizontalCount, verticalCount: ex.verticalCount - 1 });
+                state.setPanelDivisions(nd);
+                const ew = state.panelDivisionWidths.find(w => w.panelIndex === pi);
+                if (ew) {
+                  const cw = [...ew.colWidths];
+                  cw.splice(ci, 2, cw[ci] + cw[ci + 1]);
+                  const nw = state.panelDivisionWidths.filter(w => w.panelIndex !== pi);
+                  if (cw.length > 1) nw.push({ panelIndex: pi, colWidths: cw });
+                  state.setPanelDivisionWidths(nw);
+                }
+                state.setRemovedSections([]);
+              }}
+              onPanelOpeningRemove={(pi) => {
+                state.setOpeningPanels(state.openingPanels.filter(p => p !== pi));
+                const d = { ...state.openingDirections };
+                delete d[pi];
+                state.setOpeningDirections(d);
+              }}
+              onPaneOpeningRemove={(pi, ri, ci) => {
+                state.setOpeningPanes(prev => prev.filter(p => !(p.panelIndex === pi && p.rowIndex === ri && p.colIndex === ci)));
+              }}
+              onArcRemove={(id) => {
+                setCustomArcs(prev => prev.filter(a => a.id !== id));
+              }}
+              removedSections={state.removedSections}
+              onSectionRemove={(pi, ri, ci) => {
+                const proposed = { panelIndex: pi, rowIndex: ri, colIndex: ci };
+                if (!validateRemoval(
+                  state.panels, state.panelDivisions, state.removedSections, proposed,
+                  state.openingPanels, state.openingPanes,
+                )) return;
+                state.setRemovedSections(prev => [...prev, proposed]);
+              }}
             />
           </div>
         </div>

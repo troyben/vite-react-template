@@ -79,7 +79,6 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
 
         <div className={`grid gap-2 ${panels >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {Array.from({ length: panels }).map((_, i) => {
-            const isLast = i === panels - 1 && panels > 1;
             return (
               <div key={i} className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">P{i + 1}</Label>
@@ -89,10 +88,7 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
                   step="any"
                   value={panelWidths[i] || ''}
                   onChange={(e) => handlePanelWidthChange(i, e.target.value)}
-                  disabled={isLast}
-                  className={`h-8 text-sm text-center ${
-                    isLast ? 'bg-muted/50 text-muted-foreground' : ''
-                  }`}
+                  className="h-8 text-sm text-center"
                 />
               </div>
             );
@@ -101,7 +97,7 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
 
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-muted-foreground">
-            Last panel auto-adjusts to match total.
+            Neighbor panel adjusts to match total.
           </p>
           <span className="text-xs font-medium">
             Total:{' '}

@@ -5,18 +5,19 @@ import { notify } from '../utils/notifications';
 
 interface User {
   id: number;
-  
   name: string;
   email: string;
   mobile: string;
   role: string;
   avatar?: string | null;
+  clientId?: number | null;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  clientLogin: (phone: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -105,16 +106,32 @@ export const AuthProvider = ({ children, onSessionExpired }: AuthProviderProps) 
     initAuth();
   }, [onSessionExpired]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (identifier: string, password: string) => {
     try {
       setLoading(true);
-      const response = await authApi.login(email, password);
+      const response = await authApi.login(identifier, password);
       if (response.data.success) {
         saveAuth(response.data.data);
         notify.success(`Welcome back, ${response.data.data.user.name}!`);
       }
     } catch (error: any) {
       notify.error(error.message || 'Login failed');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clientLogin = async (phone: string, code: string) => {
+    try {
+      setLoading(true);
+      const response = await authApi.verifyOtp(phone, code);
+      if (response.data.success) {
+        saveAuth(response.data.data);
+        notify.success(`Welcome, ${response.data.data.user.name}!`);
+      }
+    } catch (error: any) {
+      notify.error(error.message || 'OTP verification failed');
       throw error;
     } finally {
       setLoading(false);
@@ -136,7 +153,7 @@ export const AuthProvider = ({ children, onSessionExpired }: AuthProviderProps) 
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, clientLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -14,12 +14,17 @@ const Login = () => {
     togglePassword,
     userForm,
     clientForm,
-    error,
     loading,
     handleUserChange,
     handleClientChange,
     handleUserLogin,
     handleClientLogin,
+    otpSent,
+    otp,
+    setOtp,
+    otpCountdown,
+    handleResendOtp,
+    resetOtpFlow,
   } = useLogin();
 
   return (
@@ -47,12 +52,6 @@ const Login = () => {
           </CardHeader>
 
           <CardContent>
-            {error && (
-              <div className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
             {tab === 'user' ? (
               <form onSubmit={handleUserLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -96,21 +95,67 @@ const Login = () => {
               </form>
             ) : (
               <form onSubmit={handleClientLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="mobile">Mobile Number</Label>
-                  <Input
-                    id="mobile"
-                    type="tel"
-                    name="mobile"
-                    value={clientForm.mobile}
-                    onChange={handleClientChange}
-                    placeholder="e.g. 0771234567"
-                    autoFocus
-                    disabled={loading}
-                  />
-                </div>
+                {!otpSent ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="mobile">Mobile Number</Label>
+                    <Input
+                      id="mobile"
+                      type="tel"
+                      name="mobile"
+                      value={clientForm.mobile}
+                      onChange={handleClientChange}
+                      placeholder="e.g. 0771234567"
+                      autoFocus
+                      disabled={loading}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Mobile Number</Label>
+                      <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                        <span>{clientForm.mobile}</span>
+                        <button
+                          type="button"
+                          onClick={resetOtpFlow}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="otp">Enter OTP</Label>
+                      <Input
+                        id="otp"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        pattern="[0-9]*"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                        placeholder="6-digit code"
+                        autoFocus
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="text-center text-sm text-muted-foreground">
+                      {otpCountdown > 0 ? (
+                        <span>Resend OTP in {otpCountdown}s</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          className="text-primary hover:underline"
+                        >
+                          Resend OTP
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? 'Please wait...' : otpSent ? 'Verify OTP' : 'Send OTP'}
                 </Button>
               </form>
             )}

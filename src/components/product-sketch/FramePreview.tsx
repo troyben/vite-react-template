@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import PanelRenderer from './PanelRenderer';
 import DimensionLines from './DimensionLines';
 import { getShapeClipPath, getShapeSVGPath } from '@/utils/shapeClipPath';
 import type { OpeningDirection, Unit, ActiveHingeSelector, ShapeConfig } from './types';
+import { useContainerSize } from './useContainerSize';
 
 interface FramePreviewProps {
   panels: number;
@@ -86,8 +87,37 @@ const FramePreview: React.FC<FramePreviewProps> = ({
   previewWidth,
   previewHeight,
 }) => {
-  const frameW = previewWidth ?? (panels < 4 ? 400 : 700);
-  const frameH = previewHeight ?? 400;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const containerSize = useContainerSize(containerRef);
+
+  // Compute frame dimensions to fill the container while preserving aspect ratio
+  const LABEL_MARGIN_X = 100;  // space for height dimension labels on each side
+  const LABEL_MARGIN_TOP = 45; // space for panel width labels above
+  const LABEL_MARGIN_BOTTOM = 50; // space for width dimension below
+
+  let frameW: number;
+  let frameH: number;
+
+  if (previewWidth != null && previewHeight != null) {
+    frameW = previewWidth;
+    frameH = previewHeight;
+  } else if (containerSize.width > 0 && containerSize.height > 0) {
+    const availW = containerSize.width - LABEL_MARGIN_X;
+    const availH = containerSize.height - LABEL_MARGIN_TOP - LABEL_MARGIN_BOTTOM;
+    const aspect = width / height;
+
+    if (availW / availH > aspect) {
+      frameH = Math.max(200, availH);
+      frameW = frameH * aspect;
+    } else {
+      frameW = Math.max(200, availW);
+      frameH = frameW / aspect;
+    }
+  } else {
+    // Fallback before first measurement
+    frameW = panels < 4 ? 400 : 700;
+    frameH = 400;
+  }
   const clipPath = shape && shape.type !== 'rectangle'
     ? getShapeClipPath(shape, frameW, frameH)
     : undefined;
@@ -214,7 +244,7 @@ const FramePreview: React.FC<FramePreviewProps> = ({
   const svgFramePath = isNonRect ? getShapeSVGPath(shape, frameW - frameStroke, frameH - frameStroke) : null;
 
   return (
-    <div className="product-preview" style={{ position: 'relative', overflow: 'visible' }}>
+    <div ref={containerRef} className="product-preview" style={{ position: 'relative', overflow: 'visible' }}>
       {/* Old dimension lines — only for rectangle shapes (ProductSketch modal usage) */}
       {!isNonRect && (
         <DimensionLines
@@ -223,6 +253,8 @@ const FramePreview: React.FC<FramePreviewProps> = ({
           width={width}
           height={height}
           unit={unit}
+          frameWidth={frameW}
+          frameHeight={frameH}
         />
       )}
       {/* Wrapper ensures SVG frame and clipped shape share the same origin */}

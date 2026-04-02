@@ -7,6 +7,8 @@ interface DimensionLinesProps {
   width: number;
   height: number;
   unit: Unit;
+  frameWidth: number;
+  frameHeight: number;
 }
 
 const DimensionLines: React.FC<DimensionLinesProps> = ({
@@ -15,9 +17,9 @@ const DimensionLines: React.FC<DimensionLinesProps> = ({
   width,
   height,
   unit,
+  frameWidth,
+  frameHeight,
 }) => {
-  const frameWidth = panels < 4 ? 400 : 700;
-  const frameHeight = 400;
   const offset = 10;
 
   // Panel widths in px: always divide frameWidth equally, regardless of panelWidths values
@@ -109,7 +111,7 @@ const DimensionLines: React.FC<DimensionLinesProps> = ({
                     transform: 'translateX(-50%)',
                     background: '#fff',
                     color: '#7E88C3',
-                    fontWeight: 500,
+                    fontWeight: 700,
                     fontSize: 13,
                     padding: '0 8px',
                     borderRadius: 3,
@@ -193,7 +195,7 @@ const DimensionLines: React.FC<DimensionLinesProps> = ({
               transform: 'translateX(-50%)',
               background: '#fff',
               color: '#7E88C3',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: 15,
               padding: '0 8px',
               borderRadius: 4,
@@ -274,7 +276,7 @@ const DimensionLines: React.FC<DimensionLinesProps> = ({
               transform: 'translate(-100%, -50%) rotate(-90deg)',
               background: '#fff',
               color: '#7E88C3',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: 15,
               padding: '0 8px',
               borderRadius: 4,

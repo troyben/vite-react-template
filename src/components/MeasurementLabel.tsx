@@ -21,6 +21,7 @@ export const MeasurementLabel: React.FC<MeasurementLabelProps> = ({ x, y, width,
         y={y - 20}
         text={`${widthMm}mm`}
         fontSize={12}
+        fontStyle="bold"
         fill="black"
         align="center"
       />
@@ -30,6 +31,7 @@ export const MeasurementLabel: React.FC<MeasurementLabelProps> = ({ x, y, width,
         y={y + height / 2 - 6}
         text={`${heightMm}mm`}
         fontSize={12}
+        fontStyle="bold"
         fill="black"
         rotation={-90}
         align="center"

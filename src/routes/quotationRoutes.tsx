@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import { PrivateRoute } from './guards';
+import { PrivateRoute, RoleRoute } from './guards';
 
 const QuotationList = lazy(() => import('@/pages/QuotationList'));
 const QuotationForm = lazy(() => import('@/pages/QuotationForm'));
@@ -13,11 +13,11 @@ export const quotationRoutes: RouteObject[] = [
   },
   {
     path: '/quotations/new',
-    element: <PrivateRoute><QuotationForm /></PrivateRoute>,
+    element: <RoleRoute allowedRoles={['admin', 'user']}><QuotationForm /></RoleRoute>,
   },
   {
     path: '/quotations/edit/:id',
-    element: <PrivateRoute><QuotationForm /></PrivateRoute>,
+    element: <RoleRoute allowedRoles={['admin', 'user']}><QuotationForm /></RoleRoute>,
   },
   {
     path: '/quotations/:id',

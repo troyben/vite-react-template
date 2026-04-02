@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import * as clientApi from '@/services/clientService';
+import type { Client } from '@/services/clientService';
 import type { User, FormValues } from '@/hooks/useUsers';
 
 interface UserFormDialogProps {
@@ -34,6 +36,18 @@ export function UserFormDialog({
   onSubmit,
 }: UserFormDialogProps) {
   const [role, setRole] = useState<string>(editingUser?.role || 'user');
+  const [clientId, setClientId] = useState<string>(editingUser?.clientId?.toString() || '');
+  const [clients, setClients] = useState<Client[]>([]);
+
+  useEffect(() => {
+    if (role === 'client') {
+      clientApi.getAllClients({ limit: 100 }).then((res) => {
+        if (res.data.success) {
+          setClients(res.data.data.items);
+        }
+      });
+    }
+  }, [role]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -41,9 +55,9 @@ export function UserFormDialog({
     }
   };
 
-  // Reset role when dialog opens with different user
   const handleRendered = () => {
     setRole(editingUser?.role || 'user');
+    setClientId(editingUser?.clientId?.toString() || '');
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,6 +71,7 @@ export function UserFormDialog({
       mobile: formData.get('mobile') as string,
       role: role as FormValues['role'],
       status: 'active',
+      clientId: role === 'client' && clientId ? parseInt(clientId) : null,
     };
 
     if (!editingUser) {
@@ -122,6 +137,23 @@ export function UserFormDialog({
               </SelectContent>
             </Select>
           </div>
+          {role === 'client' && (
+            <div className="grid gap-2">
+              <Label>Linked Client</Label>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {!editingUser && (
             <div className="grid gap-2">
               <Label htmlFor="user-password">Password</Label>

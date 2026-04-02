@@ -3,6 +3,7 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as clientApi from '@/services/clientService';
 import type { Client } from '@/services/clientService';
+import { useAuth } from '@/contexts/AuthContext';
 import { notify } from '@/utils/notifications';
 import {
   DropdownMenu,
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function useClients() {
+  const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,37 +147,42 @@ export function useClients() {
     {
       id: 'actions',
       header: '',
-      cell: info => (
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <MoreHorizontal className="h-4 w-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => openEditForm(info.row.original)} className="cursor-pointer">
-                <Pencil className="mr-2 h-4 w-4" />
-                <div>
-                  <div className="text-sm">Edit</div>
-                  <div className="text-xs text-muted-foreground">Modify client details</div>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" onClick={() => handleDelete(info.row.original.id)} className="cursor-pointer">
-                <Trash2 className="mr-2 h-4 w-4" />
-                <div>
-                  <div className="text-sm">Delete</div>
-                  <div className="text-xs text-muted-foreground">Remove this client</div>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: info => {
+        const row = info.row.original;
+        const canWrite = user?.role === 'admin' || (user?.role === 'user' && row.createdBy !== null && row.createdBy === user.id);
+        if (!canWrite) return null;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => openEditForm(row)} className="cursor-pointer">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  <div>
+                    <div className="text-sm">Edit</div>
+                    <div className="text-xs text-muted-foreground">Modify client details</div>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.id)} className="cursor-pointer">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <div>
+                    <div className="text-sm">Delete</div>
+                    <div className="text-xs text-muted-foreground">Remove this client</div>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
-  ], [openEditForm, handleDelete]);
+  ], [user, openEditForm, handleDelete]);
 
   return {
     clients,

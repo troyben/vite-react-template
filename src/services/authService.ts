@@ -36,9 +36,25 @@ export function setAuthHandlers(
   checkHandlers();
 }
 
-export async function login(email: string, password: string) {
+export async function login(identifier: string, password: string) {
   try {
-    return await api.post('/auth/login', { email, password });
+    return await api.post('/auth/login', { identifier, password });
+  } catch (error) {
+    return handleServiceError(error);
+  }
+}
+
+export async function requestOtp(phone: string) {
+  try {
+    return await api.post('/auth/otp/request', { phone });
+  } catch (error) {
+    return handleServiceError(error);
+  }
+}
+
+export async function verifyOtp(phone: string, code: string) {
+  try {
+    return await api.post('/auth/otp/verify', { phone, code });
   } catch (error) {
     return handleServiceError(error);
   }

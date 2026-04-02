@@ -21,6 +21,7 @@ export interface User {
   email: string;
   mobile: string;
   role: UserRole;
+  clientId?: number | null;
 }
 
 export interface FormValues {
@@ -30,6 +31,7 @@ export interface FormValues {
   role: UserRole;
   status: 'active' | 'inactive';
   password?: string;
+  clientId?: number | null;
 }
 
 export function useUsers(currentUserId: number | undefined) {
