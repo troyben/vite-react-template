@@ -45,7 +45,7 @@ export function useUsers(currentUserId: number | undefined) {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchUsers = useCallback(async (page: number, search?: string) => {
     setLoading(true);

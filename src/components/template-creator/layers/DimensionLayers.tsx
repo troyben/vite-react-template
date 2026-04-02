@@ -69,7 +69,7 @@ export interface DimensionLayersProps {
 
 export function renderOuterDimensions(props: DimensionLayersProps): React.ReactNode {
   const {
-    shape, width, height, svgVerts, realVerts, svgCenterX, svgCenterY,
+    shape: _shape, width: _width, height: _height, svgVerts, realVerts, svgCenterX, svgCenterY,
     arrowLId, arrowRId, editingDim, setEditingDim, setEditValue, edgeCommitCtx,
     effectiveSvgVerts, effectiveRealVerts,
   } = props;

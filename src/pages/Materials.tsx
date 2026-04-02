@@ -1,7 +1,7 @@
 import { Plus, Package } from 'lucide-react';
 import BaseDataTable from '@/components/BaseDataTable';
 import { MaterialFormDialog } from '@/components/materials/MaterialFormDialog';
-import { useMaterials, CATEGORY_LABELS } from '@/hooks/useMaterials';
+import { useMaterials } from '@/hooks/useMaterials';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import { Button } from '@/components/ui/button';
 import type { MaterialCategory } from '@/services/materialService';

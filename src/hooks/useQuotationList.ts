@@ -1,8 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ColumnDef } from '@tanstack/react-table';
 import { getAllQuotations, deleteQuotation, type Quotation } from '@/services/quotationService';
-import { formatAmount } from '@/utils/quotationHelpers';
 import { notify } from '@/utils/notifications';
 
 export function useQuotationList() {
@@ -13,7 +11,7 @@ export function useQuotationList() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchQuotations = useCallback(async (page: number, search?: string) => {
     try {

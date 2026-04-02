@@ -64,7 +64,7 @@ export function useMaterials() {
   const [categoryFilter, setCategoryFilter] = useState<MaterialCategory | ''>('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchMaterials = useCallback(async (page: number, search?: string, category?: MaterialCategory | '') => {
     setLoading(true);

@@ -37,12 +37,11 @@ function getArchClipPath(shape: ShapeConfig, w: number, h: number): string {
   // SVG path: start bottom-left, go up the left side to arch start,
   // arc across the top, down right side, close bottom
   const r = w / 2;
-  const sweep = shape.archType === 'segmental' ? 0 : 1;
 
   return `path('M 0 ${h} L 0 ${rectTop} A ${r} ${archH} 0 0 1 ${w} ${rectTop} L ${w} ${h} Z')`;
 }
 
-function getTrapezoidClipPath(shape: ShapeConfig, w: number, h: number): string {
+function getTrapezoidClipPath(shape: ShapeConfig, w: number, _h: number): string {
   const topWidth = shape.topWidth ?? w * 0.6;
   const insetLeft = ((w - topWidth) / 2 / w) * 100;
   const insetRight = 100 - insetLeft;

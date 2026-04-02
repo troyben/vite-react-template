@@ -152,15 +152,7 @@ const FramePreview: React.FC<FramePreviewProps> = ({
       }
       case 'triangle': {
         const peak = (shape!.peakPosition ?? 0.5) * 100;
-        // Top edge: the peak is a single point; each panel slice has a portion
-        const peakInPanel = ((peak - leftX) / (rightX - leftX)) * 100;
-        // If peak is outside this panel, clip to the slope lines
-        const leftY = peak <= leftX ? (1 - leftX / peak) * 100 : 100; // nonsense — recalculate
-        // Simpler approach: compute the triangle top-y at leftX and rightX
-        const topYAtLeft = peak === 0 ? 100 : leftX <= peak
-          ? (1 - leftX / peak) * 100
-          : (leftX - peak) / (100 - peak) * 100;
-        // Actually let's use the correct geometry:
+        // Use the correct geometry:
         // Triangle vertices: (peak%, 0%), (0%, 100%), (100%, 100%)
         // The top edge from (0%, 100%) to (peak%, 0%) and (peak%, 0%) to (100%, 100%)
         // At any x%, the y% of the top edge is:

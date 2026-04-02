@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 // Utility function to generate thumbnail
-const generateThumbnail = async (shapes: Shape[]): Promise<string> => {
+const generateThumbnail = async (_shapes: Shape[]): Promise<string> => {
   // For now, return a placeholder. In a real implementation, this would:
   // 1. Create a small offscreen canvas
   // 2. Draw the shapes on it

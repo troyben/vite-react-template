@@ -91,7 +91,7 @@ const PropertiesPanel: React.FC = () => {
               <Label>Opening Type</Label>
               <Select
                 value={selectedShape.openingType}
-                onValueChange={handleOpeningTypeChange}
+                onValueChange={(v) => { if (v !== null) handleOpeningTypeChange(v); }}
               >
                 <SelectTrigger>
                   <SelectValue />

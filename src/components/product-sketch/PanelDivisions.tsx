@@ -30,11 +30,11 @@ const PanelDivisions: React.FC<PanelDivisionsProps> = ({
   panelDivisions,
   openingPanes,
   openingPanels,
-  type,
-  doorType,
-  windowType,
+  type: _type,
+  doorType: _doorType,
+  windowType: _windowType,
   frameColor,
-  activeHingeSelector,
+  activeHingeSelector: _activeHingeSelector,
 }) => {
   const division = panelDivisions.find(d => d.panelIndex === panelIndex) || {
     panelIndex,

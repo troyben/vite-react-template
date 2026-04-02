@@ -484,17 +484,14 @@ const TemplateCreator: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3 mb-2 shrink-0">
             {/* Shape picker popover */}
             <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-md border border-input bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  <span className="text-muted-foreground text-xs">Shape:</span>
-                  <span className="capitalize">{state.shape.type.replace('-', ' ')}</span>
-                  <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
-                    <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                  </svg>
-                </button>
+              <PopoverTrigger
+                className="flex items-center gap-2 rounded-md border border-input bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+              >
+                <span className="text-muted-foreground text-xs">Shape:</span>
+                <span className="capitalize">{state.shape.type.replace('-', ' ')}</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
+                  <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                </svg>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-[280px] p-3">
                 <ShapeSelector

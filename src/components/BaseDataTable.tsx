@@ -41,7 +41,7 @@ function BaseDataTable<T extends object>({
   totalPages = 1,
   totalItems,
   onPageChange,
-  isLoading,
+  isLoading: _isLoading,
 }: BaseDataTableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 

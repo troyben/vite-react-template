@@ -126,7 +126,7 @@ export function UserFormDialog({
           </div>
           <div className="grid gap-2">
             <Label>Role</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select value={role} onValueChange={(v) => { if (v !== null) setRole(v); }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
@@ -140,7 +140,7 @@ export function UserFormDialog({
           {role === 'client' && (
             <div className="grid gap-2">
               <Label>Linked Client</Label>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select value={clientId} onValueChange={(v) => { if (v !== null) setClientId(v); }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>

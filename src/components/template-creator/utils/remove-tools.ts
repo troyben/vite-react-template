@@ -178,7 +178,6 @@ export function findRemovableAtPoint(ctx: RemoveContext, px: number, py: number)
   // --- 6. Section (empty pane area, lowest priority) ---
   {
     const removedSections = ctx.removedSections ?? [];
-    const total = panelWidths.reduce((a, b) => a + b, 0);
     for (let pi = 0; pi < panels; pi++) {
       const div = panelDivisions?.find((d) => d.panelIndex === pi);
       const rows = div?.horizontalCount ?? 1;

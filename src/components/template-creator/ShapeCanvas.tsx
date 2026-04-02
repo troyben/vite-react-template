@@ -99,7 +99,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   shape,
   width,
   height,
-  unit,
+  unit: _unit,
   panels,
   panelWidths,
   frameColor,
@@ -442,7 +442,6 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
           const leftRows = leftDiv?.horizontalCount ?? 1;
           const leftCols = leftDiv?.verticalCount ?? 1;
           const rightRows = rightDiv?.horizontalCount ?? 1;
-          const rightCols = rightDiv?.verticalCount ?? 1;
           // Check all cells on the right edge of left panel and left edge of right panel
           let allRemoved = true;
           for (let ri = 0; ri < leftRows && allRemoved; ri++) {
@@ -518,7 +517,6 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         >
           <input
             ref={inputRef}
-            xmlns="http://www.w3.org/1999/xhtml"
             type="number"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}

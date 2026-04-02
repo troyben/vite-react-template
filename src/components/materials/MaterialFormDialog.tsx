@@ -133,7 +133,7 @@ export function MaterialFormDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="category">Category *</Label>
-              <Select value={category} onValueChange={handleCategoryChange}>
+              <Select value={category} onValueChange={(v) => { if (v !== null) handleCategoryChange(v); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -166,7 +166,7 @@ export function MaterialFormDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="currency">Currency *</Label>
-              <Select value={currency} onValueChange={setCurrency}>
+              <Select value={currency} onValueChange={(v) => { if (v !== null) setCurrency(v); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
