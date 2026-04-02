@@ -38,6 +38,7 @@ const QuotationDetail = () => {
     handleDelete,
     handleStatusChange,
     handleExportPDF,
+    deleting,
   } = useQuotationDetail();
 
   const canWrite = (() => {
@@ -100,9 +101,9 @@ const QuotationDetail = () => {
                 <Pencil className="h-4 w-4 mr-1.5" />
                 Edit
               </Link>
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4 mr-1.5" />
-                Delete
+              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                {deleting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+                {deleting ? 'Deleting...' : 'Delete'}
               </Button>
             </>
           )}

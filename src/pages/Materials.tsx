@@ -33,6 +33,7 @@ const Materials = () => {
     openAddForm,
     closeForm,
     handleFormSubmit,
+    submitting,
   } = useMaterials();
 
   return (
@@ -88,6 +89,7 @@ const Materials = () => {
         editingMaterial={editingMaterial}
         onSubmit={handleFormSubmit}
         onCancel={closeForm}
+        submitting={submitting}
       />
     </div>
   );

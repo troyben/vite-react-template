@@ -42,6 +42,7 @@ function UsersContent({ currentUserId }: { currentUserId: number }) {
     handleFormSubmit,
     handlePageChange,
     handleSearch,
+    submitting,
   } = useUsers(currentUserId);
 
   return (
@@ -74,6 +75,7 @@ function UsersContent({ currentUserId }: { currentUserId: number }) {
         formError={formError}
         onClose={closeForm}
         onSubmit={handleFormSubmit}
+        submitting={submitting}
       />
     </div>
   );

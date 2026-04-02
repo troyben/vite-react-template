@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import type { PaginationMeta } from '@/types/pagination';
 
 
@@ -23,6 +23,7 @@ const Templates = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [selectedTemplate, setSelectedTemplate] = useState<SketchTemplate | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [pagination, setPagination] = useState<PaginationMeta>({
     page: 1,
     limit: 12,
@@ -73,11 +74,15 @@ const Templates = () => {
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this template?')) return;
+
+    setDeletingId(id);
     try {
       await deleteTemplate(id);
       fetchTemplates(pagination.page, searchTerm);
     } catch (err) {
       setError('Failed to delete template.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -207,8 +212,9 @@ const Templates = () => {
                         size="icon-sm"
                         onClick={(e) => handleDelete(template.id, e)}
                         className="text-muted-foreground hover:text-destructive shrink-0"
+                        disabled={deletingId === template.id}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        {deletingId === template.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       </Button>
                     )}
                   </div>

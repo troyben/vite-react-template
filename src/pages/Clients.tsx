@@ -22,6 +22,7 @@ const Clients = () => {
     openAddForm,
     closeForm,
     handleFormSubmit,
+    submitting,
   } = useClients();
 
   return (
@@ -57,6 +58,7 @@ const Clients = () => {
         editingClient={editingClient}
         onSubmit={handleFormSubmit}
         onCancel={closeForm}
+        submitting={submitting}
       />
     </div>
   );

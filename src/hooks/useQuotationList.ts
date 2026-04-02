@@ -11,6 +11,7 @@ export function useQuotationList() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchQuotations = useCallback(async (page: number, search?: string) => {
@@ -35,16 +36,19 @@ export function useQuotationList() {
   }, [fetchQuotations]);
 
   const handleDelete = useCallback(async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this quotation?')) {
-      try {
-        const response = await deleteQuotation(id);
-        if (response.data.success) {
-          notify.success('Quotation deleted successfully');
-          fetchQuotations(currentPage, searchTerm);
-        }
-      } catch (err) {
-        notify.error('Failed to delete quotation');
+    if (!window.confirm('Are you sure you want to delete this quotation?')) return;
+
+    setDeletingId(id);
+    try {
+      const response = await deleteQuotation(id);
+      if (response.data.success) {
+        notify.success('Quotation deleted successfully');
+        fetchQuotations(currentPage, searchTerm);
       }
+    } catch (err) {
+      notify.error('Failed to delete quotation');
+    } finally {
+      setDeletingId(null);
     }
   }, [fetchQuotations, currentPage, searchTerm]);
 
@@ -101,5 +105,6 @@ export function useQuotationList() {
     navigate,
     getStatusVariant,
     getStatusClassName,
+    deletingId,
   };
 }

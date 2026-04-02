@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Loader2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useQuotationList } from '@/hooks/useQuotationList';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +35,7 @@ const QuotationList = () => {
     navigate,
     getStatusVariant,
     getStatusClassName,
+    deletingId,
   } = useQuotationList();
 
   const canWrite = (row: Quotation) => {
@@ -112,10 +113,11 @@ const QuotationList = () => {
                       variant="destructive"
                       onClick={() => handleDelete(row.original.id)}
                       className="cursor-pointer"
+                      disabled={deletingId === row.original.id}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      {deletingId === row.original.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                       <div>
-                        <div className="text-sm">Delete</div>
+                        <div className="text-sm">{deletingId === row.original.id ? 'Deleting...' : 'Delete'}</div>
                         <div className="text-xs text-muted-foreground">Remove this quotation</div>
                       </div>
                     </DropdownMenuItem>
@@ -127,7 +129,7 @@ const QuotationList = () => {
         );
       },
     },
-  ], [user, navigate, handleDelete, getStatusVariant, getStatusClassName]);
+  ], [user, navigate, handleDelete, getStatusVariant, getStatusClassName, deletingId]);
 
   return (
     <div className="p-6 space-y-6">

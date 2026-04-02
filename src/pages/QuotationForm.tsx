@@ -257,8 +257,11 @@ const QuotationForm = () => {
     setTemplateTargetIndex(-1);
   };
 
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
   const handleSaveAsTemplate = async () => {
     if (!saveTemplateData || !templateName.trim()) return;
+    setSavingTemplate(true);
     try {
       await createTemplate({ name: templateName.trim(), sketchData: saveTemplateData });
       setShowSaveTemplateDialog(false);
@@ -266,6 +269,8 @@ const QuotationForm = () => {
       setTemplateName('');
     } catch (err) {
       setError('Failed to save template. Please try again.');
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -837,11 +842,11 @@ const QuotationForm = () => {
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowSaveTemplateDialog(false); setSaveTemplateData(null); setTemplateName(''); }}>
+            <Button variant="outline" onClick={() => { setShowSaveTemplateDialog(false); setSaveTemplateData(null); setTemplateName(''); }} disabled={savingTemplate}>
               Cancel
             </Button>
-            <Button onClick={handleSaveAsTemplate} disabled={!templateName.trim()}>
-              Save
+            <Button onClick={handleSaveAsTemplate} disabled={!templateName.trim() || savingTemplate}>
+              {savingTemplate ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

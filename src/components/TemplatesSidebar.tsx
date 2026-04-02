@@ -20,13 +20,18 @@ export const TemplatesSidebar: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleSaveTemplate = async () => {
-    if (templateName.trim()) {
+    if (!templateName.trim()) return;
+    setSaving(true);
+    try {
       await saveTemplate(templateName.trim(), templateDescription.trim());
       setTemplateName('');
       setTemplateDescription('');
       setIsSaveDialogOpen(false);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -149,10 +154,12 @@ export const TemplatesSidebar: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSaveTemplate}>Save Template</Button>
+            <Button onClick={handleSaveTemplate} disabled={saving || !templateName.trim()}>
+              {saving ? 'Saving...' : 'Save Template'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

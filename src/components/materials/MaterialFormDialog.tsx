@@ -37,6 +37,7 @@ interface MaterialFormDialogProps {
   editingMaterial: Material | null;
   onSubmit: (data: CreateMaterialData) => void;
   onCancel: () => void;
+  submitting?: boolean;
 }
 
 const CATEGORY_OPTIONS: { value: MaterialCategory; label: string }[] = [
@@ -66,6 +67,7 @@ export function MaterialFormDialog({
   editingMaterial,
   onSubmit,
   onCancel,
+  submitting,
 }: MaterialFormDialogProps) {
   const [category, setCategory] = useState<MaterialCategory>('frame_profile');
   const [unit, setUnit] = useState<MaterialUnit>('per_meter');
@@ -212,11 +214,11 @@ export function MaterialFormDialog({
           />
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit">
-              {editingMaterial ? 'Save Changes' : 'Add Material'}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Saving...' : editingMaterial ? 'Save Changes' : 'Add Material'}
             </Button>
           </DialogFooter>
         </form>

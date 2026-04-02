@@ -12,6 +12,7 @@ export function useQuotationDetail() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchQuotation = async () => {
@@ -44,15 +45,16 @@ export function useQuotationDetail() {
 
   const handleDelete = useCallback(async () => {
     if (!id || !quotation) return;
+    if (!window.confirm('Are you sure you want to delete this quotation?')) return;
 
-    if (window.confirm('Are you sure you want to delete this quotation?')) {
-      try {
-        await deleteQuotation(parseInt(id));
-        navigate('/');
-      } catch (err) {
-        console.error('Error deleting quotation:', err);
-        setError('Failed to delete quotation. Please try again.');
-      }
+    setDeleting(true);
+    try {
+      await deleteQuotation(parseInt(id));
+      navigate('/');
+    } catch (err) {
+      console.error('Error deleting quotation:', err);
+      setError('Failed to delete quotation. Please try again.');
+      setDeleting(false);
     }
   }, [id, quotation, navigate]);
 
@@ -101,5 +103,6 @@ export function useQuotationDetail() {
     handleDelete,
     handleStatusChange,
     handleExportPDF,
+    deleting,
   };
 }

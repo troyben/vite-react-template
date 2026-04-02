@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Star } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Star, Loader2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as materialApi from '@/services/materialService';
 import type { Material, MaterialCategory } from '@/services/materialService';
@@ -64,6 +64,8 @@ export function useMaterials() {
   const [categoryFilter, setCategoryFilter] = useState<MaterialCategory | ''>('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchMaterials = useCallback(async (page: number, search?: string, category?: MaterialCategory | '') => {
@@ -124,6 +126,7 @@ export function useMaterials() {
   }, []);
 
   const handleFormSubmit = useCallback(async (data: materialApi.CreateMaterialData) => {
+    setSubmitting(true);
     try {
       if (editingMaterial) {
         const response = await materialApi.updateMaterial(editingMaterial.id, data);
@@ -140,6 +143,8 @@ export function useMaterials() {
       fetchMaterials(currentPage, searchTerm, categoryFilter);
     } catch (err: any) {
       notify.error(err.message || 'Failed to save material');
+    } finally {
+      setSubmitting(false);
     }
   }, [editingMaterial, closeForm, fetchMaterials, currentPage, searchTerm, categoryFilter]);
 
@@ -152,6 +157,7 @@ export function useMaterials() {
     });
     if (!confirmed) return;
 
+    setDeletingId(materialId);
     try {
       const response = await materialApi.deleteMaterial(materialId);
       if (response.data.success) {
@@ -160,6 +166,8 @@ export function useMaterials() {
       }
     } catch (err: any) {
       notify.error(err.message || 'Failed to delete material');
+    } finally {
+      setDeletingId(null);
     }
   }, [fetchMaterials, currentPage, searchTerm, categoryFilter]);
 
@@ -284,10 +292,10 @@ export function useMaterials() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" onClick={() => handleDelete(info.row.original.id)} className="cursor-pointer">
-                <Trash2 className="mr-2 h-4 w-4" />
+              <DropdownMenuItem variant="destructive" onClick={() => handleDelete(info.row.original.id)} className="cursor-pointer" disabled={deletingId === info.row.original.id}>
+                {deletingId === info.row.original.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                 <div>
-                  <div className="text-sm">Delete</div>
+                  <div className="text-sm">{deletingId === info.row.original.id ? 'Deleting...' : 'Delete'}</div>
                   <div className="text-xs text-muted-foreground">Remove this material</div>
                 </div>
               </DropdownMenuItem>
@@ -296,7 +304,7 @@ export function useMaterials() {
         </DropdownMenu>
       ),
     },
-  ], [openEditForm, handleDelete, handleToggleDefault]);
+  ], [openEditForm, handleDelete, handleToggleDefault, deletingId]);
 
   return {
     materials,
@@ -316,5 +324,6 @@ export function useMaterials() {
     openAddForm,
     closeForm,
     handleFormSubmit,
+    submitting,
   };
 }

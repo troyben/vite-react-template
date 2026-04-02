@@ -17,6 +17,7 @@ interface ClientFormDialogProps {
   editingClient: Client | null;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
+  submitting?: boolean;
 }
 
 export function ClientFormDialog({
@@ -25,6 +26,7 @@ export function ClientFormDialog({
   editingClient,
   onSubmit,
   onCancel,
+  submitting,
 }: ClientFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,11 +70,11 @@ export function ClientFormDialog({
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit">
-              {editingClient ? 'Save Changes' : 'Add Client'}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Saving...' : editingClient ? 'Save Changes' : 'Add Client'}
             </Button>
           </DialogFooter>
         </form>

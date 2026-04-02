@@ -26,6 +26,7 @@ interface UserFormDialogProps {
   formError: string | null;
   onClose: () => void;
   onSubmit: (values: FormValues) => void;
+  submitting?: boolean;
 }
 
 export function UserFormDialog({
@@ -34,10 +35,18 @@ export function UserFormDialog({
   formError,
   onClose,
   onSubmit,
+  submitting,
 }: UserFormDialogProps) {
   const [role, setRole] = useState<string>(editingUser?.role || 'user');
   const [clientId, setClientId] = useState<string>(editingUser?.clientId?.toString() || '');
   const [clients, setClients] = useState<Client[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRole(editingUser?.role || 'user');
+      setClientId(editingUser?.clientId?.toString() || '');
+    }
+  }, [open, editingUser]);
 
   useEffect(() => {
     if (role === 'client') {
@@ -53,11 +62,6 @@ export function UserFormDialog({
     if (!nextOpen) {
       onClose();
     }
-  };
-
-  const handleRendered = () => {
-    setRole(editingUser?.role || 'user');
-    setClientId(editingUser?.clientId?.toString() || '');
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -86,7 +90,6 @@ export function UserFormDialog({
       <DialogContent
         className="sm:max-w-md"
         showCloseButton
-        ref={() => handleRendered()}
       >
         <DialogHeader>
           <DialogTitle>
@@ -171,8 +174,8 @@ export function UserFormDialog({
             <div className="text-sm text-destructive">{formError}</div>
           )}
           <DialogFooter>
-            <Button type="submit">
-              {editingUser ? 'Update User' : 'Add User'}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Saving...' : editingUser ? 'Update User' : 'Add User'}
             </Button>
           </DialogFooter>
         </form>

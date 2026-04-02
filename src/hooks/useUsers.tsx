@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { MoreHorizontal, Pencil, KeyRound, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, KeyRound, Trash2, Loader2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as userService from '@/services/userService';
 import { notify, confirm, alert } from '@/utils/notifications';
@@ -45,6 +45,8 @@ export function useUsers(currentUserId: number | undefined) {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [actionId, setActionId] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchUsers = useCallback(async (page: number, search?: string) => {
@@ -113,6 +115,7 @@ export function useUsers(currentUserId: number | undefined) {
 
     if (willDelete) {
       setLoading(true);
+      setActionId(userId);
       setError(null);
       try {
         await userService.deleteUser(userId);
@@ -122,6 +125,7 @@ export function useUsers(currentUserId: number | undefined) {
         notify.error(err.message || 'Failed to delete user');
       } finally {
         setLoading(false);
+        setActionId(null);
       }
     }
   }, [fetchUsers, currentPage, searchTerm]);
@@ -137,6 +141,7 @@ export function useUsers(currentUserId: number | undefined) {
 
     if (willReset) {
       setLoading(true);
+      setActionId(userId);
       try {
         await userService.resetUserPassword(userId);
         await alert({
@@ -149,12 +154,14 @@ export function useUsers(currentUserId: number | undefined) {
         notify.error(err.message || 'Failed to reset password');
       } finally {
         setLoading(false);
+        setActionId(null);
       }
     }
   }, [fetchUsers, currentPage, searchTerm]);
 
   const handleFormSubmit = useCallback(async (formValues: FormValues) => {
     setFormError(null);
+    setSubmitting(true);
     try {
       if (editingUser) {
         await userService.updateUser(editingUser.id, formValues);
@@ -168,6 +175,8 @@ export function useUsers(currentUserId: number | undefined) {
     } catch (err: any) {
       setFormError(err.message || 'An error occurred');
       notify.error(err.message || 'Failed to save user');
+    } finally {
+      setSubmitting(false);
     }
   }, [editingUser, closeForm, fetchUsers, currentPage, searchTerm]);
 
@@ -195,8 +204,8 @@ export function useUsers(currentUserId: number | undefined) {
                     <div className="text-xs text-muted-foreground">Modify user details</div>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleResetPassword(row.original.id)} className="cursor-pointer">
-                  <KeyRound className="mr-2 h-4 w-4" />
+                <DropdownMenuItem onClick={() => handleResetPassword(row.original.id)} className="cursor-pointer" disabled={actionId === row.original.id}>
+                  {actionId === row.original.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
                   <div>
                     <div className="text-sm">Reset Password</div>
                     <div className="text-xs text-muted-foreground">Generate a new password</div>
@@ -205,10 +214,10 @@ export function useUsers(currentUserId: number | undefined) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.original.id)} className="cursor-pointer">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.original.id)} className="cursor-pointer" disabled={actionId === row.original.id}>
+                  {actionId === row.original.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   <div>
-                    <div className="text-sm">Delete</div>
+                    <div className="text-sm">{actionId === row.original.id ? 'Deleting...' : 'Delete'}</div>
                     <div className="text-xs text-muted-foreground">Remove this user</div>
                   </div>
                 </DropdownMenuItem>
@@ -218,7 +227,7 @@ export function useUsers(currentUserId: number | undefined) {
         ),
       },
     ],
-    [openEditForm, handleResetPassword, handleDelete]
+    [openEditForm, handleResetPassword, handleDelete, actionId]
   );
 
   return {
@@ -238,5 +247,6 @@ export function useUsers(currentUserId: number | undefined) {
     handleFormSubmit,
     handlePageChange,
     handleSearch,
+    submitting,
   };
 }

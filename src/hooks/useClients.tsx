@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as clientApi from '@/services/clientService';
 import type { Client } from '@/services/clientService';
@@ -26,6 +26,8 @@ export function useClients() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const fetchClients = useCallback(async (page: number, search?: string) => {
@@ -98,6 +100,7 @@ export function useClients() {
       company: formData.get('company') as string || undefined,
     };
 
+    setSubmitting(true);
     try {
       if (editingClient) {
         const response = await clientApi.updateClient(editingClient.id, clientData);
@@ -114,12 +117,15 @@ export function useClients() {
       fetchClients(currentPage, searchTerm);
     } catch (err: any) {
       notify.error(err.message || 'Failed to save client');
+    } finally {
+      setSubmitting(false);
     }
   }, [editingClient, closeForm, fetchClients, currentPage, searchTerm]);
 
   const handleDelete = useCallback(async (clientId: number) => {
     if (!confirm('Are you sure you want to delete this client?')) return;
 
+    setDeletingId(clientId);
     try {
       const response = await clientApi.deleteClient(clientId);
       if (response.data.success) {
@@ -128,6 +134,8 @@ export function useClients() {
       }
     } catch (err: any) {
       notify.error(err.message || 'Failed to delete client');
+    } finally {
+      setDeletingId(null);
     }
   }, [fetchClients, currentPage, searchTerm]);
 
@@ -169,10 +177,10 @@ export function useClients() {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.id)} className="cursor-pointer">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.id)} className="cursor-pointer" disabled={deletingId === row.id}>
+                  {deletingId === row.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   <div>
-                    <div className="text-sm">Delete</div>
+                    <div className="text-sm">{deletingId === row.id ? 'Deleting...' : 'Delete'}</div>
                     <div className="text-xs text-muted-foreground">Remove this client</div>
                   </div>
                 </DropdownMenuItem>
@@ -182,7 +190,7 @@ export function useClients() {
         );
       },
     },
-  ], [user, openEditForm, handleDelete]);
+  ], [user, openEditForm, handleDelete, deletingId]);
 
   return {
     clients,
@@ -200,5 +208,6 @@ export function useClients() {
     openAddForm,
     closeForm,
     handleFormSubmit,
+    submitting,
   };
 }
