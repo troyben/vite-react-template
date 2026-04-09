@@ -23,10 +23,10 @@ const COMPANY = {
  *
  * Returns the Y position after the header.
  */
-export async function drawHeader(doc: jsPDF, quotation: Quotation): Promise<number> {
+export async function drawHeader(doc: jsPDF, quotation: Quotation, startY?: number): Promise<number> {
   const m = PAGE.margin;
   const right = PAGE.width - m;
-  let y = m;
+  let y = startY ?? m;
 
   // -- Row 1: Logo + Company name (left) | Quotation # + Date (right) --
   let logoWidth = 0;

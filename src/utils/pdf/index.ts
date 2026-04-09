@@ -1,10 +1,12 @@
 import jsPDF from 'jspdf';
 import type { Quotation } from '../../services/quotationService';
 import { notify } from '../notifications';
+import { PAGE } from './constants';
 import { drawHeader } from './header';
 import { drawItemsSection } from './itemsTable';
 import { drawSummary } from './summary';
 import { drawSignatures, drawFooter } from './footer';
+import { drawDisclaimer } from './disclaimer';
 
 export async function exportQuotationToPDF(quotation: Quotation): Promise<void> {
   try {
@@ -15,8 +17,11 @@ export async function exportQuotationToPDF(quotation: Quotation): Promise<void> 
       ? quotation.items
       : JSON.parse(quotation.items as unknown as string);
 
+    // Disclaimer
+    let y = drawDisclaimer(doc, PAGE.margin);
+
     // Header
-    let y = await drawHeader(doc, quotation);
+    y = await drawHeader(doc, quotation, y);
 
     // Items table (renders sketches inline as vector graphics)
     y = await drawItemsSection(doc, items, y);

@@ -44,6 +44,24 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
       style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Helvetica, Arial, sans-serif' }}
     >
       <div className="px-[12mm] pt-[12mm] pb-[8mm]">
+        {/* ── Disclaimer ── */}
+        <div
+          className="relative mb-[5mm] rounded-[1.5mm] border text-[7.5pt] italic"
+          style={{
+            backgroundColor: 'rgb(255, 250, 235)',
+            borderColor: 'rgb(215, 220, 235)',
+            color: 'rgb(100, 80, 40)',
+            padding: '3mm',
+            paddingLeft: '4.2mm',
+          }}
+        >
+          <div
+            className="absolute left-0 top-0 bottom-0 rounded-l-[1.5mm]"
+            style={{ width: '1.2mm', backgroundColor: 'rgb(230, 160, 50)' }}
+          />
+          All dimensions on drawings are in mm(metric system) and represent rough opening sizes, any other notes in imperial system might not reflect the final production sizes or R.O.(rough opening) sizes and will not be considered valid. All windows and doors are view from inside the house.
+        </div>
+
         {/* ── Row 1: Logo + Company Name | Quotation # + Date ── */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
