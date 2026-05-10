@@ -765,19 +765,8 @@ const QuotationForm = () => {
           </CardContent>
         </Card>
 
-        {/* Notes + Total + Actions */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6 mt-4">
-          <div className="flex-1 md:max-w-md w-full">
-            <Label htmlFor="notes" className="text-sm mb-1.5">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes || ''}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Additional notes (optional)"
-              rows={2}
-              className="text-sm"
-            />
-          </div>
+        {/* Total + Actions */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-end md:gap-6 mt-4">
           <div className="flex flex-col items-stretch md:items-end gap-3 w-full md:w-auto md:min-w-[320px]">
             {(() => {
               const subtotal = formData.total_amount;
