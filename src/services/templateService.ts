@@ -2,7 +2,7 @@ import api from '../api';
 import { AxiosResponse } from 'axios';
 import { handleServiceError } from '../utils/errorHandling';
 import type { PaginationParams, PaginatedResponse } from '@/types/pagination';
-import type { ProductData } from '@/components/product-sketch/types';
+import type { ProductData } from '@/components/product-editor/types';
 
 interface ApiResponse<T> {
   success: boolean;

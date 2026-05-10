@@ -2,7 +2,7 @@
 // Shape boundary helpers: find shape edge at a given x or y coordinate
 // ---------------------------------------------------------------------------
 
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import { MARGIN } from './types';
 import type { Point } from './types';
 import { getArchRy } from './shape-path';

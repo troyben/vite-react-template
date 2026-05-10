@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAllTemplates, type SketchTemplate } from '../services/templateService';
-import type { ProductData } from '@/components/product-sketch/types';
-import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import type { ProductData } from '@/components/product-editor/types';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

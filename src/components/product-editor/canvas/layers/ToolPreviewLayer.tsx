@@ -8,6 +8,7 @@ import type { CanvasTool } from '../utils/canvas-tools';
 import type { CanvasGeometry } from '../utils/tool-interactions';
 import { findPanelAtPoint, getDirectionFromPosition, computeLinePreview, computeArcPlacement } from '../utils/tool-interactions';
 import { getOpeningIndicator } from '../utils/opening-indicators';
+import { getOpening3D, getOpening3DLeafBounds } from '../utils/opening-indicators-3d';
 
 export interface ToolPreviewLayerProps {
   activeTool: CanvasTool;
@@ -17,13 +18,28 @@ export interface ToolPreviewLayerProps {
   isSliding: boolean;
   lineOrientation: 'horizontal' | 'vertical';
   lineTarget: 'panel' | 'pane';
+  render3D?: boolean;
+  glassFill?: string;
 }
 
 export function renderToolPreview(props: ToolPreviewLayerProps): React.ReactNode {
-  const { activeTool, hoverPos, canvasGeo, frameColor, isSliding, lineOrientation, lineTarget } = props;
+  const { activeTool, hoverPos, canvasGeo, frameColor, isSliding, lineOrientation, lineTarget, render3D, glassFill } = props;
   const { width, height, drawW, drawH } = canvasGeo;
 
   if (!hoverPos) return null;
+
+  function renderOpening(dir: string, slid: boolean, cx: number, cy: number, w: number, h: number, key: string) {
+    if (render3D) {
+      const lb = getOpening3DLeafBounds(dir, slid, cx, cy, w, h);
+      return (
+        <React.Fragment key={key}>
+          {getOpening3D(dir, slid, cx, cy, w, h, `${key}-3d`, glassFill, frameColor)}
+          {getOpeningIndicator(dir, slid, lb.cx, lb.cy, lb.w, lb.h, `${key}-2d`)}
+        </React.Fragment>
+      );
+    }
+    return getOpeningIndicator(dir, slid, cx, cy, w, h, key);
+  }
 
   if (activeTool === 'handle') {
     const hit = findPanelAtPoint(canvasGeo, hoverPos.x, hoverPos.y);
@@ -36,7 +52,7 @@ export function renderToolPreview(props: ToolPreviewLayerProps): React.ReactNode
         paneInfo.paneCy - paneInfo.paneH / 2,
         paneInfo.paneW, paneInfo.paneH,
       );
-      return getOpeningIndicator(dir, isSliding, paneInfo.paneCx, paneInfo.paneCy, paneInfo.paneW, paneInfo.paneH, 'preview-handle');
+      return renderOpening(dir, isSliding, paneInfo.paneCx, paneInfo.paneCy, paneInfo.paneW, paneInfo.paneH, 'preview-handle');
     }
     const dir = getDirectionFromPosition(
       hoverPos.x, hoverPos.y,
@@ -44,7 +60,7 @@ export function renderToolPreview(props: ToolPreviewLayerProps): React.ReactNode
       hit.panelCy - hit.panelH / 2,
       hit.panelW, hit.panelH,
     );
-    return getOpeningIndicator(dir, isSliding, hit.panelCx, hit.panelCy, hit.panelW, hit.panelH, 'preview-handle');
+    return renderOpening(dir, isSliding, hit.panelCx, hit.panelCy, hit.panelW, hit.panelH, 'preview-handle');
   }
 
   if (activeTool === 'line') {

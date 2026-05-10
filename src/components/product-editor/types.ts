@@ -46,6 +46,7 @@ export interface ProductData {
   panelDivisionWidths?: Array<{ panelIndex: number; colWidths: number[] }>;
   shape?: ShapeConfig;
   removedSections?: Array<{ panelIndex: number; rowIndex: number; colIndex: number }>;
+  render3D?: boolean;
 }
 
 export interface ProductSketchProps {

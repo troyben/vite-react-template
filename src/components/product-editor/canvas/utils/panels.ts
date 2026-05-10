@@ -2,7 +2,7 @@
 // Panel computation: dividers, polygon clipping, centers
 // ---------------------------------------------------------------------------
 
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point, DividerLine } from './types';
 import { MARGIN, ARCH_CURVE_STEPS } from './types';
 import { getArchRy } from './shape-path';

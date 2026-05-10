@@ -1,4 +1,4 @@
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 
 /**
  * Returns a CSS clip-path value for the given shape configuration.

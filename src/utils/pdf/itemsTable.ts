@@ -53,7 +53,9 @@ function calcRowHeight(doc: jsPDF, item: QuotationItem, hasSketch: boolean): num
     ? doc.splitTextToSize(item.description, COLUMNS.name - 4)
     : [];
   const lineH = 3.2;
-  const textHeight = (nameLines.length + descLines.length) * lineH + ROW_PADDING * 2 + 2;
+  const textHeight =
+    (nameLines.length + descLines.length) * lineH +
+    ROW_PADDING * 2 + 2;
 
   let sketchHeight = 0;
   if (hasSketch && item.productSketch) {

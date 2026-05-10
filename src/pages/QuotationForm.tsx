@@ -6,9 +6,9 @@ import { getAllClients } from '../services/clientService';
 import { exportQuotationToPDF } from '../utils/pdf';
 import type { Client } from '../services/clientService';
 import type { QuotationItem, QuotationFormData, Quotation } from '../services/quotationService';
-import type { ProductData } from '@/components/product-sketch/types';
+import type { ProductData } from '@/components/product-editor/types';
 import ProductEditorDialog from '@/components/ProductEditorDialog';
-import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import ClientSelector from '@/components/ClientSelector';
 import TemplatePicker from '@/components/TemplatePicker';
@@ -25,6 +25,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { formatCurrency } from '@/config/currency';
 import { notify } from '@/utils/notifications';
 import { useSystemSettingsStore } from '@/stores/systemSettingsStore';
+import { buildSketchDescription } from '@/utils/productDescription';
+import { computeTotals } from '@/utils/quotationTotals';
 
 const emptyItem: QuotationItem = {
   item: '',
@@ -48,6 +50,8 @@ const QuotationForm = () => {
     client_address: '',
     items: [{ ...emptyItem }],
     total_amount: 0,
+    vat_percent: 0,
+    transport_fee: 0,
     status: 'draft',
     notes: ''
   });
@@ -82,6 +86,12 @@ const QuotationForm = () => {
             const total = typeof quotationData.total_amount === 'string'
               ? parseFloat(quotationData.total_amount)
               : Number(quotationData.total_amount);
+            const vatPercent = typeof quotationData.vat_percent === 'string'
+              ? parseFloat(quotationData.vat_percent)
+              : Number(quotationData.vat_percent ?? 0);
+            const transportFee = typeof quotationData.transport_fee === 'string'
+              ? parseFloat(quotationData.transport_fee)
+              : Number(quotationData.transport_fee ?? 0);
             setFormData({
               id: quotationData.id,
               clientId: quotationData.clientId,
@@ -91,6 +101,8 @@ const QuotationForm = () => {
               client_address: quotationData.client_address || '',
               items: parsedItems,
               total_amount: total,
+              vat_percent: Number.isFinite(vatPercent) ? vatPercent : 0,
+              transport_fee: Number.isFinite(transportFee) ? transportFee : 0,
               status: quotationData.status,
               notes: quotationData.notes || ''
             });
@@ -305,6 +317,8 @@ const QuotationForm = () => {
           productSketch: item.productSketch ? { ...item.productSketch } : undefined
         })),
         total_amount: calculateTotal(formData.items),
+        vat_percent: Number(formData.vat_percent) || 0,
+        transport_fee: Number(formData.transport_fee) || 0,
         status: 'draft', notes: formData.notes || ''
       };
       if (isEditing && id) await updateQuotation(parseInt(id), quotationData);
@@ -337,6 +351,8 @@ const QuotationForm = () => {
           client_address: selectedClient.address || '',
           items: formData.items.map(item => ({ ...item, total: item.quantity * item.price })),
           total_amount: calculateTotal(formData.items),
+          vat_percent: Number(formData.vat_percent) || 0,
+          transport_fee: Number(formData.transport_fee) || 0,
           status: formData.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'paid',
           notes: formData.notes || '',
         };
@@ -349,13 +365,21 @@ const QuotationForm = () => {
         }
       }
 
+      const subtotalForPdf = calculateTotal(formData.items);
+      const vatPercentForPdf = Number(formData.vat_percent) || 0;
+      const transportForPdf = Number(formData.transport_fee) || 0;
+      const { grandTotal: grandTotalForPdf } = computeTotals(subtotalForPdf, vatPercentForPdf, transportForPdf);
       const quotationData: Quotation = {
         id: quotationId!, clientId: selectedClient.id,
         client_name: selectedClient.name, client_email: selectedClient.email || '',
         client_phone: selectedClient.phone || undefined,
         client_address: selectedClient.address || '',
         items: formData.items.map(item => ({ ...item, total: item.quantity * item.price })),
-        total_amount: calculateTotal(formData.items), status: formData.status,
+        total_amount: subtotalForPdf,
+        vat_percent: vatPercentForPdf,
+        transport_fee: transportForPdf,
+        grand_total: grandTotalForPdf,
+        status: formData.status,
         notes: formData.notes || '',
         created_at: createdAt,
         updated_at: new Date().toISOString(),
@@ -380,12 +404,6 @@ const QuotationForm = () => {
 
   const formatAmount = formatCurrency;
 
-  const FRAME_COLOR_NAMES: Record<string, string> = {
-    '#C0C0C0': 'Natural/Silver',
-    '#4F4F4F': 'Charcoal Grey',
-    '#CD7F32': 'Bronze',
-  };
-
   const buildNameFromSketch = (data: ProductData): string => {
     const openingType = data.type === 'door'
       ? (data.doorType || 'hinged')
@@ -394,20 +412,7 @@ const QuotationForm = () => {
     return `${openingType.charAt(0).toUpperCase() + openingType.slice(1)} ${productType}`;
   };
 
-  const buildDescriptionFromSketch = (data: ProductData): string => {
-    const lines: string[] = [];
-    lines.push(`${data.width} x ${data.height} ${data.unit}`);
-    if (data.glassType) {
-      const glass = data.glassType === 'custom-tint'
-        ? `Custom Tint${data.customGlassTint ? ` (${data.customGlassTint})` : ''}`
-        : data.glassType.charAt(0).toUpperCase() + data.glassType.slice(1);
-      lines.push(`Glass: ${glass}`);
-    }
-    if (data.frameColor) {
-      lines.push(`Frame: ${FRAME_COLOR_NAMES[data.frameColor] || 'Custom'}`);
-    }
-    return lines.join('\n');
-  };
+  const buildDescriptionFromSketch = buildSketchDescription;
 
   const renderSketchDetails = (sketchData: ProductData) => (
     <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
@@ -773,12 +778,88 @@ const QuotationForm = () => {
               className="text-sm"
             />
           </div>
-          <div className="flex flex-col items-start md:items-end gap-3 w-full md:w-auto">
-            <div className="text-left md:text-right">
-              <span className="text-sm text-muted-foreground">Total Amount</span>
-              <div className="text-2xl font-bold">{formatAmount(formData.total_amount)}</div>
-            </div>
-            <div className="flex gap-2">
+          <div className="flex flex-col items-stretch md:items-end gap-3 w-full md:w-auto md:min-w-[320px]">
+            {(() => {
+              const subtotal = formData.total_amount;
+              const vatPercent = Number(formData.vat_percent) || 0;
+              const transportFee = Number(formData.transport_fee) || 0;
+              const { vatAmount, grandTotal } = computeTotals(subtotal, vatPercent, transportFee);
+              return (
+                <Card className="w-full">
+                  <CardContent className="p-3 space-y-2">
+                    {/* VAT + Transport inputs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor="vat_percent" className="text-xs text-muted-foreground">VAT (%)</Label>
+                        <Input
+                          id="vat_percent"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={formData.vat_percent === 0 ? '' : formData.vat_percent}
+                          onFocus={(e) => e.currentTarget.select()}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '') {
+                              setFormData({ ...formData, vat_percent: 0 });
+                              return;
+                            }
+                            const raw = parseFloat(v);
+                            const next = Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0;
+                            setFormData({ ...formData, vat_percent: next });
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="transport_fee" className="text-xs text-muted-foreground">Transport fee</Label>
+                        <Input
+                          id="transport_fee"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.transport_fee === 0 ? '' : formData.transport_fee}
+                          onFocus={(e) => e.currentTarget.select()}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '') {
+                              setFormData({ ...formData, transport_fee: 0 });
+                              return;
+                            }
+                            const raw = parseFloat(v);
+                            const next = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+                            setFormData({ ...formData, transport_fee: next });
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Totals breakdown */}
+                    <div className="border-t pt-2 space-y-1 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="font-medium tabular-nums">{formatAmount(subtotal)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">VAT ({vatPercent}%)</span>
+                        <span className="font-medium tabular-nums">{formatAmount(vatAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Transport</span>
+                        <span className="font-medium tabular-nums">{formatAmount(transportFee)}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t pt-1.5 mt-1">
+                        <span className="text-sm font-semibold">Grand Total</span>
+                        <span className="text-xl font-bold tabular-nums">{formatAmount(grandTotal)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+            <div className="flex gap-2 self-end">
               <Button type="button" variant="outline" onClick={() => navigate('/quotations')}>
                 Cancel
               </Button>
@@ -802,6 +883,8 @@ const QuotationForm = () => {
             clientAddress={selectedClient?.address}
             items={formData.items.map(item => ({ ...item, total: item.quantity * item.price }))}
             totalAmount={calculateTotal(formData.items)}
+            vatPercent={Number(formData.vat_percent) || 0}
+            transportFee={Number(formData.transport_fee) || 0}
             quotationId={formData.id}
             createdAt={formData.created_at}
           />

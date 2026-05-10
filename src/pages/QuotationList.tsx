@@ -58,7 +58,25 @@ const QuotationList = () => {
     {
       accessorKey: 'total_amount',
       header: 'Total',
-      cell: ({ getValue }) => formatAmount(getValue()),
+      cell: ({ row }) => {
+        const q = row.original;
+        const subtotal = Number(q.total_amount) || 0;
+        const grand = typeof q.grand_total === 'number'
+          ? q.grand_total
+          : Number(q.grand_total);
+        const headline = Number.isFinite(grand) ? grand : subtotal;
+        const showSubtotal = Number.isFinite(grand) && grand !== subtotal;
+        return (
+          <div className="leading-tight">
+            <div className="font-medium tabular-nums">{formatAmount(headline)}</div>
+            {showSubtotal && (
+              <div className="text-[10px] text-muted-foreground tabular-nums">
+                Subtotal {formatAmount(subtotal)}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'status',

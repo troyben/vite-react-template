@@ -1,5 +1,5 @@
 import api from '../api';
-import type { ProductData } from '../components/product-sketch';
+import type { ProductData } from '../components/product-editor/types';
 import { AxiosResponse } from 'axios';
 import { handleServiceError } from '../utils/errorHandling';
 import type { PaginationParams, PaginatedResponse } from '@/types/pagination';
@@ -29,7 +29,9 @@ export interface QuotationFormData {
   client_phone?: string;      // Optional
   client_address?: string;    // Optional
   items: QuotationItem[];     // Required
-  total_amount: number;       // Required
+  total_amount: number;       // Required — SUBTOTAL (sum of line items)
+  vat_percent: number;        // Required — 0..100, default 0
+  transport_fee: number;      // Required — >= 0, default 0
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'paid'; // Required
   notes?: string;            // Optional
   created_at?: string;       // Will be set by backend
@@ -44,7 +46,10 @@ export interface Quotation {
   client_phone?: string;
   client_address?: string;
   items: QuotationItem[];
-  total_amount: number;
+  total_amount: number;       // SUBTOTAL (sum of line items)
+  vat_percent: number;        // 0..100
+  transport_fee: number;      // >= 0
+  grand_total?: number;       // RESPONSE-ONLY: total_amount + VAT + transport_fee
   rate?: number;
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
   notes?: string;
@@ -74,11 +79,13 @@ export const getQuotationById = async (id: number): Promise<AxiosResponse<ApiRes
 };
 
 export const updateQuotation = async (
-  id: number, 
+  id: number,
   quotation: Partial<Quotation>
 ): Promise<AxiosResponse<ApiResponse<Quotation>>> => {
   try {
-    return await api.put(`/quotations/${id}`, quotation);
+    // grand_total is response-only; never send it back to the server
+    const { grand_total: _grandTotal, ...payload } = quotation as Quotation;
+    return await api.put(`/quotations/${id}`, payload);
   } catch (error) {
     return handleServiceError(error);
   }
@@ -136,11 +143,15 @@ export const createQuotation = async (
     }
   });
 
-  // Add required fields if missing
+  // Add required fields if missing; ensure VAT / transport defaults
+  // and strip grand_total if accidentally provided (response-only field).
+  const { grand_total: _grandTotal, ...rest } = quotationData as Omit<QuotationFormData, 'id'> & { grand_total?: number };
   const preparedData = {
-    ...quotationData,
+    ...rest,
     status: quotationData.status || 'draft',
     client_email: quotationData.client_email || '',
+    vat_percent: typeof quotationData.vat_percent === 'number' ? quotationData.vat_percent : 0,
+    transport_fee: typeof quotationData.transport_fee === 'number' ? quotationData.transport_fee : 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };

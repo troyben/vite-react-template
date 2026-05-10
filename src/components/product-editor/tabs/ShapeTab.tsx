@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 
 interface ShapeTabProps {
   shape: ShapeConfig;

@@ -4,12 +4,13 @@
 // ---------------------------------------------------------------------------
 
 import React from 'react';
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point } from '../utils/types';
 import { MARGIN } from '../utils/types';
 import { getPanelCenter } from '../utils/panels';
 import { getTopYAtX, getBottomYAtX, getLeftXAtY, getRightXAtY } from '../utils/boundaries';
 import { getOpeningIndicator } from '../utils/opening-indicators';
+import { getOpening3D, getOpening3DLeafBounds } from '../utils/opening-indicators-3d';
 import { getRowTopFrac, getRowBottomFrac, getColLeftFrac, getColRightFrac } from '../utils/pane-fractions';
 import type { SectionId } from '../utils/section-outline';
 import { isSectionRemoved } from '../utils/section-outline';
@@ -39,6 +40,9 @@ export interface PaneLayersProps {
     openingType?: 'hinged' | 'sliding';
   }>;
   removedSections?: SectionId[];
+  render3D?: boolean;
+  glassFill?: string;
+  printMode?: boolean;
 }
 
 /** Layer 1b: Pane-level glass fill for opening panes */
@@ -54,6 +58,9 @@ export function renderPaneGlass(props: PaneLayersProps): React.ReactNode {
   return openingPanes.map((pane, pIdx) => {
     // Skip removed sections
     if (removedSections && isSectionRemoved(removedSections, pane.panelIndex, pane.rowIndex, pane.colIndex)) return null;
+    // In 3D mode the opening renderer paints its own glass on the closed half;
+    // leave the open half transparent.
+    if (props.render3D) return null;
     const div = panelDivisions.find((d) => d.panelIndex === pane.panelIndex);
     if (!div || (div.horizontalCount <= 1 && div.verticalCount <= 1)) return null;
 
@@ -79,7 +86,7 @@ export function renderPaneGlass(props: PaneLayersProps): React.ReactNode {
         y={paneY}
         width={paneW}
         height={paneH}
-        fill="#44D5B880"
+        fill={props.glassFill ?? '#cfd8ec'}
         stroke="none"
       />
     );
@@ -139,10 +146,10 @@ export function renderSubdivisionLines(props: PaneLayersProps): React.ReactNode 
       lines.push(
         <line key={`pane-h-${panelIndex}-${r}-a`}
           x1={clippedLeft} y1={y - gap / 2} x2={clippedRight} y2={y - gap / 2}
-          stroke={frameColor} strokeWidth={0.8} />,
+          stroke={frameColor} strokeWidth={props.printMode ? 1.5 : 0.8} />,
         <line key={`pane-h-${panelIndex}-${r}-b`}
           x1={clippedLeft} y1={y + gap / 2} x2={clippedRight} y2={y + gap / 2}
-          stroke={frameColor} strokeWidth={0.8} />,
+          stroke={frameColor} strokeWidth={props.printMode ? 1.5 : 0.8} />,
       );
     }
 
@@ -162,10 +169,10 @@ export function renderSubdivisionLines(props: PaneLayersProps): React.ReactNode 
       lines.push(
         <line key={`pane-v-${panelIndex}-${c}-a`}
           x1={x - gap / 2} y1={topY} x2={x - gap / 2} y2={botY}
-          stroke={frameColor} strokeWidth={0.8} />,
+          stroke={frameColor} strokeWidth={props.printMode ? 1.5 : 0.8} />,
         <line key={`pane-v-${panelIndex}-${c}-b`}
           x1={x + gap / 2} y1={topY} x2={x + gap / 2} y2={botY}
-          stroke={frameColor} strokeWidth={0.8} />,
+          stroke={frameColor} strokeWidth={props.printMode ? 1.5 : 0.8} />,
       );
     }
 
@@ -178,7 +185,7 @@ export function renderPaneOpenings(props: PaneLayersProps): React.ReactNode {
   const {
     shape, panels, panelWidths, svgVerts, drawW, drawH, width, height,
     panelDivisions, panelDivisionHeights, panelDivisionWidths, openingPanes,
-    removedSections,
+    removedSections, render3D, glassFill,
   } = props;
 
   if (!openingPanes || !panelDivisions) return null;
@@ -206,10 +213,31 @@ export function renderPaneOpenings(props: PaneLayersProps): React.ReactNode {
     const paneCy = panelTop + rowTFrac * ph + paneH / 2;
     const paneIsSliding = pane.openingType === 'sliding';
 
+    if (render3D) {
+      const lb = getOpening3DLeafBounds(pane.openingDirection, paneIsSliding, paneCx, paneCy, paneW, paneH);
+      return (
+        <React.Fragment key={`pane-opening-${pIdx}`}>
+          {getOpening3D(
+            pane.openingDirection, paneIsSliding,
+            paneCx, paneCy, paneW, paneH,
+            `pane-opening-3d-${pIdx}`,
+            glassFill ?? '#cfd8ec',
+            props.frameColor,
+          )}
+          {getOpeningIndicator(
+            pane.openingDirection, paneIsSliding,
+            lb.cx, lb.cy, lb.w, lb.h,
+            `pane-opening-2d-${pIdx}`,
+            props.printMode,
+          )}
+        </React.Fragment>
+      );
+    }
     return getOpeningIndicator(
       pane.openingDirection, paneIsSliding,
       paneCx, paneCy, paneW, paneH,
       `pane-opening-${pIdx}`,
+      props.printMode,
     );
   });
 }

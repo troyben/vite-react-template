@@ -6,7 +6,7 @@ import { drawHeader } from './header';
 import { drawItemsSection } from './itemsTable';
 import { drawSummary } from './summary';
 import { drawSignatures, drawFooter } from './footer';
-import { drawDisclaimer } from './disclaimer';
+import { drawDisclaimer, drawImportantNotes } from './disclaimer';
 
 export async function exportQuotationToPDF(quotation: Quotation): Promise<void> {
   try {
@@ -27,8 +27,21 @@ export async function exportQuotationToPDF(quotation: Quotation): Promise<void> 
     y = await drawItemsSection(doc, items, y);
 
     // Summary
-    const grandTotal = Number(quotation.total_amount);
-    y = drawSummary(doc, items, grandTotal, y);
+    const subtotal = Number(quotation.total_amount) || 0;
+    const vatPercent = Number(quotation.vat_percent) || 0;
+    const transportFee = Number(quotation.transport_fee) || 0;
+    const grandTotal = typeof quotation.grand_total === 'number' && Number.isFinite(quotation.grand_total)
+      ? quotation.grand_total
+      : Number(quotation.grand_total);
+    y = drawSummary(doc, items, {
+      subtotal,
+      vatPercent,
+      transportFee,
+      grandTotal: Number.isFinite(grandTotal) ? grandTotal : undefined,
+    }, y);
+
+    // Important Notes
+    y = drawImportantNotes(doc, y);
 
     // Signatures
     drawSignatures(doc, y);

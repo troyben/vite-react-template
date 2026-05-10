@@ -1,5 +1,5 @@
 import React, { useId, useState, useRef, useEffect, useCallback } from 'react';
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 
 // Utils
 import {
@@ -14,6 +14,7 @@ import { getGlassSvgDefs, getGlassSvgFill, getGlassSvgFilter, getGlassSvgHighlig
 import { getRealVertices, scaleVertices, getShapePath } from './utils/shape-path';
 import { getPanelDividers, getPanelPolygonPoints, getPanelCenter } from './utils/panels';
 import { getOpeningIndicator } from './utils/opening-indicators';
+import { getOpening3D, getOpening3DLeafBounds } from './utils/opening-indicators-3d';
 import type { CanvasTool, PlacedArc } from './utils/canvas-tools';
 
 // Extracted helpers
@@ -89,6 +90,9 @@ export interface ShapeCanvasProps {
   onArcRemove?: (arcId: string) => void;
   removedSections?: SectionId[];
   onSectionRemove?: (panelIndex: number, rowIndex: number, colIndex: number) => void;
+  render3D?: boolean;
+  /** Render with grayscale palette + thicker strokes for B&W PDF printing. */
+  printMode?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,7 +139,14 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   onArcRemove,
   removedSections,
   onSectionRemove,
+  render3D = false,
+  printMode = false,
 }) => {
+  // Print mode overrides for B&W PDF: gray glass + dark frame, ignoring the
+  // user-chosen colours.
+  const PRINT_GLASS = '#bdbdbd';
+  const PRINT_FRAME = '#333333';
+  const PRINT_FRAME_STROKE_MULT = 1.4;
   // Unique prefix for SVG defs IDs
   const uid = useId().replace(/:/g, '');
   const arrowLId = `sc-arrowL-${uid}`;
@@ -222,10 +233,13 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     ? svgVertsToReal(effectiveSvgVerts, drawW, drawH, width, height)
     : undefined;
 
-  // Glass fill references
-  const glassFill = getGlassSvgFill(glassType, uid);
-  const glassFilter = getGlassSvgFilter(glassType, uid);
-  const glassHighlight = getGlassSvgHighlight(glassType, uid);
+  // Glass fill references — overridden in print mode to grayscale.
+  const glassFill = printMode ? PRINT_GLASS : getGlassSvgFill(glassType, uid);
+  const glassFilter = printMode ? undefined : getGlassSvgFilter(glassType, uid);
+  const glassHighlight = printMode ? undefined : getGlassSvgHighlight(glassType, uid);
+  const effectiveFrameColor = printMode ? PRINT_FRAME : frameColor;
+  const effectiveFrameStroke = printMode ? FRAME_STROKE * PRINT_FRAME_STROKE_MULT : FRAME_STROKE;
+  const effectiveDividerStroke = printMode ? DIVIDER_STROKE * PRINT_FRAME_STROKE_MULT : DIVIDER_STROKE;
 
   // Panel dividers
   const dividers = getPanelDividers(shape, panels, panelWidths, svgVerts, drawW, drawH, width, height);
@@ -253,8 +267,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
 
   const paneLayerProps: PaneLayersProps = {
     shape, panels, panelWidths, svgVerts, drawW, drawH, width, height,
-    frameColor, panelDivisions, panelDivisionHeights, panelDivisionWidths, openingPanes,
-    removedSections,
+    frameColor: effectiveFrameColor, panelDivisions, panelDivisionHeights, panelDivisionWidths, openingPanes,
+    removedSections, render3D, glassFill, printMode,
   };
 
   const dimLayerProps: DimensionLayersProps = {
@@ -424,13 +438,18 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         const pts = getPanelPolygonPoints(shape, i, panels, panelWidths, svgVerts, drawW, drawH, width, height);
         if (!pts) return null;
         const isOpening = openingPanels.includes(i);
+        // In 3D mode, opening panels are drawn by the 3D renderer over a transparent
+        // background; skip the panel-level glass fill so the "open" half stays clear.
+        const skipFill = isOpening && render3D;
         return (
           <React.Fragment key={`glass-${i}`}>
-            <polygon points={pts}
-              fill={isOpening ? '#44D5B880' : glassFill}
-              filter={isOpening ? undefined : glassFilter}
-              stroke="none" />
-            {!isOpening && glassHighlight && (
+            {!skipFill && (
+              <polygon points={pts}
+                fill={glassFill}
+                filter={glassFilter}
+                stroke="none" />
+            )}
+            {!skipFill && glassHighlight && (
               <polygon points={pts} fill={glassHighlight} stroke="none" />
             )}
           </React.Fragment>
@@ -464,7 +483,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         }
         return (
           <line key={`div-${i}`} x1={d.x} y1={d.topY} x2={d.x} y2={d.bottomY}
-            stroke={frameColor} strokeWidth={DIVIDER_STROKE} />
+            stroke={effectiveFrameColor} strokeWidth={effectiveDividerStroke} />
         );
       })}
 
@@ -472,8 +491,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       {renderSubdivisionLines(paneLayerProps)}
 
       {/* --- Layer 3: Frame border --- */}
-      <path d={effectivePath} fill="none" stroke={frameColor}
-        strokeWidth={FRAME_STROKE} strokeLinejoin="miter" />
+      <path d={effectivePath} fill="none" stroke={effectiveFrameColor}
+        strokeWidth={effectiveFrameStroke} strokeLinejoin="miter" />
 
       {/* --- Layer 4: Opening indicators (clipped to shape) --- */}
       <g clipPath={`url(#${clipId})`}>
@@ -483,7 +502,16 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
           const { cx, cy, w: pw, h: ph } = getPanelCenter(
             shape, panelIdx, panels, panelWidths, svgVerts, drawW, drawH, width, height,
           );
-          return getOpeningIndicator(dir, isSliding, cx, cy, pw, ph, `opening-${panelIdx}`);
+          if (render3D) {
+            const lb = getOpening3DLeafBounds(dir, isSliding, cx, cy, pw, ph);
+            return (
+              <React.Fragment key={`opening-${panelIdx}`}>
+                {getOpening3D(dir, isSliding, cx, cy, pw, ph, `opening-3d-${panelIdx}`, glassFill, effectiveFrameColor)}
+                {getOpeningIndicator(dir, isSliding, lb.cx, lb.cy, lb.w, lb.h, `opening-2d-${panelIdx}`, printMode)}
+              </React.Fragment>
+            );
+          }
+          return getOpeningIndicator(dir, isSliding, cx, cy, pw, ph, `opening-${panelIdx}`, printMode);
         })}
         {/* --- Layer 4b: Pane-level opening indicators --- */}
         {renderPaneOpenings(paneLayerProps)}
@@ -505,13 +533,13 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       {customArcs?.map((arc) => (
         <path key={arc.id}
           d={`M ${arc.cx - arc.rx} ${arc.cy} A ${arc.rx} ${arc.ry} 0 0 0 ${arc.cx + arc.rx} ${arc.cy}`}
-          fill="none" stroke={frameColor} strokeWidth={1} />
+          fill="none" stroke={effectiveFrameColor} strokeWidth={printMode ? 1.6 : 1} />
       ))}
 
       {/* --- Layer 9: Hover preview (faded) --- */}
       {activeTool && activeTool !== 'remove' && hoverPos && (
         <g opacity={0.3}>{renderToolPreview({
-          activeTool, hoverPos, canvasGeo, frameColor, isSliding, lineOrientation, lineTarget,
+          activeTool, hoverPos, canvasGeo, frameColor, isSliding, lineOrientation, lineTarget, render3D, glassFill,
         })}</g>
       )}
 

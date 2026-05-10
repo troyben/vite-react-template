@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import React from 'react';
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point, DividerLine } from './types';
 import { MARGIN } from './types';
 import { getPanelCenter } from './panels';

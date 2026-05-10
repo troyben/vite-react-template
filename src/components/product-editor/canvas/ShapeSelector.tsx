@@ -1,4 +1,4 @@
-import type { ShapeType } from '@/components/product-sketch/types';
+import type { ShapeType } from '@/components/product-editor/types';
 
 interface ShapeSelectorProps {
   selected: ShapeType;

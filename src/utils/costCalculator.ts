@@ -1,4 +1,4 @@
-import type { ProductData, Unit } from '@/components/product-sketch/types';
+import type { ProductData, Unit } from '@/components/product-editor/types';
 import type { Material, MaterialCategory } from '@/services/materialService';
 
 export interface CostLineItem {

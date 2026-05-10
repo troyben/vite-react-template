@@ -3,7 +3,7 @@
 // for a given edge based on the shape type and the edge's real-world vertices.
 // ---------------------------------------------------------------------------
 
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point } from './types';
 import { realEdgeLength } from './geometry';
 

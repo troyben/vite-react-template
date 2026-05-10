@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pencil } from 'lucide-react';
-import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import { MaterialBreakdownView } from '@/components/CostBreakdown';
 import { getAllMaterials } from '@/services/materialService';
 import { calculateProductCost } from '@/utils/costCalculator';

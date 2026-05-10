@@ -1,5 +1,5 @@
-import type { ProductData } from '@/components/product-sketch/types';
-import type { ShapeCanvasProps } from '@/components/template-creator/ShapeCanvas';
+import type { ProductData } from '@/components/product-editor/types';
+import type { ShapeCanvasProps } from '@/components/product-editor/canvas/ShapeCanvas';
 
 /**
  * Maps a ProductData object (from a SketchTemplate's sketchData) to the props
@@ -8,6 +8,7 @@ import type { ShapeCanvasProps } from '@/components/template-creator/ShapeCanvas
  */
 export function extractShapeCanvasProps(
   sketchData: ProductData,
+  opts: { printMode?: boolean } = {},
 ): Omit<ShapeCanvasProps, 'svgStyle'> {
   return {
     shape: sketchData.shape || { type: 'rectangle' as const },
@@ -29,6 +30,9 @@ export function extractShapeCanvasProps(
     panelDivisionHeights: sketchData.panelDivisionHeights || [],
     panelDivisionWidths: sketchData.panelDivisionWidths || [],
     openingPanes: sketchData.openingPanes || [],
+    removedSections: sketchData.removedSections,
+    render3D: sketchData.render3D,
+    printMode: opts.printMode,
   };
 }
 

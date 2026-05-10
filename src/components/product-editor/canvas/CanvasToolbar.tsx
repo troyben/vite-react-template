@@ -1,5 +1,5 @@
 import React from 'react';
-import { GripHorizontal, Minus, MousePointer2, Eraser, RotateCcw } from 'lucide-react';
+import { GripHorizontal, Minus, MousePointer2, Eraser, RotateCcw, Box } from 'lucide-react';
 import type { CanvasTool } from './utils/canvas-tools';
 
 interface CanvasToolbarProps {
@@ -10,6 +10,8 @@ interface CanvasToolbarProps {
   lineTarget: 'panel' | 'pane';
   onLineTargetChange: (t: 'panel' | 'pane') => void;
   onReset?: () => void;
+  render3D: boolean;
+  onRender3DChange: (v: boolean) => void;
 }
 
 const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
@@ -20,6 +22,8 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   lineTarget,
   onLineTargetChange,
   onReset,
+  render3D,
+  onRender3DChange,
 }) => {
   function toggleTool(tool: CanvasTool) {
     onToolChange(activeTool === tool ? null : tool);
@@ -153,6 +157,17 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       >
         <Eraser className="h-3.5 w-3.5" />
         <span>Remove</span>
+      </button>
+
+      {/* 3D openings toggle */}
+      <button
+        type="button"
+        className={`${btnBase} ${render3D ? btnActive : btnInactive}`}
+        onClick={() => onRender3DChange(!render3D)}
+        title="Toggle 3D opening view (interior perspective). Persists in PDF export."
+      >
+        <Box className="h-3.5 w-3.5" />
+        <span>3D</span>
       </button>
 
       {/* Reset */}

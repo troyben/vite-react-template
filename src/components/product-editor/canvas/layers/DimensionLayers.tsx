@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import React from 'react';
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point } from '../utils/types';
 import { MARGIN, DIM_COLOR, DIM_FONT, DIM_OFFSET, DIM_LABEL_GAP } from '../utils/types';
 import { getOutwardNormal, realEdgeLength, isBottomEdge } from '../utils/geometry';

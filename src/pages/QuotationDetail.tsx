@@ -141,7 +141,10 @@ const QuotationDetail = () => {
             clientPhone={quotation.client_phone}
             clientAddress={quotation.client_address}
             items={items}
-            totalAmount={quotation.total_amount}
+            totalAmount={Number(quotation.total_amount) || 0}
+            vatPercent={Number(quotation.vat_percent) || 0}
+            transportFee={Number(quotation.transport_fee) || 0}
+            grandTotal={typeof quotation.grand_total === 'number' ? quotation.grand_total : Number(quotation.grand_total) || undefined}
             quotationId={quotation.id}
             createdAt={quotation.createdAt || quotation.created_at}
           />

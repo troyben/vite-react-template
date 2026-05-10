@@ -4,7 +4,7 @@
 
 import { MARGIN } from './types';
 import { getTopYAtX, getBottomYAtX } from './boundaries';
-import type { ShapeConfig } from '@/components/product-sketch/types';
+import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point } from './types';
 
 // ---------------------------------------------------------------------------

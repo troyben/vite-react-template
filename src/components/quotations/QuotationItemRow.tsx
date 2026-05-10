@@ -1,5 +1,5 @@
 import type { QuotationItem } from '@/services/quotationService';
-import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 
 interface QuotationItemRowProps {

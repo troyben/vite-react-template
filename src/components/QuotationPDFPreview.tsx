@@ -1,15 +1,23 @@
 import React from 'react';
-import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import { formatCurrency } from '@/config/currency';
 import type { QuotationItem } from '@/services/quotationService';
+import { computeTotals } from '@/utils/quotationTotals';
 
 interface QuotationPDFPreviewProps {
   clientName: string;
   clientPhone?: string;
   clientAddress?: string;
   items: QuotationItem[];
+  /** Subtotal — sum of line items. */
   totalAmount: number;
+  /** 0..100. Defaults to 0 (no VAT row rendered when 0). */
+  vatPercent?: number;
+  /** >= 0. Defaults to 0 (no Transport row rendered when 0). */
+  transportFee?: number;
+  /** Optional precomputed grand total; if absent, computed from the three above. */
+  grandTotal?: number;
   quotationId?: number;
   createdAt?: string;
 }
@@ -32,11 +40,20 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
   clientAddress,
   items,
   totalAmount,
+  vatPercent = 0,
+  transportFee = 0,
+  grandTotal,
   quotationId,
   createdAt,
 }) => {
   const totalPieces = items.reduce((sum, it) => sum + it.quantity, 0);
   const totalItemsAmount = items.reduce((sum, it) => sum + it.total, 0);
+  // Subtotal precedence: explicit totalAmount prop, falling back to summed items.
+  const subtotal = Number.isFinite(totalAmount) ? totalAmount : totalItemsAmount;
+  const totals = computeTotals(subtotal, vatPercent, transportFee);
+  const grand = typeof grandTotal === 'number' ? grandTotal : totals.grandTotal;
+  const showVatRow = true;
+  const showTransportRow = true;
 
   return (
     <div
@@ -165,7 +182,7 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
                   {item.productSketch ? (
                     <div className="flex items-center justify-center" style={{ minHeight: '22mm' }}>
                       <ShapeCanvas
-                        {...extractShapeCanvasProps(item.productSketch)}
+                        {...extractShapeCanvasProps(item.productSketch, { printMode: true })}
                         svgStyle={{ width: '100%', maxWidth: '42mm', maxHeight: '38mm', height: 'auto' }}
                       />
                     </div>
@@ -212,25 +229,61 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
 
         {/* ── Summary (right-aligned) ── */}
         <div className="flex justify-end mt-[6mm]">
-          <div style={{ width: '55mm' }}>
+          <div style={{ width: '70mm' }}>
             <div className="flex justify-between text-[9pt] mb-[1.5mm]" style={{ color: 'rgb(33, 33, 33)' }}>
               <span>Total Pieces:</span>
               <span>{totalPieces}</span>
             </div>
-            <div className="flex justify-between text-[9pt] mb-[3mm]" style={{ color: 'rgb(33, 33, 33)' }}>
-              <span>Total Amount:</span>
-              <span>{formatCurrency(totalItemsAmount)}</span>
+            <div className="flex justify-between text-[9pt] mb-[1.5mm]" style={{ color: 'rgb(33, 33, 33)' }}>
+              <span>Subtotal:</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
+            {showVatRow && (
+              <div className="flex justify-between text-[9pt] mb-[1.5mm]" style={{ color: 'rgb(33, 33, 33)' }}>
+                <span>VAT ({vatPercent}%):</span>
+                <span>{formatCurrency(totals.vatAmount)}</span>
+              </div>
+            )}
+            {showTransportRow && (
+              <div className="flex justify-between text-[9pt] mb-[3mm]" style={{ color: 'rgb(33, 33, 33)' }}>
+                <span>Transport:</span>
+                <span>{formatCurrency(transportFee)}</span>
+              </div>
+            )}
             <div style={{ borderTop: '0.3mm solid rgb(215, 220, 235)' }} className="mb-[4mm]" />
             <div className="flex justify-between text-[11pt] font-bold" style={{ color: 'rgb(1, 30, 75)' }}>
               <span>Grand Total:</span>
-              <span>{formatCurrency(totalAmount)}</span>
+              <span>{formatCurrency(grand)}</span>
             </div>
           </div>
         </div>
 
+        {/* ── Important Notes ── */}
+        <div
+          className="mt-[8mm] rounded-[1.5mm] border text-[7.5pt]"
+          style={{
+            backgroundColor: 'rgb(255, 250, 235)',
+            borderColor: 'rgb(215, 220, 235)',
+            color: 'rgb(80, 60, 30)',
+            padding: '3mm',
+            paddingLeft: '4.2mm',
+            position: 'relative',
+          }}
+        >
+          <div
+            className="absolute left-0 top-0 bottom-0 rounded-l-[1.5mm]"
+            style={{ width: '1.2mm', backgroundColor: 'rgb(230, 160, 50)' }}
+          />
+          <div className="font-bold mb-[1.2mm] text-[8pt]" style={{ color: 'rgb(140, 90, 20)' }}>
+            Important Notes
+          </div>
+          <div>
+            Customer is responsible to remove the protection film (if applicable) cover in maximum 2 months from installation. The plastic can glue to frame from intense sun exposure and heat and might not come out easy or even might remain on frames permanently. In this case manufacturer is not responsible if protection film cover can not be removed.
+          </div>
+        </div>
+
         {/* ── Signatures ── */}
-        <div className="flex justify-between mt-[16mm] px-[2mm]">
+        <div className="flex justify-between mt-[12mm] px-[2mm]">
           <div style={{ width: '55mm' }}>
             <div style={{ borderTop: '0.3mm solid rgb(215, 220, 235)' }} />
             <div className="text-[7pt] mt-[1.5mm]" style={{ color: 'rgb(130, 130, 130)' }}>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAllTemplates, deleteTemplate, type SketchTemplate } from '../services/templateService';
 import { useAuth } from '@/contexts/AuthContext';
-import ShapeCanvas from '@/components/template-creator/ShapeCanvas';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import TemplateDetailModal from '@/components/templates/TemplateDetailModal';
 import { extractShapeCanvasProps, formatTemplateDate } from '@/utils/templateSketchProps';
 import { ScreenLoader } from '@/components/ScreenLoader';
