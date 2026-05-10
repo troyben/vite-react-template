@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useSystemSettingsStore } from './stores/systemSettingsStore';
+import { useSidebarStore } from './stores/sidebarStore';
 import type { ReactNode } from 'react';
 import AppRoutes from './routes';
 
@@ -12,6 +13,7 @@ function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === '/login';
   const { user } = useAuth();
+  const expanded = useSidebarStore((s) => s.expanded);
 
   useEffect(() => {
     if (user && user.role !== 'client') {
@@ -22,7 +24,7 @@ function AppContent() {
   return (
     <div className="flex min-h-screen">
       {!hideNavbar && <Navbar />}
-      <div className={hideNavbar ? 'flex-1' : 'flex-1 ml-16'}>
+      <div className={hideNavbar ? 'flex-1' : `flex-1 transition-[margin] duration-200 ${expanded ? 'ml-56' : 'ml-16'}`}>
         <AppRoutes />
       </div>
     </div>
