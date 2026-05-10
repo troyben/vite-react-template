@@ -8,7 +8,6 @@
 
 import React from 'react';
 
-const HANDLE_COLOR = '#111';
 const STROKE_WIDTH = 1.8;
 
 const WEDGE_DEPTH = 0.55;   // free edge sits at this fraction across panel
@@ -18,7 +17,7 @@ const INSET = 1;            // small inset from panel border
 function renderHingedSideView(
   direction: string,
   left: number, right: number, top: number, bottom: number,
-  pw: number, ph: number,
+  _pw: number, _ph: number,
   keyPrefix: string,
   glassFill: string,
   frameColor: string,
@@ -34,8 +33,6 @@ function renderHingedSideView(
   let polygon: string;
   let diag1: { x1: number; y1: number; x2: number; y2: number };
   let diag2: { x1: number; y1: number; x2: number; y2: number };
-  let handleX: number;
-  let handleY: number;
 
   switch (direction) {
     case 'right': {
@@ -45,8 +42,6 @@ function renderHingedSideView(
       polygon = `${r},${t} ${fx},${t + taper} ${fx},${b - taper} ${r},${b}`;
       diag1 = { x1: r, y1: t, x2: fx, y2: t + taper };
       diag2 = { x1: r, y1: b, x2: fx, y2: b - taper };
-      handleX = fx;
-      handleY = (t + b) / 2;
       break;
     }
     case 'left': {
@@ -56,8 +51,6 @@ function renderHingedSideView(
       polygon = `${l},${t} ${fx},${t + taper} ${fx},${b - taper} ${l},${b}`;
       diag1 = { x1: l, y1: t, x2: fx, y2: t + taper };
       diag2 = { x1: l, y1: b, x2: fx, y2: b - taper };
-      handleX = fx;
-      handleY = (t + b) / 2;
       break;
     }
     case 'top': {
@@ -67,8 +60,6 @@ function renderHingedSideView(
       polygon = `${l},${t} ${l + taper},${fy} ${r - taper},${fy} ${r},${t}`;
       diag1 = { x1: l, y1: t, x2: l + taper, y2: fy };
       diag2 = { x1: r, y1: t, x2: r - taper, y2: fy };
-      handleX = (l + r) / 2;
-      handleY = fy;
       break;
     }
     case 'bottom':
@@ -79,8 +70,6 @@ function renderHingedSideView(
       polygon = `${l},${b} ${l + taper},${fy} ${r - taper},${fy} ${r},${b}`;
       diag1 = { x1: l, y1: b, x2: l + taper, y2: fy };
       diag2 = { x1: r, y1: b, x2: r - taper, y2: fy };
-      handleX = (l + r) / 2;
-      handleY = fy;
       break;
     }
   }
@@ -141,7 +130,7 @@ function renderHingedSideView(
 function renderSlidingSideView(
   direction: string,
   left: number, right: number, top: number, bottom: number,
-  pw: number, ph: number,
+  _pw: number, _ph: number,
   keyPrefix: string,
   glassFill: string,
   frameColor: string,
@@ -159,29 +148,23 @@ function renderSlidingSideView(
   // direction value), full perpendicular dimension, recessed inward.
   const inset = Math.min(ipw, iph) * 0.015;
   let fx0: number, fx1: number, fy0: number, fy1: number;
-  let handleX: number, handleY: number;
   switch (direction) {
     case 'right':
-      // Slides RIGHT — leaf covers RIGHT half. Handle on LEFT (frame-side) edge.
       fx0 = l + ipw * 0.5; fx1 = r - inset;
       fy0 = t + inset; fy1 = b - inset;
-      handleX = fx0 + ipw * 0.04; handleY = (fy0 + fy1) / 2;
       break;
     case 'left':
       fx0 = l + inset; fx1 = l + ipw * 0.5;
       fy0 = t + inset; fy1 = b - inset;
-      handleX = fx1 - ipw * 0.04; handleY = (fy0 + fy1) / 2;
       break;
     case 'top':
       fy0 = t + inset; fy1 = t + iph * 0.5;
       fx0 = l + inset; fx1 = r - inset;
-      handleX = (fx0 + fx1) / 2; handleY = fy1 - iph * 0.04;
       break;
     case 'bottom':
     default:
       fy0 = t + iph * 0.5; fy1 = b - inset;
       fx0 = l + inset; fx1 = r - inset;
-      handleX = (fx0 + fx1) / 2; handleY = fy0 + iph * 0.04;
       break;
   }
 
