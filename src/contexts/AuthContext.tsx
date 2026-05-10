@@ -51,50 +51,54 @@ export const AuthProvider = ({ children, onSessionExpired }: AuthProviderProps) 
 
   // Initialize auth state
   useEffect(() => {
+    // Register interceptor handlers up-front so any authenticated request
+    // (including those triggered immediately after a fresh login) can read
+    // the latest token from localStorage. Previously this was gated behind
+    // a stored-user check, which caused a 401 race on first-login fetches.
+    setAuthHandlers({
+      getAccessToken: () => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            return JSON.parse(storedUser).accessToken ?? null;
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      },
+      refresh: async () => {
+        const storedUser = localStorage.getItem('user');
+        const userData = storedUser ? JSON.parse(storedUser) : null;
+        if (!userData?.refreshToken) {
+          throw new Error('No refresh token available');
+        }
+        try {
+          const response = await authApi.refresh(userData.refreshToken);
+          if (!response.data?.success) {
+            throw new Error(response.data?.message || 'Refresh failed');
+          }
+          saveAuth(response.data.data);
+        } catch (refreshError: any) {
+          console.error('Refresh error:', refreshError?.response?.data || refreshError);
+          notify.error('Session expired. Please login again.');
+          await clearAuth();
+          if (onSessionExpired) {
+            onSessionExpired();
+          } else {
+            window.location.href = '/login';
+          }
+          throw refreshError;
+        }
+      },
+      logout: clearAuth
+    });
+
     const initAuth = async () => {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setAuthHandlers({
-            getAccessToken: () => {
-              const storedUser = localStorage.getItem('user');
-              if (storedUser) {
-                try {
-                  const userData = JSON.parse(storedUser);
-                  return userData.accessToken;
-                } catch {
-                  return null;
-                }
-              }
-              return null;
-            },
-            refresh: async () => {
-              if (!userData.refreshToken) {
-                throw new Error('No refresh token available');
-              }
-              try {
-                const response = await authApi.refresh(userData.refreshToken);
-                if (!response.data?.success) {
-                  throw new Error(response.data?.message || 'Refresh failed');
-                }
-                const newAuthData = response.data.data;
-                saveAuth(newAuthData);
-              } catch (refreshError: any) {
-                console.error('Refresh error:', refreshError?.response?.data || refreshError);
-                notify.error('Session expired. Please login again.');
-                await clearAuth();
-                if (onSessionExpired) {
-                  onSessionExpired();
-                } else {
-                  window.location.href = '/login';
-                }
-                throw refreshError;
-              }
-            },
-            logout: clearAuth
-          });
+          setUser(JSON.parse(storedUser));
         } catch (error) {
           console.error('Auth initialization error:', error);
           await clearAuth();
