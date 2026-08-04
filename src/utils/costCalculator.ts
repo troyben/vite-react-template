@@ -1,4 +1,5 @@
 import type { ProductData, Unit } from '@/components/product-editor/types';
+import { GABLE_RISE_RATIO } from '@/components/product-editor/canvas/utils/shape-path';
 import type { Material, MaterialCategory } from '@/services/materialService';
 
 export interface CostLineItem {
@@ -176,6 +177,17 @@ function calculateGlassItems(product: ProductData, materials: Material[]): CostL
         ? toMeters(product.shape.topWidth, product.unit)
         : wMeters;
       area = ((wMeters + topW) / 2) * hMeters;
+      break;
+    }
+    case 'gable': {
+      // Rectangular walls below the shoulders + triangular apex above them
+      const rise = Math.min(
+        product.shape?.gableHeight
+          ? toMeters(product.shape.gableHeight, product.unit)
+          : hMeters * GABLE_RISE_RATIO,
+        hMeters,
+      );
+      area = wMeters * (hMeters - rise) + 0.5 * wMeters * rise;
       break;
     }
     default:

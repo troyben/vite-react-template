@@ -6,6 +6,7 @@
 import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point } from './types';
 import { realEdgeLength } from './geometry';
+import { getGableRise } from './shape-path';
 
 export interface EdgeCommitContext {
   shape: ShapeConfig;
@@ -89,6 +90,22 @@ export function getEdgeCommitFn(
       if (isHoriz && Math.abs(len - width) < 1 && onWidthChange) return onWidthChange;
       // Diagonal edges are complex -- skip
       return null;
+
+    case 'gable': {
+      // Bottom edge = full width
+      if (isHoriz && Math.abs(len - width) < 1 && onWidthChange) return onWidthChange;
+      // Vertical side = side-wall height (total height minus apex rise). Editing it
+      // pins the current rise and grows/shrinks the overall height to match.
+      const rise = Math.round(getGableRise(shape, height));
+      if (isVert && Math.abs(len - (height - rise)) < 1 && onHeightChange) {
+        return (v) => {
+          onShapeConfigChange?.({ gableHeight: rise });
+          onHeightChange(v + rise);
+        };
+      }
+      // Rafters (diagonals) are derived from width/rise/apex position -- skip
+      return null;
+    }
 
     case 'pentagon':
     case 'hexagon':

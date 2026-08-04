@@ -138,6 +138,44 @@ const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
         </div>
       );
 
+    case 'gable':
+      return (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Apex Rise (mm)</Label>
+            <Input
+              type="number"
+              step={10}
+              value={shape.gableHeight ?? ''}
+              onChange={(e) => handleNumericChange(e, 'gableHeight', onChange)}
+              placeholder="400"
+              className="h-8 text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Height of the triangle above the side walls. The overall height in the
+              Dimensions tab includes it, so the side walls are height minus apex rise.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Apex Position</Label>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={shape.peakPosition ?? 0.5}
+              onChange={(e) => onChange({ peakPosition: Number(e.target.value) })}
+              className="w-full accent-violet-600"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>Left</span>
+              <span>{((shape.peakPosition ?? 0.5) * 100).toFixed(0)}%</span>
+              <span>Right</span>
+            </div>
+          </div>
+        </div>
+      );
+
     case 'pentagon':
     case 'hexagon':
       return (

@@ -17,6 +17,17 @@ export function getArchRy(shape: ShapeConfig, drawW: number, drawH: number, real
 }
 
 // ---------------------------------------------------------------------------
+// Gable rise helper -- apex height above the side walls, clamped to the shape
+// ---------------------------------------------------------------------------
+
+export const GABLE_RISE_RATIO = 0.3;
+
+export function getGableRise(shape: ShapeConfig, realH: number): number {
+  const rise = shape.gableHeight ?? realH * GABLE_RISE_RATIO;
+  return Math.max(0, Math.min(rise, realH));
+}
+
+// ---------------------------------------------------------------------------
 // Vertex computation -- real-world coordinates (mm)
 //
 // These are the ACTUAL vertices in real dimensions. They are used to:
@@ -56,6 +67,44 @@ export function getRealVertices(
         { x: w, y: h },
         { x: 0, y: h },
       ];
+    }
+
+    case 'gable': {
+      // Rectangle with a triangular apex on top. Clockwise from the apex:
+      // apex -> right shoulder -> bottom-right -> bottom-left -> left shoulder
+      const rise = getGableRise(shape, h);
+      const peakX = Math.max(0, Math.min((shape.peakPosition ?? 0.5) * w, w));
+
+      // No rise -> plain rectangle (avoids a redundant vertex on the top edge)
+      if (rise < 0.001) {
+        return [
+          { x: 0, y: 0 },
+          { x: w, y: 0 },
+          { x: w, y: h },
+          { x: 0, y: h },
+        ];
+      }
+      // Full rise -> the shoulders land on the bottom corners: a triangle
+      if (rise > h - 0.001) {
+        return [
+          { x: peakX, y: 0 },
+          { x: w, y: h },
+          { x: 0, y: h },
+        ];
+      }
+
+      const verts = [
+        { x: peakX, y: 0 },
+        { x: w, y: rise },
+        { x: w, y: h },
+        { x: 0, y: h },
+        { x: 0, y: rise },
+      ];
+      // Apex flush against a side wall: drop the coincident shoulder so that
+      // side stays one full-height edge instead of two collinear segments.
+      if (peakX < 0.001) return verts.filter((_, i) => i !== 4);
+      if (peakX > w - 0.001) return verts.filter((_, i) => i !== 1);
+      return verts;
     }
 
     case 'pentagon':

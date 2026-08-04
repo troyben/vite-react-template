@@ -2,7 +2,7 @@ export type OpeningDirection = 'left' | 'right' | 'top' | 'bottom';
 export type Unit = 'cm' | 'mm' | 'm';
 export type GlassType = 'clear' | 'frosted' | 'custom-tint';
 
-export type ShapeType = 'rectangle' | 'arch' | 'trapezoid' | 'l-shape' | 'triangle' | 'pentagon' | 'hexagon';
+export type ShapeType = 'rectangle' | 'arch' | 'trapezoid' | 'l-shape' | 'triangle' | 'gable' | 'pentagon' | 'hexagon';
 
 export interface ShapeConfig {
   type: ShapeType;
@@ -13,6 +13,8 @@ export interface ShapeConfig {
   cutoutHeight?: number;
   cutoutPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
   peakPosition?: number;
+  /** Gable: apex rise above the side walls (mm). Total height includes it. */
+  gableHeight?: number;
 }
 
 export interface ProductData {
