@@ -25,7 +25,7 @@ import {
   toMeters,
   sumTotals,
   round,
-} from './costCalculator';
+} from './costCalculatorCore';
 
 /**
  * Cost of one flat unit. This is the original calculation, unchanged, run
