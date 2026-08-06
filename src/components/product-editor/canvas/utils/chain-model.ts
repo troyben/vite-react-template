@@ -136,3 +136,60 @@ export function chainToProductData(
     rootSegmentIndex: chain.rootIndex,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Connector deletion cascade logic
+//
+// When a connector is deleted, everything attached beyond it (away from the
+// root segment) is also deleted. This function calculates which segments and
+// connectors die.
+// ---------------------------------------------------------------------------
+
+export interface RemovalRange {
+  segmentIndices: number[];
+  connectorIndices: number[];
+  newRootIndex: number;
+}
+
+/**
+ * Which segments and connectors die when connector `connectorIndex` is deleted.
+ *
+ * connectors[i] joins segments[i] to segments[i+1]. Everything on the far side
+ * of the joint from the root segment goes.
+ */
+export function connectorRemovalRange(chain: Chain, connectorIndex: number): RemovalRange {
+  const segCount = chain.segments.length;
+  const connCount = chain.connectors.length;
+
+  if (connectorIndex >= chain.rootIndex) {
+    // Connector is at or to the right of root: remove everything to the right
+    const segmentIndices: number[] = [];
+    for (let i = connectorIndex + 1; i < segCount; i++) segmentIndices.push(i);
+    const connectorIndices: number[] = [];
+    for (let i = connectorIndex; i < connCount; i++) connectorIndices.push(i);
+    return { segmentIndices, connectorIndices, newRootIndex: chain.rootIndex };
+  }
+
+  // Connector is to the left of root: remove everything to the left
+  const segmentIndices: number[] = [];
+  for (let i = 0; i <= connectorIndex; i++) segmentIndices.push(i);
+  const connectorIndices: number[] = [];
+  for (let i = 0; i <= connectorIndex; i++) connectorIndices.push(i);
+  return {
+    segmentIndices,
+    connectorIndices,
+    newRootIndex: chain.rootIndex - segmentIndices.length,
+  };
+}
+
+/** Delete a connector and everything attached beyond it. Returns a new chain. */
+export function applyConnectorRemoval(chain: Chain, connectorIndex: number): Chain {
+  const { segmentIndices, connectorIndices, newRootIndex } = connectorRemovalRange(chain, connectorIndex);
+  const deadSegments = new Set(segmentIndices);
+  const deadConnectors = new Set(connectorIndices);
+  return {
+    segments: chain.segments.filter((_, i) => !deadSegments.has(i)).map(cloneSegment),
+    connectors: chain.connectors.filter((_, i) => !deadConnectors.has(i)).map((c) => ({ ...c })),
+    rootIndex: newRootIndex,
+  };
+}

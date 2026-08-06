@@ -92,3 +92,79 @@ describe('makeSegment', () => {
     expect(s.id).toBeTruthy();
   });
 });
+
+import { connectorRemovalRange, applyConnectorRemoval } from './chain-model';
+import type { Chain } from './chain-model';
+
+function chainOf(segmentCount: number, rootIndex: number): Chain {
+  return {
+    segments: Array.from({ length: segmentCount }, (_, i) => makeSegment(1000 + i)),
+    connectors: Array.from({ length: segmentCount - 1 }, (_, i) => ({
+      id: `c${i}`, angle: 90, postWidth: 100,
+    })),
+    rootIndex,
+  };
+}
+
+describe('connectorRemovalRange', () => {
+  it('removes everything to the right when the root is leftmost', () => {
+    const r = connectorRemovalRange(chainOf(4, 0), 1);
+    expect(r.segmentIndices).toEqual([2, 3]);
+    expect(r.connectorIndices).toEqual([1, 2]);
+    expect(r.newRootIndex).toBe(0);
+  });
+
+  it('removes only the last leg for the last connector', () => {
+    const r = connectorRemovalRange(chainOf(4, 0), 2);
+    expect(r.segmentIndices).toEqual([3]);
+    expect(r.connectorIndices).toEqual([2]);
+  });
+
+  it('removes everything to the left when the connector is left of the root', () => {
+    const r = connectorRemovalRange(chainOf(4, 2), 1);
+    expect(r.segmentIndices).toEqual([0, 1]);
+    expect(r.connectorIndices).toEqual([0, 1]);
+    expect(r.newRootIndex).toBe(0);
+  });
+
+  it('shifts the root by exactly the number of segments dropped on the left', () => {
+    const r = connectorRemovalRange(chainOf(4, 2), 0);
+    expect(r.segmentIndices).toEqual([0]);
+    expect(r.connectorIndices).toEqual([0]);
+    expect(r.newRootIndex).toBe(1);
+  });
+
+  it('treats a connector at the root index as a rightward removal', () => {
+    const r = connectorRemovalRange(chainOf(4, 2), 2);
+    expect(r.segmentIndices).toEqual([3]);
+    expect(r.newRootIndex).toBe(2);
+  });
+});
+
+describe('applyConnectorRemoval', () => {
+  it('splices out the doomed segments and connectors', () => {
+    const before = chainOf(4, 0);
+    const keptId = before.segments[1].id;
+    const after = applyConnectorRemoval(before, 1);
+    expect(after.segments).toHaveLength(2);
+    expect(after.connectors).toHaveLength(1);
+    expect(after.segments[1].id).toBe(keptId);
+    expect(after.rootIndex).toBe(0);
+  });
+
+  it('keeps the root segment when removing from the left', () => {
+    const before = chainOf(4, 2);
+    const rootId = before.segments[2].id;
+    const after = applyConnectorRemoval(before, 1);
+    expect(after.segments).toHaveLength(2);
+    expect(after.segments[after.rootIndex].id).toBe(rootId);
+    expect(after.rootIndex).toBe(0);
+  });
+
+  it('does not mutate the input chain', () => {
+    const before = chainOf(3, 0);
+    applyConnectorRemoval(before, 0);
+    expect(before.segments).toHaveLength(3);
+    expect(before.connectors).toHaveLength(2);
+  });
+});
