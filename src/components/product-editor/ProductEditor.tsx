@@ -83,6 +83,27 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Keep the chain's root segment in sync with the editor's own dimension/panel
+  // state, so a chained product reflects edits made through the Dimensions and
+  // Panels tabs (which write to `state`, not directly to `state.chain`).
+  useEffect(() => {
+    state.chain.updateSegment(state.chain.chain.rootIndex, {
+      width: state.width,
+      panels: state.panels,
+      panelWidths: state.panelWidths,
+      panelDivisions: state.panelDivisions,
+      panelDivisionHeights: state.panelDivisionHeights,
+      panelDivisionWidths: state.panelDivisionWidths,
+      openingPanels: state.openingPanels,
+      openingDirections: state.openingDirections,
+      openingPanes: state.openingPanes,
+      removedSections: state.removedSections,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.width, state.panels, state.panelWidths, state.panelDivisions,
+      state.panelDivisionHeights, state.panelDivisionWidths, state.openingPanels,
+      state.openingDirections, state.openingPanes, state.removedSections]);
+
   const handlers = buildShapeCanvasHandlers(state, { customArcs, setCustomArcs });
 
   const handleReset = () => {
@@ -125,7 +146,12 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
               </svg>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[280px] p-3">
-              <ShapeSelector selected={state.shape.type} onSelect={state.setShapeType} />
+              <ShapeSelector
+                selected={state.shape.type}
+                onSelect={state.setShapeType}
+                onConnectorTool={() => setActiveTool(activeTool === 'connector' ? null : 'connector')}
+                connectorActive={activeTool === 'connector'}
+              />
             </PopoverContent>
           </Popover>
 
@@ -268,6 +294,14 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
             removedSections={state.removedSections}
             onSectionRemove={handlers.onSectionRemove}
             render3D={state.render3D}
+            chain={state.chain.chain}
+            activeSegmentIndex={state.chain.activeSegmentIndex}
+            activeConnectorIndex={state.chain.activeConnectorIndex}
+            onSegmentSelect={state.chain.setActiveSegmentIndex}
+            onConnectorSelect={state.chain.setActiveConnectorIndex}
+            onConnectorAngleChange={state.chain.setConnectorAngle}
+            onConnectorRemove={state.chain.removeConnector}
+            onSegmentAttach={(end, w) => state.chain.attachSegment(end, w)}
           />
         </div>
       </div>

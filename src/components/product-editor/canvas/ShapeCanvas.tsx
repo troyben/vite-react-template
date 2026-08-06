@@ -23,6 +23,7 @@ import { findPanelAtPoint, getDirectionFromPosition, computeLinePreview, compute
 import type { CanvasGeometry } from './utils/tool-interactions';
 import { findRemovableAtPoint, findSameKindAtPoint, getHighlightGeometry } from './utils/remove-tools';
 import type { RemovableItem, RemoveContext } from './utils/remove-tools';
+import { boundsOf, edgeAtPoint, getConnectorGhost } from './utils/connector-tool';
 import type { SectionId } from './utils/section-outline';
 import { computeSectionOutlinePath, isSectionRemoved, parseOutlineVertices, svgVertsToReal, mergeCollinearVertices, computeEffectiveBounds } from './utils/section-outline';
 
@@ -152,6 +153,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   printMode = false,
   chain,
   activeSegmentIndex,
+  onSegmentAttach,
 }) => {
   // Unique prefix for SVG defs IDs
   const uid = useId().replace(/:/g, '');
@@ -171,6 +173,9 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   // --- Remove tool state ---
   const [removeTarget, setRemoveTarget] = useState<RemovableItem | null>(null);
   const [rightClickTarget, setRightClickTarget] = useState<RemovableItem | null>(null);
+
+  // --- Connector tool state ---
+  const [connectorEdge, setConnectorEdge] = useState<'left' | 'right' | null>(null);
 
   /** Convert mouse event coords to SVG viewBox coords */
   const getSVGPoint = useCallback((e: React.MouseEvent): { x: number; y: number } | null => {
@@ -210,6 +215,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         printMode={printMode}
         activeSegmentIndex={activeSegmentIndex}
         svgStyle={svgStyle}
+        activeTool={activeTool}
+        onSegmentAttach={onSegmentAttach}
       />
     );
   }
@@ -371,6 +378,11 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       dispatchRemoval(removeTarget);
       setRemoveTarget(null);
     }
+
+    if (activeTool === 'connector' && connectorEdge && onSegmentAttach) {
+      onSegmentAttach(connectorEdge, width);
+      setConnectorEdge(null);
+    }
   }
 
   // --- Right-click handler for same-kind removal ---
@@ -410,6 +422,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
           setHoverPos(pt);
           if (activeTool === 'remove') {
             setRemoveTarget(findRemovableAtPoint(removeCtx, pt.x, pt.y));
+          } else if (activeTool === 'connector') {
+            setConnectorEdge(edgeAtPoint(boundsOf(svgVerts), pt.x, pt.y));
           } else {
             setRightClickTarget(findSameKindAtPoint(removeCtx, pt.x, pt.y, activeTool, lineTarget));
           }
@@ -419,6 +433,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         setHoverPos(null);
         setRemoveTarget(null);
         setRightClickTarget(null);
+        setConnectorEdge(null);
       }}
       onClick={(e) => {
         if (!activeTool || !hoverPos) return;
@@ -570,6 +585,20 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
           activeTool, hoverPos, canvasGeo, frameColor, isSliding, lineOrientation, lineTarget, render3D, glassFill,
         })}</g>
       )}
+
+      {/* --- Layer 9b: Connector tool ghost preview --- */}
+      {activeTool === 'connector' && connectorEdge && (() => {
+        const ghost = getConnectorGhost(boundsOf(svgVerts), connectorEdge, drawW);
+        return (
+          <g key="connector-ghost" opacity={0.4}>
+            <rect x={ghost.post.x} y={ghost.post.y} width={ghost.post.width} height={ghost.post.height} fill="#7c3aed" />
+            <polygon
+              points={ghost.legPoints}
+              fill="#7c3aed" fillOpacity={0.15} stroke="#7c3aed" strokeWidth={1.5} strokeDasharray="5 3"
+            />
+          </g>
+        );
+      })()}
 
       {/* --- Layer 10: Remove / right-click highlight overlay --- */}
       {activeTool === 'remove' && removeTarget && <g key="remove-highlight">{getHighlightGeometry(removeTarget, removeCtx)}</g>}

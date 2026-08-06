@@ -3,6 +3,8 @@ import type { ShapeType } from '@/components/product-editor/types';
 interface ShapeSelectorProps {
   selected: ShapeType;
   onSelect: (shape: ShapeType) => void;
+  onConnectorTool: () => void;
+  connectorActive: boolean;
 }
 
 const shapes: { type: ShapeType; label: string; icon: React.ReactNode }[] = [
@@ -80,24 +82,47 @@ const shapes: { type: ShapeType; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-const ShapeSelector: React.FC<ShapeSelectorProps> = ({ selected, onSelect }) => {
+const ShapeSelector: React.FC<ShapeSelectorProps> = ({ selected, onSelect, onConnectorTool, connectorActive }) => {
   return (
-    <div className="grid grid-cols-4 gap-2">
-      {shapes.map(({ type, label, icon }) => (
+    <div className="space-y-3">
+      <div className="grid grid-cols-4 gap-2">
+        {shapes.map(({ type, label, icon }) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => onSelect(type)}
+            className={`flex flex-col items-center gap-1 rounded-lg p-2 text-xs font-medium transition-colors ${
+              selected === type
+                ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-300'
+                : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+            }`}
+          >
+            {icon}
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="border-t pt-2">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tools</p>
         <button
-          key={type}
           type="button"
-          onClick={() => onSelect(type)}
-          className={`flex flex-col items-center gap-1 rounded-lg p-2 text-xs font-medium transition-colors ${
-            selected === type
+          onClick={onConnectorTool}
+          title="Connector — attach another unit at an angle to form a corner window"
+          className={`flex w-full items-center gap-2 rounded-lg p-2 text-xs font-medium transition-colors ${
+            connectorActive
               ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-300'
               : 'bg-muted/50 hover:bg-muted text-muted-foreground'
           }`}
         >
-          {icon}
-          <span>{label}</span>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="12" width="14" height="18" stroke="currentColor" strokeWidth="2" />
+            <path d="M21 14L35 9V27L21 32V14Z" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path d="M17 12V30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          <span>Connector</span>
         </button>
-      ))}
+      </div>
     </div>
   );
 };

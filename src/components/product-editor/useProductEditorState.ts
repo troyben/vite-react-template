@@ -9,6 +9,7 @@ import type {
   ShapeType,
   Unit,
 } from '@/components/product-editor/types';
+import { useSegmentChain } from './useSegmentChain';
 
 export type ProductEditorTabKey = 'shape' | 'dimensions' | 'appearance' | 'openings' | 'panels';
 
@@ -77,6 +78,7 @@ export function useProductEditorState() {
   const [removedSections, setRemovedSections] = useState<SectionId[]>(DEFAULTS.removedSections);
   const [render3D, setRender3D] = useState<boolean>(DEFAULTS.render3D);
   const [activeTab, setActiveTab] = useState<ProductEditorTabKey>('dimensions');
+  const chainState = useSegmentChain(DEFAULTS.width);
 
   const isSliding =
     (type === 'door' && doorType === 'sliding') || (type === 'window' && windowType === 'sliding');
@@ -267,6 +269,7 @@ export function useProductEditorState() {
     render3D, setRender3D,
     activeTab, setActiveTab,
     isSliding,
+    chain: chainState,
     // Handlers
     handleDimensionChange,
     handleTypeChange,
