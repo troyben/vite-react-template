@@ -1,5 +1,7 @@
 import React, { useId, useState, useRef, useEffect, useCallback } from 'react';
 import type { ShapeConfig } from '@/components/product-editor/types';
+import type { Chain } from './utils/chain-model';
+import ChainCanvas from './ChainCanvas';
 
 // Utils
 import {
@@ -93,6 +95,15 @@ export interface ShapeCanvasProps {
   render3D?: boolean;
   /** Render with grayscale palette + thicker strokes for B&W PDF printing. */
   printMode?: boolean;
+  /** Corner-window chain. When absent or single-segment, the flat path is used. */
+  chain?: Chain;
+  activeSegmentIndex?: number;
+  activeConnectorIndex?: number | null;
+  onSegmentSelect?: (index: number) => void;
+  onConnectorSelect?: (index: number | null) => void;
+  onConnectorAngleChange?: (index: number, angle: number) => void;
+  onConnectorRemove?: (index: number) => void;
+  onSegmentAttach?: (end: 'left' | 'right', width: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +152,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   onSectionRemove,
   render3D = false,
   printMode = false,
+  chain,
+  activeSegmentIndex,
 }) => {
   // Print mode overrides for B&W PDF: gray glass + dark frame, ignoring the
   // user-chosen colours.
@@ -185,6 +198,28 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       inputRef.current.select();
     }
   }, [editingDim]);
+
+  // --- Chain render path -----------------------------------------------------
+  // Only taken once a connector exists. A single-segment product falls through
+  // to the original flat renderer below, unchanged. ChainCanvas owns its own
+  // <svg>/viewBox/defs, so this is a pure delegation with no shared state.
+  if (chain && chain.connectors.length > 0) {
+    return (
+      <ChainCanvas
+        chain={chain}
+        shape={shape}
+        height={height}
+        frameColor={frameColor}
+        glassType={glassType}
+        customGlassTint={customGlassTint}
+        isSliding={isSliding}
+        render3D={render3D}
+        printMode={printMode}
+        activeSegmentIndex={activeSegmentIndex}
+        svgStyle={svgStyle}
+      />
+    );
+  }
 
   function commitEdit() {
     if (!editingDim) return;
