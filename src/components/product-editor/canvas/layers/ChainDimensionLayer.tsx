@@ -37,7 +37,17 @@ function outwardNormal(a: Point, b: Point): Point {
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   // Rotate the direction 90 degrees; positive y is down in SVG, so this points below.
-  return { x: -dy / len, y: dx / len };
+  const n = { x: -dy / len, y: dx / len };
+  // A leg's sill always sits below its own frame in screen space (the height
+  // "drop" only ever shifts corners down, never sideways -- see runCorners),
+  // so the dimension line always belongs on the +y side. The fixed +90-degree
+  // rotation above only lands there when the leg runs left-to-right on screen;
+  // once a chain turns enough that a leg's projected base reverses direction
+  // (happens well within the 1-359 degree range this feature allows -- e.g. a
+  // 3rd leg after two same-direction 90-degree turns), the raw rotation flips
+  // to the wrong side and the dimension cuts into the frame instead of sitting
+  // outside it. Force it downward instead of trusting the rotation's sign.
+  return n.y < 0 ? { x: -n.x, y: -n.y } : n;
 }
 
 export function renderChainDimensions(props: ChainDimensionProps): React.ReactNode {
