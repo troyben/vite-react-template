@@ -8,11 +8,9 @@ import {
   MARGIN,
   BOTTOM_LABEL_SPACE,
   DIM_COLOR,
-  FRAME_STROKE,
-  DIVIDER_STROKE,
   MARKER_SIZE,
 } from './utils/types';
-import { getGlassSvgDefs, getGlassSvgFill, getGlassSvgFilter, getGlassSvgHighlight } from './utils/glass-color';
+import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { getRealVertices, scaleVertices, getShapePath } from './utils/shape-path';
 import { getPanelDividers, getPanelPolygonPoints, getPanelCenter } from './utils/panels';
 import { getOpeningIndicator } from './utils/opening-indicators';
@@ -155,11 +153,6 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   chain,
   activeSegmentIndex,
 }) => {
-  // Print mode overrides for B&W PDF: gray glass + dark frame, ignoring the
-  // user-chosen colours.
-  const PRINT_GLASS = '#bdbdbd';
-  const PRINT_FRAME = '#333333';
-  const PRINT_FRAME_STROKE_MULT = 1.4;
   // Unique prefix for SVG defs IDs
   const uid = useId().replace(/:/g, '');
   const arrowLId = `sc-arrowL-${uid}`;
@@ -268,13 +261,13 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     ? svgVertsToReal(effectiveSvgVerts, drawW, drawH, width, height)
     : undefined;
 
-  // Glass fill references — overridden in print mode to grayscale.
-  const glassFill = printMode ? PRINT_GLASS : getGlassSvgFill(glassType, uid);
-  const glassFilter = printMode ? undefined : getGlassSvgFilter(glassType, uid);
-  const glassHighlight = printMode ? undefined : getGlassSvgHighlight(glassType, uid);
-  const effectiveFrameColor = printMode ? PRINT_FRAME : frameColor;
-  const effectiveFrameStroke = printMode ? FRAME_STROKE * PRINT_FRAME_STROKE_MULT : FRAME_STROKE;
-  const effectiveDividerStroke = printMode ? DIVIDER_STROKE * PRINT_FRAME_STROKE_MULT : DIVIDER_STROKE;
+  // Glass fill references — overridden in print mode to grayscale. Shared
+  // with ChainCanvas via getPrintModeRenderColors so the two paths can't
+  // silently diverge.
+  const {
+    glassFill, glassFilter, glassHighlight,
+    effectiveFrameColor, effectiveFrameStroke, effectiveDividerStroke,
+  } = getPrintModeRenderColors(printMode, frameColor, glassType, uid);
 
   // Panel dividers
   const dividers = getPanelDividers(shape, panels, panelWidths, svgVerts, drawW, drawH, width, height);

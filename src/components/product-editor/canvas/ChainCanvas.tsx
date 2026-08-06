@@ -10,8 +10,7 @@ import React, { useId } from 'react';
 import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Chain } from './utils/chain-model';
 import { layoutChain } from './utils/chain-projection';
-import { getGlassSvgDefs, getGlassSvgFill, getGlassSvgFilter, getGlassSvgHighlight } from './utils/glass-color';
-import { FRAME_STROKE, DIVIDER_STROKE } from './utils/types';
+import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { renderSegment } from './layers/SegmentLayers';
 
 export interface ChainCanvasProps {
@@ -30,12 +29,6 @@ export interface ChainCanvasProps {
   svgStyle?: React.CSSProperties;
 }
 
-// Print mode overrides for B&W PDF: gray glass + dark frame, ignoring the
-// user-chosen colours. Mirrors ShapeCanvas's own print overrides.
-const PRINT_GLASS = '#bdbdbd';
-const PRINT_FRAME = '#333333';
-const PRINT_FRAME_STROKE_MULT = 1.4;
-
 const ChainCanvas: React.FC<ChainCanvasProps> = ({
   chain,
   shape,
@@ -51,12 +44,12 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
 }) => {
   const uid = useId().replace(/:/g, '');
 
-  const glassFill = printMode ? PRINT_GLASS : getGlassSvgFill(glassType, uid);
-  const glassFilter = printMode ? undefined : getGlassSvgFilter(glassType, uid);
-  const glassHighlight = printMode ? undefined : getGlassSvgHighlight(glassType, uid);
-  const effectiveFrameColor = printMode ? PRINT_FRAME : frameColor;
-  const effectiveFrameStroke = printMode ? FRAME_STROKE * PRINT_FRAME_STROKE_MULT : FRAME_STROKE;
-  const effectiveDividerStroke = printMode ? DIVIDER_STROKE * PRINT_FRAME_STROKE_MULT : DIVIDER_STROKE;
+  // Shared with ShapeCanvas via getPrintModeRenderColors so the flat and
+  // chain paths can't silently diverge on B&W PDF print rules.
+  const {
+    glassFill, glassFilter, glassHighlight,
+    effectiveFrameColor, effectiveFrameStroke, effectiveDividerStroke,
+  } = getPrintModeRenderColors(printMode, frameColor, glassType, uid);
 
   const layout = layoutChain(
     chain.segments.map((s) => s.width),

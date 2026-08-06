@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import React from 'react';
+import { FRAME_STROKE, DIVIDER_STROKE } from './types';
 
 // -- Internal helpers --------------------------------------------------------
 
@@ -162,6 +163,41 @@ export function getGlassSvgFilter(glassType: string, uid: string): string | unde
 export function getGlassSvgHighlight(glassType: string, uid: string): string | undefined {
   if (glassType === 'custom-tint') return `url(#glass-tint-hl-${uid})`;
   return undefined;
+}
+
+// -- Print-mode render overrides ----------------------------------------------
+// Single source of truth for the B&W PDF print rules: grayscale glass, dark
+// frame, thicker strokes. Both the flat (ShapeCanvas) and chain (ChainCanvas)
+// render paths call this so the two can't silently diverge if the rule ever
+// changes.
+
+const PRINT_GLASS = '#bdbdbd';
+const PRINT_FRAME = '#333333';
+const PRINT_FRAME_STROKE_MULT = 1.4;
+
+export interface PrintModeRenderColors {
+  glassFill: string;
+  glassFilter: string | undefined;
+  glassHighlight: string | undefined;
+  effectiveFrameColor: string;
+  effectiveFrameStroke: number;
+  effectiveDividerStroke: number;
+}
+
+export function getPrintModeRenderColors(
+  printMode: boolean,
+  frameColor: string,
+  glassType: string,
+  uid: string,
+): PrintModeRenderColors {
+  return {
+    glassFill: printMode ? PRINT_GLASS : getGlassSvgFill(glassType, uid),
+    glassFilter: printMode ? undefined : getGlassSvgFilter(glassType, uid),
+    glassHighlight: printMode ? undefined : getGlassSvgHighlight(glassType, uid),
+    effectiveFrameColor: printMode ? PRINT_FRAME : frameColor,
+    effectiveFrameStroke: printMode ? FRAME_STROKE * PRINT_FRAME_STROKE_MULT : FRAME_STROKE,
+    effectiveDividerStroke: printMode ? DIVIDER_STROKE * PRINT_FRAME_STROKE_MULT : DIVIDER_STROKE,
+  };
 }
 
 // -- CSS glassmorphism style (returns React.CSSProperties) -------------------
