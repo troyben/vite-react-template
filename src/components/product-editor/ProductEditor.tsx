@@ -86,6 +86,11 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
       const idx = state.chain.activeConnectorIndex;
       if (idx == null) return;
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        // Don't hijack arrow keys that are the native increment/decrement for
+        // whatever form control currently has focus (width/height/panel-width/
+        // row-height/post-width number fields, selects, the slider itself).
+        const t = e.target as HTMLElement | null;
+        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
         e.preventDefault();
         const delta = e.key === 'ArrowUp' ? 1 : -1;
         state.chain.setConnectorAngle(idx, state.chain.chain.connectors[idx].angle + delta);
