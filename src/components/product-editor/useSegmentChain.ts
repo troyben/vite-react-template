@@ -67,22 +67,23 @@ export function useSegmentChain(initialWidth = 1000) {
       postWidth: DEFAULT_POST_WIDTH,
     };
     setChain((prev) => {
-      if (end === 'right') {
-        return {
-          segments: [...prev.segments, segment],
-          connectors: [...prev.connectors, connector],
-          rootIndex: prev.rootIndex,
-        };
-      }
-      return {
-        segments: [segment, ...prev.segments],
-        connectors: [connector, ...prev.connectors],
-        rootIndex: prev.rootIndex + 1,
-      };
+      const next =
+        end === 'right'
+          ? {
+              segments: [...prev.segments, segment],
+              connectors: [...prev.connectors, connector],
+              rootIndex: prev.rootIndex,
+            }
+          : {
+              segments: [segment, ...prev.segments],
+              connectors: [connector, ...prev.connectors],
+              rootIndex: prev.rootIndex + 1,
+            };
+      setActiveSegmentIndex(end === 'right' ? next.segments.length - 1 : 0);
+      setActiveConnectorIndex(end === 'right' ? next.connectors.length - 1 : 0);
+      return next;
     });
-    setActiveSegmentIndex(end === 'right' ? chain.segments.length : 0);
-    setActiveConnectorIndex(end === 'right' ? chain.connectors.length : 0);
-  }, [chain.segments.length, chain.connectors.length]);
+  }, []);
 
   const setConnectorAngle = useCallback((index: number, angle: number) => {
     setChain((prev) => ({
