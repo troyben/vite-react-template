@@ -23,7 +23,7 @@ import PanelsTab from '@/components/product-editor/tabs/PanelsTab';
 import type { CanvasTool, PlacedArc } from '@/components/product-editor/canvas/utils/canvas-tools';
 import type { ProductData } from '@/components/product-editor/types';
 import { useProductEditorState, type ProductEditorTabKey } from './useProductEditorState';
-import { buildShapeCanvasHandlers } from './productEditorHandlers';
+import { buildActiveSegmentView, buildShapeCanvasHandlers } from './productEditorHandlers';
 
 export type ProductEditorMode = 'page' | 'dialog';
 
@@ -103,6 +103,15 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
   // Keep the chain's root segment in sync with the editor's own dimension/panel
   // state, so a chained product reflects edits made through the Dimensions and
   // Panels tabs (which write to `state`, not directly to `state.chain`).
+  //
+  // Safe to leave targeting `rootIndex` (not `activeSegmentIndex`): every write
+  // path into these flat fields — the tabs, the Panels: input, and the canvas
+  // handlers — now goes through `buildActiveSegmentView`, which only touches
+  // flat `state.*` when the root leg is the active one (see `view` below).
+  // So by the time this effect's deps change, the root leg *is* the one that
+  // was just edited, whichever leg happens to be selected when it runs. Do
+  // NOT swap this to `activeSegmentIndex` — that would instead copy whatever
+  // leg was active into the *newly* active leg on every selection change.
   useEffect(() => {
     state.chain.updateSegment(state.chain.chain.rootIndex, {
       width: state.width,
@@ -122,6 +131,12 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
       state.openingDirections, state.openingPanes, state.removedSections]);
 
   const handlers = buildShapeCanvasHandlers(state, { customArcs, setCustomArcs });
+  // Read/write view over the active leg — the root leg's flat state when the
+  // root is active (byte-for-byte the same as before), or the selected leg's
+  // own data otherwise. Backs the Panels: input and the Dims/Open/Panes tabs.
+  // Shape and Look stay bound to flat state: shape-type editing is root-only
+  // by design, and frame color/glass are shared across every leg.
+  const view = buildActiveSegmentView(state);
 
   const handleReset = () => {
     state.setWidth(1000);
@@ -178,8 +193,8 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
               type="number"
               min={1}
               max={8}
-              value={state.panels}
-              onChange={(e) => state.handlePanelCountChange(Number(e.target.value))}
+              value={view.panels}
+              onChange={(e) => view.handlePanelCountChange(Number(e.target.value))}
               className="w-16 rounded-md border border-input px-2 py-1 text-sm text-center"
             />
           </div>
@@ -350,15 +365,15 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
 
           {state.activeTab === 'dimensions' && (
             <DimensionsTab
-              width={state.width}
+              width={view.width}
               height={state.height}
               unit={state.unit}
-              panels={state.panels}
-              panelWidths={state.panelWidths}
-              setWidth={state.setWidth}
+              panels={view.panels}
+              panelWidths={view.panelWidths}
+              setWidth={view.setWidth}
               setUnit={state.setUnit}
-              handleDimensionChange={state.handleDimensionChange}
-              handlePanelWidthChange={state.handlePanelWidthChange}
+              handleDimensionChange={view.handleDimensionChange}
+              handlePanelWidthChange={view.handlePanelWidthChange}
             />
           )}
 
@@ -375,30 +390,30 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
 
           {state.activeTab === 'openings' && (
             <OpeningsTab
-              panels={state.panels}
-              openingPanels={state.openingPanels}
-              openingDirections={state.openingDirections}
+              panels={view.panels}
+              openingPanels={view.openingPanels}
+              openingDirections={view.openingDirections}
               type={state.type}
-              setOpeningPanels={state.setOpeningPanels}
-              setOpeningDirections={state.setOpeningDirections}
+              setOpeningPanels={view.setOpeningPanels}
+              setOpeningDirections={view.setOpeningDirections}
             />
           )}
 
           {state.activeTab === 'panels' && (
             <PanelsTab
-              panels={state.panels}
+              panels={view.panels}
               height={state.height}
               unit={state.unit}
-              panelWidths={state.panelWidths}
-              panelDivisions={state.panelDivisions}
-              panelDivisionHeights={state.panelDivisionHeights}
-              panelDivisionWidths={state.panelDivisionWidths}
-              openingPanes={state.openingPanes}
+              panelWidths={view.panelWidths}
+              panelDivisions={view.panelDivisions}
+              panelDivisionHeights={view.panelDivisionHeights}
+              panelDivisionWidths={view.panelDivisionWidths}
+              openingPanes={view.openingPanes}
               activeHingeSelector={state.activeHingeSelector}
-              setPanelDivisions={state.setPanelDivisions}
-              setPanelDivisionHeights={state.setPanelDivisionHeights}
-              setPanelDivisionWidths={state.setPanelDivisionWidths}
-              setOpeningPanes={state.setOpeningPanes}
+              setPanelDivisions={view.setPanelDivisions}
+              setPanelDivisionHeights={view.setPanelDivisionHeights}
+              setPanelDivisionWidths={view.setPanelDivisionWidths}
+              setOpeningPanes={view.setOpeningPanes}
               setActiveHingeSelector={state.setActiveHingeSelector}
             />
           )}

@@ -155,6 +155,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   chain,
   activeSegmentIndex,
   activeConnectorIndex,
+  onSegmentSelect,
   onConnectorSelect,
   onConnectorAngleChange,
   onSegmentAttach,
@@ -222,6 +223,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         svgStyle={svgStyle}
         activeTool={activeTool}
         onSegmentAttach={onSegmentAttach}
+        onSegmentSelect={onSegmentSelect}
         onConnectorSelect={onConnectorSelect}
         onConnectorAngleChange={onConnectorAngleChange}
       />

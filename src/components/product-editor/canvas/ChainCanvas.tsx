@@ -37,6 +37,7 @@ export interface ChainCanvasProps {
   svgStyle?: React.CSSProperties;
   activeTool?: CanvasTool;
   onSegmentAttach?: (end: 'left' | 'right', width: number) => void;
+  onSegmentSelect?: (index: number) => void;
   onConnectorSelect?: (index: number | null) => void;
   onConnectorAngleChange?: (index: number, angle: number) => void;
 }
@@ -75,6 +76,7 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   svgStyle,
   activeTool,
   onSegmentAttach,
+  onSegmentSelect,
   onConnectorSelect,
   onConnectorAngleChange,
 }) => {
@@ -145,6 +147,27 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
           if (hitPost >= 0) {
             onConnectorSelect?.(hitPost);
             return;
+          }
+
+          // Leg selection comes next, but only when no tool is active: a click
+          // meant for the connector tool (or any future per-leg tool) should
+          // dispatch to that tool, not get hijacked into re-selecting whatever
+          // leg happens to be underneath the cursor.
+          if (!activeTool) {
+            const inPolygon = (p: { x: number; y: number }, poly: Array<{ x: number; y: number }>) => {
+              let inside = false;
+              for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+                if ((yi > p.y) !== (yj > p.y) && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) inside = !inside;
+              }
+              return inside;
+            };
+            const hitSeg = layout.segments.findIndex((s) => inPolygon(pt, s.corners));
+            if (hitSeg >= 0) {
+              onSegmentSelect?.(hitSeg);
+              onConnectorSelect?.(null);
+              return;
+            }
           }
         }
         if (activeTool === 'connector' && connectorEdge && onSegmentAttach) {
