@@ -17,6 +17,7 @@ import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
 import { DIM_COLOR, MARKER_SIZE } from './utils/types';
 import type { CanvasTool } from './utils/canvas-tools';
 import { boundsOf, edgeAtPoint, getConnectorGhost } from './utils/connector-tool';
+import { findConnectorAtPoint, getConnectorCascadeHighlight } from './utils/remove-tools';
 import ConnectorSlider from './ConnectorSlider';
 
 export interface ChainCanvasProps {
@@ -40,6 +41,7 @@ export interface ChainCanvasProps {
   onSegmentSelect?: (index: number) => void;
   onConnectorSelect?: (index: number | null) => void;
   onConnectorAngleChange?: (index: number, angle: number) => void;
+  onConnectorRemove?: (index: number) => void;
 }
 
 /**
@@ -79,6 +81,7 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   onSegmentSelect,
   onConnectorSelect,
   onConnectorAngleChange,
+  onConnectorRemove,
 }) => {
   const uid = useId().replace(/:/g, '');
   const arrowLId = `chain-arrowL-${uid}`;
@@ -86,6 +89,7 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [connectorEdge, setConnectorEdge] = useState<'left' | 'right' | null>(null);
+  const [removeConnectorTarget, setRemoveConnectorTarget] = useState<number | null>(null);
 
   /** Convert mouse event coords to SVG viewBox coords. */
   const getSVGPoint = useCallback((e: React.MouseEvent): { x: number; y: number } | null => {
@@ -127,25 +131,33 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
       }}
       preserveAspectRatio="xMidYMid meet"
       onMouseMove={(e) => {
-        if (activeTool !== 'connector') return;
         const pt = getSVGPoint(e);
-        if (pt) setConnectorEdge(edgeAtPoint(chainBounds, pt.x, pt.y));
+        if (!pt) return;
+        if (activeTool === 'connector') {
+          setConnectorEdge(edgeAtPoint(chainBounds, pt.x, pt.y));
+        } else if (activeTool === 'remove') {
+          setRemoveConnectorTarget(findConnectorAtPoint(layout, pt.x, pt.y));
+        }
       }}
-      onMouseLeave={() => setConnectorEdge(null)}
+      onMouseLeave={() => {
+        setConnectorEdge(null);
+        setRemoveConnectorTarget(null);
+      }}
       onClick={(e) => {
         // Post hit-test always takes priority over tool dispatch: clicking an
-        // existing corner post selects it, even while the connector tool is
-        // active for placing a new one elsewhere.
+        // existing corner post selects it -- or, with the erase tool active,
+        // deletes the post and its cascade -- even while another tool is
+        // active for placing new geometry elsewhere.
         const pt = getSVGPoint(e);
         if (pt) {
-          const hitPost = layout.posts.findIndex((post) => {
-            const xs = post.corners.map((p) => p.x);
-            const ys = post.corners.map((p) => p.y);
-            return pt.x >= Math.min(...xs) - 4 && pt.x <= Math.max(...xs) + 4
-              && pt.y >= Math.min(...ys) && pt.y <= Math.max(...ys);
-          });
-          if (hitPost >= 0) {
-            onConnectorSelect?.(hitPost);
+          const hitPost = findConnectorAtPoint(layout, pt.x, pt.y);
+          if (hitPost != null) {
+            if (activeTool === 'remove') {
+              onConnectorRemove?.(hitPost);
+              setRemoveConnectorTarget(null);
+            } else {
+              onConnectorSelect?.(hitPost);
+            }
             return;
           }
 
@@ -247,6 +259,12 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
           />
         );
       })()}
+
+      {/* Erase-tool cascade preview: the hovered post plus every segment and
+          post beyond it. Rendered last so the red shading is never hidden
+          behind glass, frames, or the dimension layers. */}
+      {activeTool === 'remove' && removeConnectorTarget != null &&
+        getConnectorCascadeHighlight(chain, layout, removeConnectorTarget)}
     </svg>
   );
 };

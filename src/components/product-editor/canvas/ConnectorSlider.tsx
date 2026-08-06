@@ -27,6 +27,7 @@ const ConnectorSlider: React.FC<ConnectorSliderProps> = ({ x, y, height, angle, 
         }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
       >
         <input
           type="range"

@@ -158,6 +158,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   onSegmentSelect,
   onConnectorSelect,
   onConnectorAngleChange,
+  onConnectorRemove,
   onSegmentAttach,
 }) => {
   // Unique prefix for SVG defs IDs
@@ -202,6 +203,27 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     }
   }, [editingDim]);
 
+  // The chain branch below is a conditional return inside this same component
+  // instance, not a remount -- so this flat-path hover/remove state would
+  // otherwise sit dormant while ChainCanvas is rendered and resurface stale
+  // (a phantom highlight, or a click that deletes the wrong thing) once the
+  // last connector is removed and the flat path resumes. Clear it the moment
+  // the chain path takes over, adjusted during render (not in an effect, to
+  // avoid an extra cascading render) per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  // It then stays null for as long as this flat <svg> isn't mounted to update it.
+  const chainActive = Boolean(chain && chain.connectors.length > 0);
+  const [wasChainActive, setWasChainActive] = useState(chainActive);
+  if (chainActive !== wasChainActive) {
+    setWasChainActive(chainActive);
+    if (chainActive) {
+      setHoverPos(null);
+      setRemoveTarget(null);
+      setRightClickTarget(null);
+      setConnectorEdge(null);
+    }
+  }
+
   // --- Chain render path -----------------------------------------------------
   // Only taken once a connector exists. A single-segment product falls through
   // to the original flat renderer below, unchanged. ChainCanvas owns its own
@@ -226,6 +248,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         onSegmentSelect={onSegmentSelect}
         onConnectorSelect={onConnectorSelect}
         onConnectorAngleChange={onConnectorAngleChange}
+        onConnectorRemove={onConnectorRemove}
       />
     );
   }
