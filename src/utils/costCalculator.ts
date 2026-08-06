@@ -1,6 +1,7 @@
 import type { ProductData, Unit } from '@/components/product-editor/types';
 import { GABLE_RISE_RATIO } from '@/components/product-editor/canvas/utils/shape-path';
 import type { Material, MaterialCategory } from '@/services/materialService';
+import { calculateSegmentCost, calculateChainCost } from './chainCostCalculator';
 
 export interface CostLineItem {
   material: string;
@@ -26,7 +27,7 @@ export interface CostBreakdown {
 /**
  * Convert a dimension from the product's unit to meters.
  */
-function toMeters(value: number, unit: Unit): number {
+export function toMeters(value: number, unit: Unit): number {
   switch (unit) {
     case 'mm': return value / 1000;
     case 'cm': return value / 100;
@@ -38,7 +39,7 @@ function toMeters(value: number, unit: Unit): number {
 /**
  * Get materials filtered by category.
  */
-function byCategory(materials: Material[], category: MaterialCategory): Material[] {
+export function byCategory(materials: Material[], category: MaterialCategory): Material[] {
   return materials.filter(m => m.category === category);
 }
 
@@ -47,7 +48,7 @@ function byCategory(materials: Material[], category: MaterialCategory): Material
  * Among matches, prefer one with isDefault=true.
  * Falls back to first match, then first material in the list.
  */
-function findMaterial(
+export function findMaterial(
   materials: Material[],
   predicate: (props: Record<string, any>) => boolean
 ): Material | undefined {
@@ -60,7 +61,7 @@ function findMaterial(
 // Frame calculation
 // ---------------------------------------------------------------------------
 
-function calculateFrameItems(product: ProductData, materials: Material[]): CostLineItem[] {
+export function calculateFrameItems(product: ProductData, materials: Material[]): CostLineItem[] {
   const items: CostLineItem[] = [];
   const frameProfiles = byCategory(materials, 'frame_profile');
   if (frameProfiles.length === 0) return items;
@@ -143,7 +144,7 @@ function calculateFrameItems(product: ProductData, materials: Material[]): CostL
 // Glass calculation
 // ---------------------------------------------------------------------------
 
-function calculateGlassItems(product: ProductData, materials: Material[]): CostLineItem[] {
+export function calculateGlassItems(product: ProductData, materials: Material[]): CostLineItem[] {
   const items: CostLineItem[] = [];
   const glassMaterials = byCategory(materials, 'glass');
   if (glassMaterials.length === 0) return items;
@@ -210,7 +211,7 @@ function calculateGlassItems(product: ProductData, materials: Material[]): CostL
 // Hardware calculation
 // ---------------------------------------------------------------------------
 
-function calculateHardwareItems(product: ProductData, materials: Material[]): CostLineItem[] {
+export function calculateHardwareItems(product: ProductData, materials: Material[]): CostLineItem[] {
   const items: CostLineItem[] = [];
   const hardwareMaterials = byCategory(materials, 'hardware');
   if (hardwareMaterials.length === 0) return items;
@@ -326,7 +327,7 @@ function calculateHardwareItems(product: ProductData, materials: Material[]): Co
 // Accessory calculation
 // ---------------------------------------------------------------------------
 
-function calculateAccessoryItems(product: ProductData, materials: Material[]): CostLineItem[] {
+export function calculateAccessoryItems(product: ProductData, materials: Material[]): CostLineItem[] {
   const items: CostLineItem[] = [];
   const accessories = byCategory(materials, 'accessory');
   if (accessories.length === 0) return items;
@@ -368,102 +369,6 @@ function calculateAccessoryItems(product: ProductData, materials: Material[]): C
 }
 
 // ---------------------------------------------------------------------------
-// Corner-window chains
-//
-// A chain is several window/door "legs" (segments) joined at angles by
-// aluminium corner posts (connectors). It prices as ONE quotation line item:
-// each leg is costed independently, as if it were its own single-unit
-// product, then summed — plus one frame line item per corner post.
-// ---------------------------------------------------------------------------
-
-/** Cost of one flat unit. This is the original calculation, unchanged. */
-function calculateSegmentCost(product: ProductData, materials: Material[]): CostBreakdown {
-  const frameItems = calculateFrameItems(product, materials);
-  const glassItems = calculateGlassItems(product, materials);
-  const hardwareItems = calculateHardwareItems(product, materials);
-  const accessoryItems = calculateAccessoryItems(product, materials);
-
-  const totalCost =
-    sumTotals(frameItems) +
-    sumTotals(glassItems) +
-    sumTotals(hardwareItems) +
-    sumTotals(accessoryItems);
-
-  return {
-    frameItems,
-    glassItems,
-    hardwareItems,
-    accessoryItems,
-    totalCost: round(totalCost),
-  };
-}
-
-/**
- * Flatten one segment into a standalone single-unit ProductData so it can be
- * run through the original per-unit calculation.
- *
- * Every per-leg field comes from the segment itself, defaulting to "none"
- * rather than falling back to the root product's fields — a leg with no
- * panelDivisions of its own must not inherit the root's and inflate its
- * glass or hardware count.
- *
- * `shape` is the one field that needs special handling: ChainCanvas only
- * ever draws the root segment (product.rootSegmentIndex, default 0) with the
- * product's real shape — every attached leg renders as a plain rectangle.
- * Costing mirrors that, or a non-rectangular root (e.g. an arch) would leak
- * its glass-area formula into legs that are drawn as rectangles.
- */
-function segmentAsProduct(product: ProductData, index: number): ProductData {
-  const s = product.segments?.[index];
-  if (!s) return product;
-  const isRoot = index === (product.rootSegmentIndex ?? 0);
-  return {
-    ...product,
-    width: s.width,
-    panels: s.panels,
-    panelWidths: s.panelWidths,
-    panelDivisions: s.panelDivisions,
-    panelDivisionHeights: s.panelDivisionHeights,
-    panelDivisionWidths: s.panelDivisionWidths,
-    openingPanels: s.openingPanels ?? [],
-    openingDirections: s.openingDirections ?? {},
-    openingPanes: s.openingPanes ?? [],
-    removedSections: s.removedSections,
-    shape: isRoot ? product.shape : { type: 'rectangle' },
-    segments: undefined,
-    connectors: undefined,
-    rootSegmentIndex: undefined,
-  };
-}
-
-/**
- * Corner posts, priced as vertical frame extrusion — the same profile
- * material used for the outer frame (byCategory 'frame_profile').
- */
-function calculatePostItems(product: ProductData, materials: Material[]): CostLineItem[] {
-  const connectors = product.connectors ?? [];
-  if (connectors.length === 0) return [];
-
-  const frameProfiles = byCategory(materials, 'frame_profile');
-  if (frameProfiles.length === 0) return [];
-  const material = findMaterial(frameProfiles, p => p.profileType === 'outer_frame');
-  if (!material) return [];
-
-  const heightM = toMeters(product.height, product.unit || 'mm');
-  return connectors.map((c, i) => {
-    const quantity = round(heightM);
-    return {
-      material: `Corner Post ${i + 1} (${c.postWidth}mm @ ${c.angle}°) — ${material.name}`,
-      category: 'Frame Profile',
-      quantity,
-      unit: 'meters',
-      unitCost: material.costPrice,
-      total: round(quantity * material.costPrice),
-    };
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -475,11 +380,11 @@ function calculatePostItems(product: ProductData, materials: Material[]): CostLi
  *
  * A corner-window chain (2+ segments joined by at least one connector) prices
  * as a single line item: every leg's cost plus one frame item per corner
- * post. A single-segment product — or a `segments` array with no connectors
- * (the app never emits that combination, see chain-model.ts, but this guards
- * against it defensively) — takes exactly one pass through the original
- * per-unit calculation with the original inputs, so existing costs are
- * unchanged.
+ * post — see chainCostCalculator.ts. A single-segment product — or a
+ * `segments` array with no connectors (the app never emits that combination,
+ * see chain-model.ts, but this guards against it defensively) — takes
+ * exactly one pass through calculateSegmentCost with the original inputs, so
+ * existing costs are unchanged.
  */
 export function calculateProductCost(
   product: ProductData,
@@ -491,33 +396,13 @@ export function calculateProductCost(
     return calculateSegmentCost(product, materials);
   }
 
-  const perSegment = segments.map((_, i) => calculateSegmentCost(segmentAsProduct(product, i), materials));
-  const postItems = calculatePostItems(product, materials);
-
-  const frameItems = [...perSegment.flatMap(b => b.frameItems), ...postItems];
-  const glassItems = perSegment.flatMap(b => b.glassItems);
-  const hardwareItems = perSegment.flatMap(b => b.hardwareItems);
-  const accessoryItems = perSegment.flatMap(b => b.accessoryItems);
-
-  const totalCost =
-    sumTotals(frameItems) +
-    sumTotals(glassItems) +
-    sumTotals(hardwareItems) +
-    sumTotals(accessoryItems);
-
-  return {
-    frameItems,
-    glassItems,
-    hardwareItems,
-    accessoryItems,
-    totalCost: round(totalCost),
-  };
+  return calculateChainCost(product, materials);
 }
 
-function sumTotals(items: CostLineItem[]): number {
+export function sumTotals(items: CostLineItem[]): number {
   return items.reduce((sum, item) => sum + item.total, 0);
 }
 
-function round(value: number): number {
+export function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
