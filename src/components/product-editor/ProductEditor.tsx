@@ -74,14 +74,26 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
-  // Escape key deactivates tool
+  // Escape deactivates the tool and deselects the connector; arrow keys nudge
+  // the selected connector's angle by 1 degree while one is selected.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setActiveTool(null);
+      if (e.key === 'Escape') {
+        setActiveTool(null);
+        state.chain.setActiveConnectorIndex(null);
+        return;
+      }
+      const idx = state.chain.activeConnectorIndex;
+      if (idx == null) return;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const delta = e.key === 'ArrowUp' ? 1 : -1;
+        state.chain.setConnectorAngle(idx, state.chain.chain.connectors[idx].angle + delta);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [state.chain]);
 
   // Keep the chain's root segment in sync with the editor's own dimension/panel
   // state, so a chained product reflects edits made through the Dimensions and

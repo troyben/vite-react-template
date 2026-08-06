@@ -17,6 +17,7 @@ import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
 import { DIM_COLOR, MARKER_SIZE } from './utils/types';
 import type { CanvasTool } from './utils/canvas-tools';
 import { boundsOf, edgeAtPoint, getConnectorGhost } from './utils/connector-tool';
+import ConnectorSlider from './ConnectorSlider';
 
 export interface ChainCanvasProps {
   chain: Chain;
@@ -31,9 +32,13 @@ export interface ChainCanvasProps {
   printMode: boolean;
   /** Index into chain.segments of the currently selected segment. */
   activeSegmentIndex?: number;
+  /** Index into chain.connectors of the currently selected corner post. */
+  activeConnectorIndex?: number | null;
   svgStyle?: React.CSSProperties;
   activeTool?: CanvasTool;
   onSegmentAttach?: (end: 'left' | 'right', width: number) => void;
+  onConnectorSelect?: (index: number | null) => void;
+  onConnectorAngleChange?: (index: number, angle: number) => void;
 }
 
 /**
@@ -66,9 +71,12 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   render3D,
   printMode,
   activeSegmentIndex,
+  activeConnectorIndex,
   svgStyle,
   activeTool,
   onSegmentAttach,
+  onConnectorSelect,
+  onConnectorAngleChange,
 }) => {
   const uid = useId().replace(/:/g, '');
   const arrowLId = `chain-arrowL-${uid}`;
@@ -122,7 +130,23 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         if (pt) setConnectorEdge(edgeAtPoint(chainBounds, pt.x, pt.y));
       }}
       onMouseLeave={() => setConnectorEdge(null)}
-      onClick={() => {
+      onClick={(e) => {
+        // Post hit-test always takes priority over tool dispatch: clicking an
+        // existing corner post selects it, even while the connector tool is
+        // active for placing a new one elsewhere.
+        const pt = getSVGPoint(e);
+        if (pt) {
+          const hitPost = layout.posts.findIndex((post) => {
+            const xs = post.corners.map((p) => p.x);
+            const ys = post.corners.map((p) => p.y);
+            return pt.x >= Math.min(...xs) - 4 && pt.x <= Math.max(...xs) + 4
+              && pt.y >= Math.min(...ys) && pt.y <= Math.max(...ys);
+          });
+          if (hitPost >= 0) {
+            onConnectorSelect?.(hitPost);
+            return;
+          }
+        }
         if (activeTool === 'connector' && connectorEdge && onSegmentAttach) {
           onSegmentAttach(connectorEdge, legWidthAtEdge(chain, layout, connectorEdge));
           setConnectorEdge(null);
@@ -183,6 +207,23 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
           connectorEdge,
           legWidthAtEdge(chain, layout, connectorEdge) * layout.scale,
         ))}
+
+      {/* Angle slider for the selected corner post */}
+      {activeConnectorIndex != null && layout.posts[activeConnectorIndex] && onConnectorAngleChange && (() => {
+        const post = layout.posts[activeConnectorIndex];
+        const cx = post.corners.reduce((s, p) => s + p.x, 0) / 4;
+        const topY = Math.min(...post.corners.map((p) => p.y));
+        const botY = Math.max(...post.corners.map((p) => p.y));
+        return (
+          <ConnectorSlider
+            x={cx}
+            y={topY}
+            height={botY - topY}
+            angle={chain.connectors[activeConnectorIndex].angle}
+            onChange={(a) => onConnectorAngleChange(activeConnectorIndex, a)}
+          />
+        );
+      })()}
     </svg>
   );
 };

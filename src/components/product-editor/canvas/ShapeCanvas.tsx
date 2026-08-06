@@ -154,6 +154,9 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   printMode = false,
   chain,
   activeSegmentIndex,
+  activeConnectorIndex,
+  onConnectorSelect,
+  onConnectorAngleChange,
   onSegmentAttach,
 }) => {
   // Unique prefix for SVG defs IDs
@@ -215,9 +218,12 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         render3D={render3D}
         printMode={printMode}
         activeSegmentIndex={activeSegmentIndex}
+        activeConnectorIndex={activeConnectorIndex}
         svgStyle={svgStyle}
         activeTool={activeTool}
         onSegmentAttach={onSegmentAttach}
+        onConnectorSelect={onConnectorSelect}
+        onConnectorAngleChange={onConnectorAngleChange}
       />
     );
   }
