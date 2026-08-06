@@ -33,6 +33,7 @@ import type { PaneLayersProps } from './layers/PaneLayers';
 import { renderOuterDimensions, renderArchDimensions, renderBottomDimension, renderInnerDimensions } from './layers/DimensionLayers';
 import type { EditingDim, DimensionLayersProps } from './layers/DimensionLayers';
 import { renderToolPreview } from './layers/ToolPreviewLayer';
+import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
 
 // Re-export RemovableItem for consumers that import it from here
 export type { RemovableItem } from './utils/remove-tools';
@@ -251,6 +252,11 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   const realVerts = getRealVertices(shape, width, height);
   const svgVerts = scaleVertices(realVerts, width, height, drawW, drawH);
 
+  // Bounding box of the shape's own vertices -- used by the connector tool for
+  // both edge hit-testing and ghost sizing. Computed once per render rather
+  // than at each of its two call sites.
+  const shapeBounds = boundsOf(svgVerts);
+
   // Shape outline path
   const shapePath = getShapePath(shape, svgVerts, drawW, drawH, width, height);
 
@@ -423,7 +429,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
           if (activeTool === 'remove') {
             setRemoveTarget(findRemovableAtPoint(removeCtx, pt.x, pt.y));
           } else if (activeTool === 'connector') {
-            setConnectorEdge(edgeAtPoint(boundsOf(svgVerts), pt.x, pt.y));
+            setConnectorEdge(edgeAtPoint(shapeBounds, pt.x, pt.y));
           } else {
             setRightClickTarget(findSameKindAtPoint(removeCtx, pt.x, pt.y, activeTool, lineTarget));
           }
@@ -587,18 +593,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       )}
 
       {/* --- Layer 9b: Connector tool ghost preview --- */}
-      {activeTool === 'connector' && connectorEdge && (() => {
-        const ghost = getConnectorGhost(boundsOf(svgVerts), connectorEdge, drawW);
-        return (
-          <g key="connector-ghost" opacity={0.4}>
-            <rect x={ghost.post.x} y={ghost.post.y} width={ghost.post.width} height={ghost.post.height} fill="#7c3aed" />
-            <polygon
-              points={ghost.legPoints}
-              fill="#7c3aed" fillOpacity={0.15} stroke="#7c3aed" strokeWidth={1.5} strokeDasharray="5 3"
-            />
-          </g>
-        );
-      })()}
+      {activeTool === 'connector' && connectorEdge &&
+        renderConnectorGhost(getConnectorGhost(shapeBounds, connectorEdge, drawW))}
 
       {/* --- Layer 10: Remove / right-click highlight overlay --- */}
       {activeTool === 'remove' && removeTarget && <g key="remove-highlight">{getHighlightGeometry(removeTarget, removeCtx)}</g>}

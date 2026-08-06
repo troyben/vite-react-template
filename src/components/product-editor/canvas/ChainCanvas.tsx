@@ -13,6 +13,7 @@ import { layoutChain } from './utils/chain-projection';
 import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { renderSegment } from './layers/SegmentLayers';
 import { renderChainDimensions } from './layers/ChainDimensionLayer';
+import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
 import { DIM_COLOR, MARKER_SIZE } from './utils/types';
 import type { CanvasTool } from './utils/canvas-tools';
 import { boundsOf, edgeAtPoint, getConnectorGhost } from './utils/connector-tool';
@@ -176,19 +177,12 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
       {renderChainDimensions({ chain, layout, heightMm: height, arrowLId, arrowRId })}
 
       {/* Connector tool ghost preview */}
-      {activeTool === 'connector' && connectorEdge && (() => {
-        const nearestWidth = legWidthAtEdge(chain, layout, connectorEdge);
-        const ghost = getConnectorGhost(chainBounds, connectorEdge, nearestWidth * layout.scale);
-        return (
-          <g key="connector-ghost" opacity={0.4}>
-            <rect x={ghost.post.x} y={ghost.post.y} width={ghost.post.width} height={ghost.post.height} fill="#7c3aed" />
-            <polygon
-              points={ghost.legPoints}
-              fill="#7c3aed" fillOpacity={0.15} stroke="#7c3aed" strokeWidth={1.5} strokeDasharray="5 3"
-            />
-          </g>
-        );
-      })()}
+      {activeTool === 'connector' && connectorEdge &&
+        renderConnectorGhost(getConnectorGhost(
+          chainBounds,
+          connectorEdge,
+          legWidthAtEdge(chain, layout, connectorEdge) * layout.scale,
+        ))}
     </svg>
   );
 };
