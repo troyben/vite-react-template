@@ -12,6 +12,8 @@ import type { Chain } from './utils/chain-model';
 import { layoutChain } from './utils/chain-projection';
 import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { renderSegment } from './layers/SegmentLayers';
+import { renderChainDimensions } from './layers/ChainDimensionLayer';
+import { DIM_COLOR, MARKER_SIZE } from './utils/types';
 
 export interface ChainCanvasProps {
   chain: Chain;
@@ -43,6 +45,8 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   svgStyle,
 }) => {
   const uid = useId().replace(/:/g, '');
+  const arrowLId = `chain-arrowL-${uid}`;
+  const arrowRId = `chain-arrowR-${uid}`;
 
   // Shared with ShapeCanvas via getPrintModeRenderColors so the flat and
   // chain paths can't silently diverge on B&W PDF print rules.
@@ -63,7 +67,17 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
       style={svgStyle ?? { width: '100%', height: '88vh' }}
       preserveAspectRatio="xMidYMid meet"
     >
-      <defs>{getGlassSvgDefs(glassType, uid, frameColor, customGlassTint)}</defs>
+      <defs>
+        <marker id={arrowLId} markerWidth={MARKER_SIZE} markerHeight={MARKER_SIZE}
+          refX={MARKER_SIZE} refY={MARKER_SIZE / 2} orient="auto" markerUnits="strokeWidth">
+          <path d={`M${MARKER_SIZE},0 L0,${MARKER_SIZE / 2} L${MARKER_SIZE},${MARKER_SIZE}`} fill={DIM_COLOR} />
+        </marker>
+        <marker id={arrowRId} markerWidth={MARKER_SIZE} markerHeight={MARKER_SIZE}
+          refX="0" refY={MARKER_SIZE / 2} orient="auto" markerUnits="strokeWidth">
+          <path d={`M0,0 L${MARKER_SIZE},${MARKER_SIZE / 2} L0,${MARKER_SIZE}`} fill={DIM_COLOR} />
+        </marker>
+        {getGlassSvgDefs(glassType, uid, frameColor, customGlassTint)}
+      </defs>
 
       {/* Corner posts, drawn behind the legs */}
       {layout.posts.map((post) => (
@@ -97,6 +111,8 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         uid,
         selected: i === activeSegmentIndex,
       }))}
+
+      {renderChainDimensions({ chain, layout, heightMm: height, arrowLId, arrowRId })}
     </svg>
   );
 };
