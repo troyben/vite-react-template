@@ -11,7 +11,10 @@
 
 import React from 'react';
 import type { Point } from '../utils/types';
-import { DIM_COLOR, DIM_FONT, DIM_LABEL_GAP, DIM_OFFSET } from '../utils/types';
+import { DIM_COLOR, DIM_FONT, DIM_LABEL_GAP, DIM_OFFSET, MARKER_SIZE } from '../utils/types';
+
+/** How far a dimension line pulls back from an end that has a neighbour. */
+const DIM_END_INSET = MARKER_SIZE + 3;
 import type { ChainLayout } from '../utils/chain-projection';
 import type { Chain } from '../utils/chain-model';
 import { bendFromInterior, formatBend } from '../utils/chain-model';
@@ -62,8 +65,26 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
         const bl = corners[3];
         const br = corners[2];
         const n = outwardNormal(bl, br);
-        const a = { x: bl.x + n.x * DIM_OFFSET, y: bl.y + n.y * DIM_OFFSET };
-        const b = { x: br.x + n.x * DIM_OFFSET, y: br.y + n.y * DIM_OFFSET };
+
+        // Neighbouring legs meet at a corner post, but their dimension lines
+        // leave the sill at different angles and converge in front of it --
+        // close enough for the two arrowheads to touch. Pull each line back
+        // from the ends that have a neighbour. The outermost ends keep their
+        // full reach, so the chain's extremes still read exactly.
+        const len = Math.hypot(br.x - bl.x, br.y - bl.y) || 1;
+        const u = { x: (br.x - bl.x) / len, y: (br.y - bl.y) / len };
+        const cap = len * 0.4;
+        const startInset = i > 0 ? Math.min(DIM_END_INSET, cap) : 0;
+        const endInset = i < chain.segments.length - 1 ? Math.min(DIM_END_INSET, cap) : 0;
+
+        const a = {
+          x: bl.x + n.x * DIM_OFFSET + u.x * startInset,
+          y: bl.y + n.y * DIM_OFFSET + u.y * startInset,
+        };
+        const b = {
+          x: br.x + n.x * DIM_OFFSET - u.x * endInset,
+          y: br.y + n.y * DIM_OFFSET - u.y * endInset,
+        };
         const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         const deg = labelAngle(a, b);
         // Lift the label off its own dimension line along the line's normal,

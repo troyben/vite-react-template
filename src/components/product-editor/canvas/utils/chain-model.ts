@@ -45,11 +45,14 @@ export function interiorFromBend(bend: number): number {
   return STRAIGHT_ANGLE - bend;
 }
 
-/** Format a bend for display, with an explicit sign so direction is unambiguous. */
+/**
+ * Format a bend for display. Unsigned: a corner is a 90 degree corner whichever
+ * way it turns, and the sketch beside the number already shows which way. The
+ * sign stays in the stored interior angle, which is what the geometry and the
+ * pricing read.
+ */
 export function formatBend(bend: number): string {
-  const rounded = Math.round(bend);
-  if (rounded === 0) return '0°';
-  return `${rounded > 0 ? '+' : '−'}${Math.abs(rounded)}°`;
+  return `${Math.abs(Math.round(bend))}°`;
 }
 
 export interface Chain {

@@ -387,13 +387,24 @@ export function layoutChain(
     // vertical, so the local v (window height) axis maps straight through
     // with no shear or scale of its own -- only u (along the segment) picks
     // up the depth shear from dir.y.
+    // The flat renderers draw their content starting at local (MARGIN, MARGIN),
+    // so the matrix has to cancel that offset for the leg's top-left corner to
+    // land on the projected corner.
+    //
+    // Both axes contribute to both screen coordinates once a leg is sheared:
+    // local u moves the point by (a, b) and local v by (c, d) = (0, 1). So x
+    // must cancel a*MARGIN and y must cancel BOTH b*MARGIN and d*MARGIN. Only
+    // the d term was cancelled before, which drew every receding leg b*MARGIN
+    // too low -- about 8% of the frame height at a right-angle corner, enough
+    // to visibly unstick the leg from its corner post while the square-on legs
+    // (where b is 0) stayed put.
     const matrix: Matrix6 = [
       a,
       b,
       0,
       1,
       scale * e + ox - a * MARGIN,
-      scale * f + oy - MARGIN,
+      scale * f + oy - MARGIN - b * MARGIN,
     ];
     return {
       index: s.index,

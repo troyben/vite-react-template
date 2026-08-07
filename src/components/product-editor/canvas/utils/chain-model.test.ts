@@ -278,7 +278,7 @@ describe('bend vs interior angle', () => {
 
   it('signs the display value so direction is unambiguous', () => {
     expect(formatBend(0)).toBe('0°');
-    expect(formatBend(90)).toBe('+90°');
-    expect(formatBend(-90)).toBe('−90°');
+    expect(formatBend(90)).toBe('90°');
+    expect(formatBend(-90)).toBe('90°');
   });
 });

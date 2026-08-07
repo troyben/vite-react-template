@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { walkChain, projectPlanPoint, layoutChain, solveView, narrowestFaceRatio, MIN_FACE_RATIO, MAX_VIEW_TURN_DEG } from './chain-projection';
 import { worstOverlapFraction, OVERLAP_TOLERANCE } from './chain-overlap';
-import { DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT } from './types';
+import { DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT, MARGIN } from './types';
 
 const close = (a: number, b: number, tol = 0.01) => Math.abs(a - b) < tol;
 
@@ -314,6 +314,47 @@ describe('the viewBox has room for the dimensions', () => {
       // Nothing at all past the right edge.
       const rightInk = Math.max(...corners.map((p) => p.x)) + DIM_OFFSET;
       expect(rightInk).toBeLessThanOrEqual(layout.totalW);
+    });
+  }
+});
+
+describe('the matrix puts a leg where its corners say it is', () => {
+  // The corners are used for hit-testing, dimensions and the erase overlay;
+  // the matrix is what actually draws the frame and glass. They were allowed to
+  // disagree once: the matrix cancelled the renderers' MARGIN offset on the v
+  // axis but not the u axis, so any sheared leg drew b*MARGIN below its own
+  // corners while square-on legs looked fine.
+  const configs: Array<[string, number[], number[]]> = [
+    ['corner +90',  [1000, 1000],       [90]],
+    ['corner -90',  [1000, 1000],       [-90]],
+    ['corner -135', [1000, 1000],       [-135]],
+    ['corner +45',  [1000, 800],        [45]],
+    ['Z -90 +90',   [1000, 1000, 1000], [-90, 90]],
+    ['bay +60',     [800, 1200, 800],   [60, 60]],
+  ];
+
+  for (const [name, widths, bends] of configs) {
+    it(`draws every leg on its own corners: ${name}`, () => {
+      const layout = layoutChain(widths, 1000, bends.map((b) => ({ angle: 180 - b, postWidth: 100 })));
+      for (const leg of layout.segments) {
+        const [a, b, c, d, e, f] = leg.matrix;
+        const at = (u: number, v: number) => ({ x: a * u + c * v + e, y: b * u + d * v + f });
+        const [tl, tr, br, bl] = leg.corners;
+
+        const drawnTL = at(MARGIN, MARGIN);
+        const drawnTR = at(MARGIN + leg.drawW, MARGIN);
+        const drawnBR = at(MARGIN + leg.drawW, MARGIN + layout.drawH);
+        const drawnBL = at(MARGIN, MARGIN + layout.drawH);
+
+        expect(close(drawnTL.x, tl.x)).toBe(true);
+        expect(close(drawnTL.y, tl.y)).toBe(true);
+        expect(close(drawnTR.x, tr.x)).toBe(true);
+        expect(close(drawnTR.y, tr.y)).toBe(true);
+        expect(close(drawnBR.x, br.x)).toBe(true);
+        expect(close(drawnBR.y, br.y)).toBe(true);
+        expect(close(drawnBL.x, bl.x)).toBe(true);
+        expect(close(drawnBL.y, bl.y)).toBe(true);
+      }
     });
   }
 });
