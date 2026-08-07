@@ -18,6 +18,7 @@ const DIM_END_INSET = MARKER_SIZE + 3;
 import type { ChainLayout } from '../utils/chain-projection';
 import type { Chain } from '../utils/chain-model';
 import { bendFromInterior, formatBend } from '../utils/chain-model';
+import type { EditingDim } from './DimensionLayers';
 
 export interface ChainDimensionProps {
   chain: Chain;
@@ -25,6 +26,15 @@ export interface ChainDimensionProps {
   heightMm: number;
   arrowLId: string;
   arrowRId: string;
+  /**
+   * Open the inline editor on a label. Omitted on read-only canvases (template
+   * thumbnails, the PDF), which then render plain text as before.
+   */
+  onEditDim?: (d: EditingDim) => void;
+  /** Commit a new width for one leg. */
+  onLegWidthCommit?: (legIndex: number, widthMm: number) => void;
+  /** Commit a new height. Shared by every leg in the chain. */
+  onHeightCommit?: (heightMm: number) => void;
 }
 
 /** Angle of a segment on screen, in degrees, normalised so text is never upside down. */
@@ -55,7 +65,14 @@ function outwardNormal(a: Point, b: Point): Point {
 }
 
 export function renderChainDimensions(props: ChainDimensionProps): React.ReactNode {
-  const { chain, layout, heightMm, arrowLId, arrowRId } = props;
+  const { chain, layout, heightMm, arrowLId, arrowRId, onEditDim, onLegWidthCommit, onHeightCommit } = props;
+  const editable = Boolean(onEditDim);
+  const editProps = (open: () => void) => (editable
+    ? {
+      style: { cursor: 'pointer' as const },
+      onClick: (e: React.MouseEvent) => { e.stopPropagation(); open(); },
+    }
+    : {});
 
   return (
     <g className="chain-dimensions">
@@ -104,6 +121,12 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
               x={label.x} y={label.y}
               transform={`rotate(${deg}, ${label.x}, ${label.y})`}
               fill={DIM_COLOR} fontSize={DIM_FONT} textAnchor="middle"
+              {...editProps(() => onEditDim?.({
+                key: `chain-w-${i}`,
+                x: label.x, y: label.y, angle: deg,
+                value: Math.round(segment.width),
+                onCommit: (v) => onLegWidthCommit?.(i, v),
+              }))}
             >
               {Math.round(segment.width)}
             </text>
@@ -128,6 +151,12 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
               x={x - DIM_LABEL_GAP} y={midY}
               transform={`rotate(-90, ${x - DIM_LABEL_GAP}, ${midY})`}
               fill={DIM_COLOR} fontSize={DIM_FONT} textAnchor="middle"
+              {...editProps(() => onEditDim?.({
+                key: 'chain-h',
+                x: x - DIM_LABEL_GAP, y: midY, angle: -90,
+                value: Math.round(heightMm),
+                onCommit: (v) => onHeightCommit?.(v),
+              }))}
             >
               {Math.round(heightMm)}
             </text>

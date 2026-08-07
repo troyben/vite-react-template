@@ -84,17 +84,25 @@ export interface ActiveSegmentView {
   setRemovedSections: (updater: SetLike<SectionId[]>) => void;
 }
 
-export function buildActiveSegmentView(state: ProductEditorState): ActiveSegmentView {
+/**
+ * The same view over an explicitly chosen leg.
+ *
+ * Canvas tools need this: a click lands on whichever leg is under the pointer,
+ * which is not always the selected one, and selecting first would not help --
+ * the selection state would still be stale for the rest of that same event.
+ */
+export function buildSegmentView(state: ProductEditorState, segmentIndex: number): ActiveSegmentView {
   const chain = state.chain;
-  const isRootActive = chain.activeSegmentIndex === chain.chain.rootIndex;
-  const seg = chain.activeSegment;
+  const isRootActive = segmentIndex === chain.chain.rootIndex;
+  const seg = chain.chain.segments[segmentIndex] ?? chain.chain.segments[0];
+  const updateSeg = (updates: Partial<Segment>) => chain.updateSegment(segmentIndex, updates);
 
   const setWidth = (w: number) => {
     if (isRootActive) {
       state.setWidth(w);
       return;
     }
-    chain.updateActiveSegment({ width: w, panelWidths: syncWidths(seg.panelWidths, w) });
+    updateSeg({ width: w, panelWidths: syncWidths(seg.panelWidths, w) });
   };
 
   const handleDimensionChange = (value: string, dimension: 'width' | 'height') => {
@@ -121,7 +129,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
     if (value === '') {
       const newWidths = [...seg.panelWidths];
       newWidths[panelIndex] = 0;
-      chain.updateActiveSegment({ panelWidths: newWidths });
+      updateSeg({ panelWidths: newWidths });
       return;
     }
     let num = parseFloat(value);
@@ -135,7 +143,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       newWidths[panelIndex] = num;
       newWidths = syncWidths(newWidths, seg.width);
     }
-    chain.updateActiveSegment({ panelWidths: newWidths });
+    updateSeg({ panelWidths: newWidths });
   };
 
   const handlePanelCountChange = (newCount: number) => {
@@ -152,7 +160,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
     const avg = Math.round(seg.width / newCount);
     const widths = Array(newCount).fill(avg);
     if (newCount > 0) widths[newCount - 1] = seg.width - avg * (newCount - 1);
-    chain.updateActiveSegment({ panels: newCount, panelDivisions: existingDivisions, panelWidths: widths });
+    updateSeg({ panels: newCount, panelDivisions: existingDivisions, panelWidths: widths });
   };
 
   const setOpeningPanels = (p: number[]) => {
@@ -160,7 +168,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setOpeningPanels(p);
       return;
     }
-    chain.updateActiveSegment({ openingPanels: p });
+    updateSeg({ openingPanels: p });
   };
 
   const setOpeningDirections = (d: Record<number, OpeningDirection>) => {
@@ -168,7 +176,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setOpeningDirections(d);
       return;
     }
-    chain.updateActiveSegment({ openingDirections: d });
+    updateSeg({ openingDirections: d });
   };
 
   const setPanelDivisions = (d: NonNullable<Segment['panelDivisions']>) => {
@@ -176,7 +184,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setPanelDivisions(d);
       return;
     }
-    chain.updateActiveSegment({ panelDivisions: d });
+    updateSeg({ panelDivisions: d });
   };
 
   const setPanelDivisionHeights = (h: NonNullable<Segment['panelDivisionHeights']>) => {
@@ -184,7 +192,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setPanelDivisionHeights(h);
       return;
     }
-    chain.updateActiveSegment({ panelDivisionHeights: h });
+    updateSeg({ panelDivisionHeights: h });
   };
 
   const setPanelDivisionWidths = (w: NonNullable<Segment['panelDivisionWidths']>) => {
@@ -192,7 +200,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setPanelDivisionWidths(w);
       return;
     }
-    chain.updateActiveSegment({ panelDivisionWidths: w });
+    updateSeg({ panelDivisionWidths: w });
   };
 
   const setPanels = (n: number) => {
@@ -200,7 +208,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setPanels(n);
       return;
     }
-    chain.updateActiveSegment({ panels: n });
+    updateSeg({ panels: n });
   };
 
   const setPanelWidths = (w: number[]) => {
@@ -208,7 +216,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       state.setPanelWidths(w);
       return;
     }
-    chain.updateActiveSegment({ panelWidths: w });
+    updateSeg({ panelWidths: w });
   };
 
   const setOpeningPanes = (updater: SetLike<NonNullable<Segment['openingPanes']>>) => {
@@ -217,7 +225,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       return;
     }
     const next = resolveSetLike(updater, seg.openingPanes ?? []);
-    chain.updateActiveSegment({ openingPanes: next });
+    updateSeg({ openingPanes: next });
   };
 
   const setRemovedSections = (updater: SetLike<SectionId[]>) => {
@@ -226,7 +234,7 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
       return;
     }
     const next = resolveSetLike(updater, seg.removedSections ?? []);
-    chain.updateActiveSegment({ removedSections: next });
+    updateSeg({ removedSections: next });
   };
 
   return {
@@ -257,19 +265,36 @@ export function buildActiveSegmentView(state: ProductEditorState): ActiveSegment
   };
 }
 
-export function buildShapeCanvasHandlers(state: ProductEditorState, arcs: ArcsState) {
-  const { customArcs, setCustomArcs } = arcs;
-  const view = buildActiveSegmentView(state);
+/** The view over whichever leg is currently selected. */
+export function buildActiveSegmentView(state: ProductEditorState): ActiveSegmentView {
+  return buildSegmentView(state, state.chain.activeSegmentIndex);
+}
 
-  // onWidthChange / onHeightChange are the outer-dimension-line inline editors
-  // on the flat canvas path. They stay on flat state deliberately: ChainCanvas
-  // doesn't render editable dimension lines on individual legs (see
-  // ChainDimensionLayer), so these only ever fire while the flat path is
-  // rendered — which only happens when there are no connectors, i.e. exactly
-  // one segment that is always both root and active. Routing them through
-  // `view` would be a no-op today; leaving them flat keeps this file's diff
-  // honest about what's actually reachable.
+/**
+ * Canvas callbacks bound to one leg.
+ *
+ * `segmentIndex` defaults to the selected leg, which is what the flat path and
+ * the tabs want. The chain canvas passes the leg the pointer actually landed
+ * on, so a tool edits what was clicked rather than what happened to be
+ * selected.
+ */
+export function buildShapeCanvasHandlers(
+  state: ProductEditorState,
+  arcs: ArcsState,
+  segmentIndex: number = state.chain.activeSegmentIndex,
+) {
+  const { customArcs, setCustomArcs } = arcs;
+  const view = buildSegmentView(state, segmentIndex);
+
+  // onWidthChange is the outer width dimension's inline editor. It now fires on
+  // the chain path too -- each leg's width label is editable -- so it writes
+  // through `view` to reach the right leg. onHeightChange stays on flat state:
+  // height is shared by every leg in a chain by design.
   const onWidthChange = (v: number) => {
+    if (!view.isRootActive) {
+      view.setWidth(v);
+      return;
+    }
     if (state.removedSections.length > 0) {
       const eff = computeEffectiveBounds(
         state.panels, state.panelWidths, state.panelDivisions,

@@ -1,7 +1,8 @@
-import React, { useId, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useId, useState, useRef, useCallback } from 'react';
 import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Chain } from './utils/chain-model';
 import ChainCanvas from './ChainCanvas';
+import type { SegmentToolHandlers } from './useChainTools';
 
 // Utils
 import {
@@ -34,6 +35,7 @@ import { renderOuterDimensions, renderArchDimensions, renderBottomDimension, ren
 import type { EditingDim, DimensionLayersProps } from './layers/DimensionLayers';
 import { renderToolPreview } from './layers/ToolPreviewLayer';
 import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
+import InlineDimensionInput from './layers/InlineDimensionInput';
 
 // Re-export RemovableItem for consumers that import it from here
 export type { RemovableItem } from './utils/remove-tools';
@@ -104,6 +106,12 @@ export interface ShapeCanvasProps {
   onConnectorAngleChange?: (index: number, angle: number) => void;
   onConnectorRemove?: (index: number) => void;
   onSegmentAttach?: (end: 'left' | 'right', width: number) => void;
+  /**
+   * Canvas callbacks bound to a given leg of a chain. Only the chain path uses
+   * it — the flat path has a single shape and takes the individual callbacks
+   * above unchanged.
+   */
+  segmentTools?: (segmentIndex: number) => SegmentToolHandlers;
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +168,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   onConnectorAngleChange,
   onConnectorRemove,
   onSegmentAttach,
+  segmentTools,
 }) => {
   // Unique prefix for SVG defs IDs
   const uid = useId().replace(/:/g, '');
@@ -170,7 +179,6 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   // --- Inline dimension editing state ---
   const [editingDim, setEditingDim] = useState<EditingDim | null>(null);
   const [editValue, setEditValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // --- Tool interaction state ---
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
@@ -195,13 +203,6 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     const svgPt = pt.matrixTransform(ctm.inverse());
     return { x: svgPt.x, y: svgPt.y };
   }, []);
-
-  // Select all text when the input appears
-  useEffect(() => {
-    if (editingDim && inputRef.current) {
-      inputRef.current.select();
-    }
-  }, [editingDim]);
 
   // The chain branch below is a conditional return inside this same component
   // instance, not a remount -- so this flat-path hover/remove state would
@@ -247,6 +248,11 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         onSegmentAttach={onSegmentAttach}
         onSegmentSelect={onSegmentSelect}
         onConnectorSelect={onConnectorSelect}
+        lineOrientation={lineOrientation}
+        lineTarget={lineTarget}
+        customArcs={customArcs}
+        segmentTools={segmentTools}
+        onHeightChange={onHeightChange}
         onConnectorAngleChange={onConnectorAngleChange}
         onConnectorRemove={onConnectorRemove}
       />
@@ -633,29 +639,13 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
 
       {/* --- Inline dimension editor overlay --- */}
       {editingDim && (
-        <foreignObject
-          x={editingDim.x - 25} y={editingDim.y - 8} width={50} height={16}
-          transform={editingDim.angle ? `rotate(${editingDim.angle}, ${editingDim.x}, ${editingDim.y})` : undefined}
-        >
-          <input
-            ref={inputRef}
-            type="number"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitEdit();
-              else if (e.key === 'Escape') setEditingDim(null);
-            }}
-            onBlur={commitEdit}
-            autoFocus
-            style={{
-              width: '100%', height: '100%', fontSize: '7px',
-              textAlign: 'center' as const, border: '1px solid #7E88C3',
-              borderRadius: '2px', outline: 'none', background: 'white',
-              padding: '0 2px', boxSizing: 'border-box' as const,
-            }}
-          />
-        </foreignObject>
+        <InlineDimensionInput
+          editingDim={editingDim}
+          value={editValue}
+          onValueChange={setEditValue}
+          onCommit={commitEdit}
+          onCancel={() => setEditingDim(null)}
+        />
       )}
     </svg>
   );

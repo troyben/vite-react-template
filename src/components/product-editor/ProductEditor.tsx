@@ -142,6 +142,10 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
       state.openingDirections, state.openingPanes, state.removedSections]);
 
   const handlers = buildShapeCanvasHandlers(state, { customArcs, setCustomArcs });
+  // The chain canvas edits the leg under the pointer, which is not always the
+  // selected one, so it asks for that leg's handlers at click time.
+  const segmentTools = (segmentIndex: number) =>
+    buildShapeCanvasHandlers(state, { customArcs, setCustomArcs }, segmentIndex);
   // Read/write view over the active leg — the root leg's flat state when the
   // root is active (byte-for-byte the same as before), or the selected leg's
   // own data otherwise. Backs the Panels: input and the Dims/Open/Panes tabs.
@@ -337,6 +341,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
             onArcRemove={handlers.onArcRemove}
             removedSections={state.removedSections}
             onSectionRemove={handlers.onSectionRemove}
+            segmentTools={segmentTools}
             render3D={state.render3D}
             chain={state.chain.chain}
             activeSegmentIndex={state.chain.activeSegmentIndex}

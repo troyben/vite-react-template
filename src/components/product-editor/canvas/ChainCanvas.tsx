@@ -17,8 +17,14 @@ import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
 import { DIM_COLOR, MARKER_SIZE } from './utils/types';
 import type { CanvasTool } from './utils/canvas-tools';
 import { boundsOf, edgeAtPoint, getConnectorGhost } from './utils/connector-tool';
-import { findConnectorAtPoint, getConnectorCascadeHighlight } from './utils/remove-tools';
+import { findConnectorAtPoint, getConnectorCascadeHighlight, getHighlightGeometry } from './utils/remove-tools';
+import { renderToolPreview } from './layers/ToolPreviewLayer';
 import ConnectorSlider from './ConnectorSlider';
+import { useChainTools, type SegmentToolHandlers } from './useChainTools';
+import { legAtPoint } from './utils/chain-interaction';
+import type { PlacedArc } from './utils/canvas-tools';
+import type { EditingDim } from './layers/DimensionLayers';
+import InlineDimensionInput from './layers/InlineDimensionInput';
 
 export interface ChainCanvasProps {
   chain: Chain;
@@ -42,6 +48,17 @@ export interface ChainCanvasProps {
   onConnectorSelect?: (index: number | null) => void;
   onConnectorAngleChange?: (index: number, angle: number) => void;
   onConnectorRemove?: (index: number) => void;
+  lineOrientation?: 'horizontal' | 'vertical';
+  lineTarget?: 'panel' | 'pane';
+  customArcs?: PlacedArc[];
+  /**
+   * Canvas callbacks bound to a given leg. The chain path edits the leg under
+   * the pointer, so it asks for that leg's handlers at the moment of the click
+   * rather than holding one pre-bound set.
+   */
+  segmentTools?: (segmentIndex: number) => SegmentToolHandlers;
+  /** Commit a new shared height from the chain's height label. */
+  onHeightChange?: (heightMm: number) => void;
 }
 
 /**
@@ -82,6 +99,11 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   onConnectorSelect,
   onConnectorAngleChange,
   onConnectorRemove,
+  lineOrientation = 'horizontal',
+  lineTarget = 'panel',
+  customArcs,
+  segmentTools,
+  onHeightChange,
 }) => {
   const uid = useId().replace(/:/g, '');
   const arrowLId = `chain-arrowL-${uid}`;
@@ -90,6 +112,23 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [connectorEdge, setConnectorEdge] = useState<'left' | 'right' | null>(null);
   const [removeConnectorTarget, setRemoveConnectorTarget] = useState<number | null>(null);
+  const [editingDim, setEditingDim] = useState<EditingDim | null>(null);
+  const [editValue, setEditValue] = useState('');
+
+  const openDimEditor = (d: EditingDim) => {
+    setEditingDim(d);
+    setEditValue(String(d.value));
+  };
+
+  // Same commit rule as the flat canvas: a positive number applies, anything
+  // else just closes the box.
+  const commitDimEdit = () => {
+    if (editingDim) {
+      const num = parseFloat(editValue);
+      if (!isNaN(num) && num > 0) editingDim.onCommit(num);
+    }
+    setEditingDim(null);
+  };
 
   /** Convert mouse event coords to SVG viewBox coords. */
   const getSVGPoint = useCallback((e: React.MouseEvent): { x: number; y: number } | null => {
@@ -126,13 +165,24 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
     .sort((a, b) => b.depth - a.depth)
     .map((s) => s.index);
 
+  // Handle / line / arc / erase, routed to whichever leg the pointer is over.
+  const tools = useChainTools({
+    chain, shape, layout, heightMm: height,
+    activeTool, lineOrientation, lineTarget, customArcs, segmentTools,
+  });
+
+  /** Wrap per-leg content in that leg's transform so it lands on the leg. */
+  const inLeg = (legIndex: number, key: string, content: React.ReactNode) => (
+    <g key={key} transform={`matrix(${layout.segments[legIndex].matrix.join(' ')})`}>{content}</g>
+  );
+
   return (
     <svg
       ref={svgRef}
       viewBox={`0 0 ${layout.totalW} ${layout.totalH}`}
       style={{
         ...(svgStyle ?? { width: '100%', height: '88vh' }),
-        cursor: activeTool ? 'crosshair' : undefined,
+        cursor: tools.cursor,
       }}
       preserveAspectRatio="xMidYMid meet"
       onMouseMove={(e) => {
@@ -140,13 +190,30 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         if (!pt) return;
         if (activeTool === 'connector') {
           setConnectorEdge(edgeAtPoint(chainBounds, pt.x, pt.y));
-        } else if (activeTool === 'remove') {
-          setRemoveConnectorTarget(findConnectorAtPoint(layout, pt.x, pt.y));
+          return;
         }
+        if (activeTool === 'remove') {
+          // A post under the pointer wins: erasing it takes the whole cascade,
+          // so the per-leg highlight would advertise a smaller deletion than
+          // the click actually performs.
+          const post = findConnectorAtPoint(layout, pt.x, pt.y);
+          setRemoveConnectorTarget(post);
+          if (post != null) {
+            tools.clearHover();
+            return;
+          }
+        }
+        tools.handlePointerMove(pt);
       }}
       onMouseLeave={() => {
         setConnectorEdge(null);
         setRemoveConnectorTarget(null);
+        tools.clearHover();
+      }}
+      onContextMenu={(e) => {
+        const pt = getSVGPoint(e);
+        if (!pt) return;
+        if (tools.handleContextMenu(pt)) e.preventDefault();
       }}
       onClick={(e) => {
         // Post hit-test always takes priority over tool dispatch: clicking an
@@ -166,21 +233,16 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
             return;
           }
 
-          // Leg selection comes next, but only when no tool is active: a click
-          // meant for the connector tool (or any future per-leg tool) should
-          // dispatch to that tool, not get hijacked into re-selecting whatever
-          // leg happens to be underneath the cursor.
+          // Then the per-leg tools -- handle, line, arc, erase -- which act on
+          // the leg under the pointer rather than the selected one.
+          if (tools.handleToolClick(pt)) return;
+
+          // Plain selection last, and only with no tool active: a click meant
+          // for a tool should not get hijacked into re-selecting whatever leg
+          // happens to be underneath the cursor.
           if (!activeTool) {
-            const inPolygon = (p: { x: number; y: number }, poly: Array<{ x: number; y: number }>) => {
-              let inside = false;
-              for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-                const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
-                if ((yi > p.y) !== (yj > p.y) && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) inside = !inside;
-              }
-              return inside;
-            };
-            const hitSeg = layout.segments.findIndex((s) => inPolygon(pt, s.corners));
-            if (hitSeg >= 0) {
+            const hitSeg = legAtPoint(layout, pt);
+            if (hitSeg != null) {
               onSegmentSelect?.(hitSeg);
               onConnectorSelect?.(null);
               return;
@@ -240,7 +302,13 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         selected: i === activeSegmentIndex,
       }))}
 
-      {renderChainDimensions({ chain, layout, heightMm: height, arrowLId, arrowRId })}
+      {renderChainDimensions({
+        chain, layout, heightMm: height, arrowLId, arrowRId,
+        // Editing is only offered when there is somewhere to send the result.
+        onEditDim: segmentTools || onHeightChange ? openDimEditor : undefined,
+        onLegWidthCommit: (legIndex, widthMm) => segmentTools?.(legIndex).onWidthChange?.(widthMm),
+        onHeightCommit: onHeightChange,
+      })}
 
       {/* Connector tool ghost preview */}
       {activeTool === 'connector' && connectorEdge &&
@@ -267,11 +335,52 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         );
       })()}
 
+      {/* Tool preview -- the ghost divider, handle or arc about to be placed --
+          drawn inside the hovered leg's own transform group, so the same flat
+          renderer the single-unit canvas uses lands correctly on a leg that is
+          sheared away from the viewer. */}
+      {tools.hover && activeTool && activeTool !== 'remove' && activeTool !== 'connector' &&
+        inLeg(tools.hover.legIndex, 'tool-preview', (
+          <g opacity={0.3}>
+            {renderToolPreview({
+              activeTool,
+              hoverPos: tools.hover.local,
+              canvasGeo: tools.geometryFor(tools.hover.legIndex),
+              frameColor: effectiveFrameColor,
+              isSliding,
+              lineOrientation,
+              lineTarget,
+              render3D,
+              glassFill,
+            })}
+          </g>
+        ))}
+
+      {/* What the erase tool is about to remove from a leg. */}
+      {activeTool === 'remove' && tools.removeTarget &&
+        inLeg(tools.removeTarget.legIndex, 'remove-highlight',
+          getHighlightGeometry(tools.removeTarget.item, tools.removeContextFor(tools.removeTarget.legIndex)))}
+
+      {/* What a right-click would remove, for the non-erase tools. */}
+      {activeTool && activeTool !== 'remove' && tools.sameKindTarget &&
+        inLeg(tools.sameKindTarget.legIndex, 'samekind-highlight',
+          getHighlightGeometry(tools.sameKindTarget.item, tools.removeContextFor(tools.sameKindTarget.legIndex)))}
+
       {/* Erase-tool cascade preview: the hovered post plus every segment and
           post beyond it. Rendered last so the red shading is never hidden
           behind glass, frames, or the dimension layers. */}
       {activeTool === 'remove' && removeConnectorTarget != null &&
         getConnectorCascadeHighlight(chain, layout, removeConnectorTarget)}
+
+      {editingDim && (
+        <InlineDimensionInput
+          editingDim={editingDim}
+          value={editValue}
+          onValueChange={setEditValue}
+          onCommit={commitDimEdit}
+          onCancel={() => setEditingDim(null)}
+        />
+      )}
     </svg>
   );
 };
