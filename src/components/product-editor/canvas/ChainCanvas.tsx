@@ -121,6 +121,11 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   // equivalent of the flat path's svgVerts extents.
   const chainBounds = boundsOf(layout.segments.flatMap((s) => s.corners));
 
+  const paintOrder = layout.segments
+    .slice()
+    .sort((a, b) => b.depth - a.depth)
+    .map((s) => s.index);
+
   return (
     <svg
       ref={svgRef}
@@ -211,9 +216,11 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         />
       ))}
 
-      {/* Legs */}
-      {chain.segments.map((segment, i) => renderSegment({
-        segment,
+      {/* Legs, furthest first, so a nearer leg covers a further one rather
+          than the other way round on the shapes that cannot be fully
+          separated by any view angle (see solveView). */}
+      {paintOrder.map((i) => renderSegment({
+        segment: chain.segments[i],
         segmentIndex: i,
         matrix: layout.segments[i].matrix,
         drawW: layout.segments[i].drawW,

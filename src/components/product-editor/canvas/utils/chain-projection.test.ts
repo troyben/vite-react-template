@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { walkChain, projectPlanPoint, layoutChain } from './chain-projection';
+import { walkChain, projectPlanPoint, layoutChain, solveView, narrowestFaceRatio, MIN_FACE_RATIO, MAX_VIEW_TURN_DEG } from './chain-projection';
+import { worstOverlapFraction, OVERLAP_TOLERANCE } from './chain-overlap';
 
 const close = (a: number, b: number, tol = 0.01) => Math.abs(a - b) < tol;
 
@@ -96,5 +97,131 @@ describe('layoutChain', () => {
     expect(Math.min(...ys)).toBeGreaterThanOrEqual(39.99);
     expect(layout.totalW).toBeGreaterThan(Math.max(...xs));
     expect(layout.totalH).toBeGreaterThan(Math.max(...ys));
+  });
+});
+
+describe('walkChain view rotation', () => {
+  it('turns the whole assembly by the start heading', () => {
+    const plan = walkChain([1000], [], Math.PI / 2);
+    const s = plan.segments[0];
+    expect(close(s.dirX, 0)).toBe(true);
+    expect(close(s.dirY, 1)).toBe(true);
+  });
+
+  it('leaves the first leg square-on by default', () => {
+    expect(close(walkChain([1000], []).segments[0].dirX, 1)).toBe(true);
+  });
+});
+
+describe('projectPlanPoint depth sign', () => {
+  it('mirrors depth to the left without changing how far it rises', () => {
+    const right = projectPlanPoint(0, 100, 1);
+    const left = projectPlanPoint(0, 100, -1);
+    expect(close(left.x, -right.x)).toBe(true);
+    expect(close(left.y, right.y)).toBe(true);
+  });
+});
+
+describe('solveView', () => {
+  const corner = (interior: number) => solveView([1000, 1000], 1000, [{ angle: interior, postWidth: 100 }]);
+
+  it('does not turn a chain with no corners', () => {
+    const view = solveView([1000], 1000, []);
+    expect(view).toEqual({ rotationRad: 0, depthSign: 1, resolved: true });
+  });
+
+  it('keeps an ordinary right-angle corner square-on', () => {
+    const view = corner(90);
+    expect(view.rotationRad).toBe(0);
+    expect(view.depthSign).toBe(1);
+  });
+
+  it('keeps the first leg square-on when the corner bends toward the viewer', () => {
+    // The reported case: interior 270 is a 90 degree bend downward on screen.
+    // Before, the second leg folded back over the first; now depth mirrors
+    // instead and no rotation is spent.
+    const view = corner(270);
+    expect(view.rotationRad).toBe(0);
+    expect(view.depthSign).toBe(-1);
+    expect(view.resolved).toBe(true);
+  });
+
+  it('turns only once staying square-on stops working, and eases in', () => {
+    const turns = [270, 285, 300, 315, 330].map((a) => Math.abs(corner(a).rotationRad));
+    // Monotone, so dragging the slider never snaps the drawing round.
+    for (let i = 1; i < turns.length; i++) expect(turns[i]).toBeGreaterThanOrEqual(turns[i - 1]);
+    expect(turns[0]).toBe(0);
+    expect(turns[turns.length - 1]).toBeGreaterThan(0);
+  });
+
+  it('admits when a shape hides part of itself from every angle', () => {
+    // A three-leg bay closed hard at both joints puts its two returns face to
+    // face. No single viewpoint shows both.
+    const view = solveView([800, 1200, 800], 1000, [
+      { angle: 45, postWidth: 100 },
+      { angle: 45, postWidth: 100 },
+    ]);
+    expect(view.resolved).toBe(false);
+  });
+});
+
+describe('layoutChain keeps every leg visible', () => {
+  it('hides nothing at any bend it reports as resolved', () => {
+    const hidden: Array<{ interior: number; fraction: number }> = [];
+    for (let interior = 5; interior <= 355; interior += 5) {
+      const connectors = [{ angle: interior, postWidth: 100 }];
+      if (!solveView([1000, 1000], 1000, connectors).resolved) continue;
+      const layout = layoutChain([1000, 1000], 1000, connectors);
+      const fraction = worstOverlapFraction(layout.segments.map((s) => s.corners));
+      if (fraction >= OVERLAP_TOLERANCE) hidden.push({ interior, fraction });
+    }
+    expect(hidden).toEqual([]);
+  });
+
+  it('resolves every bend up to 145 degrees either way', () => {
+    // Past that the two legs are folded so far back onto each other that no
+    // single viewpoint shows both -- solveView says so rather than pretending.
+    const unresolved: number[] = [];
+    for (let bend = -145; bend <= 145; bend += 5) {
+      const connectors = [{ angle: 180 - bend, postWidth: 100 }];
+      if (!solveView([1000, 1000], 1000, connectors).resolved) unresolved.push(bend);
+    }
+    expect(unresolved).toEqual([]);
+  });
+
+  it('still returns a usable view when it cannot resolve one', () => {
+    const view = solveView([1000, 1000], 1000, [{ angle: 5, postWidth: 100 }]);
+    expect(view.resolved).toBe(false);
+    expect(Number.isFinite(view.rotationRad)).toBe(true);
+    expect(Math.abs(view.rotationRad)).toBeLessThanOrEqual((MAX_VIEW_TURN_DEG * Math.PI) / 180);
+  });
+
+  it('orders legs so the furthest is painted first', () => {
+    const layout = layoutChain([1000, 1000], 1000, [{ angle: 90, postWidth: 100 }]);
+    // Interior 90 sends the second leg away from the viewer.
+    expect(layout.segments[1].depth).toBeGreaterThan(layout.segments[0].depth);
+  });
+
+  it('reports the view it chose', () => {
+    expect(layoutChain([1000, 1000], 1000, [{ angle: 270, postWidth: 100 }]).view.depthSign).toBe(-1);
+  });
+});
+
+describe('legibility', () => {
+  it('never draws a leg as an edge-on sliver', () => {
+    const narrow: Array<{ interior: number; ratio: number }> = [];
+    for (let interior = 5; interior <= 355; interior += 5) {
+      const connectors = [{ angle: interior, postWidth: 100 }];
+      const { rotationRad, depthSign, resolved } = solveView([1000, 1000], 1000, connectors);
+      if (!resolved) continue;
+      const ratio = narrowestFaceRatio(connectors, rotationRad, depthSign);
+      if (ratio < MIN_FACE_RATIO) narrow.push({ interior, ratio });
+    }
+    expect(narrow).toEqual([]);
+  });
+
+  it('still keeps a plain right-angle corner square-on', () => {
+    expect(solveView([1000, 1000], 1000, [{ angle: 90, postWidth: 100 }]).rotationRad).toBe(0);
+    expect(solveView([1000, 1000], 1000, [{ angle: 270, postWidth: 100 }]).rotationRad).toBe(0);
   });
 });

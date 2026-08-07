@@ -9,6 +9,7 @@
 
 import type { Point } from './types';
 import { MARGIN, BOTTOM_LABEL_SPACE } from './types';
+import { OVERLAP_TOLERANCE, worstOverlapFraction } from './chain-overlap';
 
 /** Depth foreshortening. 0.5 is the classic "cabinet" projection. */
 export const DEPTH_FACTOR = 0.5;
@@ -16,6 +17,17 @@ export const DEPTH_FACTOR = 0.5;
 export const DEPTH_ANGLE = Math.PI / 4;
 /** Draw-space height of the chain, before margins. */
 export const BASE_DRAW_HEIGHT = 180;
+/** Furthest the whole assembly will ever be turned to unhide a leg. */
+export const MAX_VIEW_TURN_DEG = 90;
+/**
+ * Narrowest a leg may be drawn, as a share of its true width. A leg turned
+ * almost edge-on is not hidden by anything, but it collapses to a sliver with
+ * no room for its panels -- just as unusable as being covered.
+ */
+export const MIN_FACE_RATIO = 0.25;
+
+/** Which way depth recedes on screen. +1 is up and to the right. */
+export type DepthSign = 1 | -1;
 
 /** SVG matrix(a, b, c, d, e, f): (u,v) -> (a*u + c*v + e, b*u + d*v + f) */
 export type Matrix6 = [number, number, number, number, number, number];
@@ -47,6 +59,25 @@ export interface ChainLayoutSegment {
   corners: [Point, Point, Point, Point];
   /** Local draw-space width of this segment, for the flat renderers. */
   drawW: number;
+  /**
+   * Plan-space distance from the viewer, for painting order. Larger is further
+   * away, whichever way depth recedes -- the depth sign only moves a point
+   * sideways on screen, never nearer or further.
+   */
+  depth: number;
+}
+
+/** How the whole assembly is turned and which way depth recedes. */
+export interface ChainView {
+  /** Turn applied to every leg, in radians. 0 keeps the first leg square-on. */
+  rotationRad: number;
+  depthSign: DepthSign;
+  /**
+   * False when no orientation leaves every leg visible -- a shape that hides
+   * part of itself from any single viewpoint, such as a bay closed to a full
+   * right angle at both joints.
+   */
+  resolved: boolean;
 }
 
 export interface ChainLayoutPost {
@@ -57,6 +88,7 @@ export interface ChainLayoutPost {
 export interface ChainLayout {
   segments: ChainLayoutSegment[];
   posts: ChainLayoutPost[];
+  view: ChainView;
   /** Draw units per mm. Uniform across both axes. */
   scale: number;
   drawH: number;
@@ -70,15 +102,19 @@ export interface ChainLayout {
  * Interior angle theta turns the next segment by (180 - theta), so theta = 180
  * is straight and theta = 90 is a right-angle corner. Each post advances along
  * the bisector of the two headings it joins, so it visually fills the corner.
+ *
+ * `startHeadingRad` turns the whole assembly before the walk begins. 0 leaves
+ * the first leg square-on to the viewer, drawn at its true width.
  */
 export function walkChain(
   widthsMm: number[],
   connectors: Array<{ angle: number; postWidth: number }>,
+  startHeadingRad = 0,
 ): ChainPlan {
   const segments: PlanSegment[] = [];
   const posts: PlanPost[] = [];
 
-  let heading = 0;
+  let heading = startHeadingRad;
   let x = 0;
   let y = 0;
 
@@ -116,14 +152,125 @@ export function walkChain(
   return { segments, posts };
 }
 
-/** Cabinet oblique projection. Depth recedes up and to the right. */
-export function projectPlanPoint(x: number, y: number): Point {
+/**
+ * Cabinet oblique projection. Depth recedes up and to the right, or up and to
+ * the left when `depthSign` is -1.
+ *
+ * Only the horizontal term flips: a point's distance from the viewer still
+ * raises it on screen by the same amount either way, so mirroring the depth
+ * axis re-sides the drawing without changing what is in front of what.
+ */
+export function projectPlanPoint(x: number, y: number, depthSign: DepthSign = 1): Point {
   return {
-    x: x + DEPTH_FACTOR * y * Math.cos(DEPTH_ANGLE),
+    x: x + DEPTH_FACTOR * y * Math.cos(DEPTH_ANGLE) * depthSign,
     // Written as a subtraction rather than a unary negation so that y = 0
     // yields +0, not -0 -- keeps the front plane exactly equal to its input.
     y: 0 - DEPTH_FACTOR * y * Math.sin(DEPTH_ANGLE),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Choosing the view
+//
+// Every leg is drawn into one flat picture, so a chain that folds toward the
+// viewer can put its second leg straight on top of its first. Turning the whole
+// assembly a little separates them -- but a turned assembly no longer shows any
+// leg at its true width, and the first leg is the surface the user places
+// panels and openings on.
+//
+// So: stay square-on while the drawing still reads, and turn by the smallest
+// angle that frees the hidden leg once it does not. On an ordinary corner that
+// means no turn at all out to about 110 degrees of bend, after which the turn
+// eases in a degree at a time rather than snapping.
+// ---------------------------------------------------------------------------
+
+/** The four projected corners of each leg's face, in draw-independent mm. */
+function legFaces(
+  widthsMm: number[],
+  heightMm: number,
+  connectors: Array<{ angle: number; postWidth: number }>,
+  rotationRad: number,
+  depthSign: DepthSign,
+): Point[][] {
+  return walkChain(widthsMm, connectors, rotationRad).segments.map((s) => {
+    const near = projectPlanPoint(s.startX, s.startY, depthSign);
+    const far = projectPlanPoint(s.startX + s.dirX * s.widthMm, s.startY + s.dirY * s.widthMm, depthSign);
+    return [
+      near,
+      far,
+      { x: far.x, y: far.y + heightMm },
+      { x: near.x, y: near.y + heightMm },
+    ];
+  });
+}
+
+/**
+ * Narrowest leg in the chain, as a share of its true width.
+ *
+ * A leg's drawn width is its heading's horizontal component plus whatever the
+ * depth shear adds, so this is independent of how wide the leg actually is.
+ */
+export function narrowestFaceRatio(
+  connectors: Array<{ angle: number; postWidth: number }>,
+  rotationRad: number,
+  depthSign: DepthSign,
+): number {
+  const widths = new Array(connectors.length + 1).fill(1);
+  return Math.min(
+    ...walkChain(widths, connectors, rotationRad).segments.map((s) =>
+      Math.abs(s.dirX + DEPTH_FACTOR * s.dirY * Math.cos(DEPTH_ANGLE) * depthSign),
+    ),
+  );
+}
+
+/**
+ * Smallest turn -- and the depth direction to pair it with -- that leaves every
+ * leg both unhidden and wide enough to read. Prefers no turn at all, then turns
+ * of one degree, two, and so on out to MAX_VIEW_TURN_DEG.
+ *
+ * The common cases exit on the first probe, so this normally costs one extra
+ * plan walk. Only chains bent past roughly 110 degrees search at all.
+ */
+export function solveView(
+  widthsMm: number[],
+  heightMm: number,
+  connectors: Array<{ angle: number; postWidth: number }>,
+): ChainView {
+  if (connectors.length === 0) return { rotationRad: 0, depthSign: 1, resolved: true };
+
+  // Try the depth direction the chain already leans toward first, so a bend
+  // that grows past a threshold does not also flip the drawing side to side.
+  const netTurn = connectors.reduce((sum, c) => sum + (180 - c.angle), 0);
+  const signs: DepthSign[] = netTurn >= 0 ? [1, -1] : [-1, 1];
+
+  let best: ChainView = { rotationRad: 0, depthSign: signs[0], resolved: false };
+  let bestPenalty = Infinity;
+
+  for (let turn = 0; turn <= MAX_VIEW_TURN_DEG; turn++) {
+    for (const deg of turn === 0 ? [0] : [turn, -turn]) {
+      for (const depthSign of signs) {
+        const rotationRad = (deg * Math.PI) / 180;
+        const faceRatio = narrowestFaceRatio(connectors, rotationRad, depthSign);
+        const hidden = worstOverlapFraction(legFaces(widthsMm, heightMm, connectors, rotationRad, depthSign));
+
+        if (faceRatio >= MIN_FACE_RATIO && hidden < OVERLAP_TOLERANCE) {
+          return { rotationRad, depthSign, resolved: true };
+        }
+
+        // Nothing has qualified yet, so remember the least-bad view in case
+        // nothing ever does. Covered area and squashed width are both total
+        // losses of information, so they weigh the same. Strict improvement
+        // only, which keeps the smallest turn when scores tie.
+        const penalty = hidden + Math.max(0, MIN_FACE_RATIO - faceRatio) / MIN_FACE_RATIO;
+        if (penalty < bestPenalty) {
+          bestPenalty = penalty;
+          best = { rotationRad, depthSign, resolved: false };
+        }
+      }
+    }
+  }
+
+  return best;
 }
 
 /** Project the four corners of a plan-space run of the given width and height. */
@@ -132,9 +279,10 @@ function runCorners(
   dirX: number, dirY: number,
   widthMm: number, heightMm: number,
   scale: number, ox: number, oy: number,
+  depthSign: DepthSign,
 ): [Point, Point, Point, Point] {
-  const near = projectPlanPoint(startX, startY);
-  const far = projectPlanPoint(startX + dirX * widthMm, startY + dirY * widthMm);
+  const near = projectPlanPoint(startX, startY, depthSign);
+  const far = projectPlanPoint(startX + dirX * widthMm, startY + dirY * widthMm, depthSign);
   const toDraw = (p: Point, drop: number): Point => ({
     x: p.x * scale + ox,
     y: (p.y + drop) * scale + oy,
@@ -156,19 +304,21 @@ export function layoutChain(
   heightMm: number,
   connectors: Array<{ angle: number; postWidth: number }>,
 ): ChainLayout {
-  const plan = walkChain(widthsMm, connectors);
+  const view = solveView(widthsMm, heightMm, connectors);
+  const plan = walkChain(widthsMm, connectors, view.rotationRad);
   const scale = BASE_DRAW_HEIGHT / heightMm;
+  const { depthSign } = view;
 
   // First pass with no offset, to measure the bounding box.
   const measure = (ox: number, oy: number) => {
     const segments = plan.segments.map((s) => ({
       index: s.index,
-      corners: runCorners(s.startX, s.startY, s.dirX, s.dirY, s.widthMm, heightMm, scale, ox, oy),
+      corners: runCorners(s.startX, s.startY, s.dirX, s.dirY, s.widthMm, heightMm, scale, ox, oy, depthSign),
       drawW: s.widthMm * scale,
     }));
     const posts = plan.posts.map((p) => ({
       index: p.index,
-      corners: runCorners(p.startX, p.startY, p.dirX, p.dirY, p.widthMm, heightMm, scale, ox, oy),
+      corners: runCorners(p.startX, p.startY, p.dirX, p.dirY, p.widthMm, heightMm, scale, ox, oy, depthSign),
     }));
     return { segments, posts };
   };
@@ -191,9 +341,9 @@ export function layoutChain(
   const sinA = Math.sin(DEPTH_ANGLE);
 
   const segments: ChainLayoutSegment[] = plan.segments.map((s, i) => {
-    const a = s.dirX + DEPTH_FACTOR * s.dirY * cosA;
+    const a = s.dirX + DEPTH_FACTOR * s.dirY * cosA * depthSign;
     const b = -DEPTH_FACTOR * s.dirY * sinA;
-    const e = s.startX + DEPTH_FACTOR * s.startY * cosA;
+    const e = s.startX + DEPTH_FACTOR * s.startY * cosA * depthSign;
     const f = -DEPTH_FACTOR * s.startY * sinA;
     // c and d are 0 and 1: the oblique projection leaves vertical lines
     // vertical, so the local v (window height) axis maps straight through
@@ -207,12 +357,19 @@ export function layoutChain(
       scale * e + ox - a * MARGIN,
       scale * f + oy - MARGIN,
     ];
-    return { index: s.index, matrix, corners: placed.segments[i].corners, drawW: placed.segments[i].drawW };
+    return {
+      index: s.index,
+      matrix,
+      corners: placed.segments[i].corners,
+      drawW: placed.segments[i].drawW,
+      depth: s.startY + (s.dirY * s.widthMm) / 2,
+    };
   });
 
   return {
     segments,
     posts: placed.posts,
+    view,
     scale,
     drawH: BASE_DRAW_HEIGHT,
     totalW: maxX - minX + 2 * MARGIN,
