@@ -66,14 +66,22 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
         const b = { x: br.x + n.x * DIM_OFFSET, y: br.y + n.y * DIM_OFFSET };
         const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         const deg = labelAngle(a, b);
+        // Lift the label off its own dimension line along the line's normal,
+        // not straight up the screen. On a slanted sill -- which every receding
+        // leg has -- a vertical lift slides the text along the line instead of
+        // away from it, and the arrows run straight through the digits.
+        const label = {
+          x: mid.x - n.x * DIM_LABEL_GAP,
+          y: mid.y - n.y * DIM_LABEL_GAP,
+        };
         return (
           <g key={`chain-dim-w-${i}`}>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               stroke={DIM_COLOR} strokeWidth={1}
               markerStart={`url(#${arrowLId})`} markerEnd={`url(#${arrowRId})`} />
             <text
-              x={mid.x} y={mid.y - DIM_LABEL_GAP}
-              transform={`rotate(${deg}, ${mid.x}, ${mid.y - DIM_LABEL_GAP})`}
+              x={label.x} y={label.y}
+              transform={`rotate(${deg}, ${label.x}, ${label.y})`}
               fill={DIM_COLOR} fontSize={DIM_FONT} textAnchor="middle"
             >
               {Math.round(segment.width)}

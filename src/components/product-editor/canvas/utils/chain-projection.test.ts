@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { walkChain, projectPlanPoint, layoutChain, solveView, narrowestFaceRatio, MIN_FACE_RATIO, MAX_VIEW_TURN_DEG } from './chain-projection';
 import { worstOverlapFraction, OVERLAP_TOLERANCE } from './chain-overlap';
+import { DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT } from './types';
 
 const close = (a: number, b: number, tol = 0.01) => Math.abs(a - b) < tol;
 
@@ -21,17 +22,19 @@ describe('walkChain', () => {
     expect(plan.segments).toHaveLength(2);
     expect(plan.posts).toHaveLength(1);
 
-    // post starts at the end of segment 0 and runs along the 45 degree bisector
+    // The post starts at the end of segment 0 and takes only the in-plane part
+    // of the 45 degree bisector, so both legs meet it at the same depth and the
+    // joint draws flush. See the comment in walkChain.
     const post = plan.posts[0];
     expect(close(post.startX, 1000)).toBe(true);
     expect(close(post.startY, 0)).toBe(true);
     expect(close(post.dirX, Math.SQRT1_2)).toBe(true);
-    expect(close(post.dirY, Math.SQRT1_2)).toBe(true);
+    expect(post.dirY).toBe(0);
 
-    // segment 1 starts past the post and heads straight away from the viewer
+    // segment 1 starts past the post, at the same depth, and heads away
     const s1 = plan.segments[1];
     expect(close(s1.startX, 1000 + 100 * Math.SQRT1_2)).toBe(true);
-    expect(close(s1.startY, 100 * Math.SQRT1_2)).toBe(true);
+    expect(s1.startY).toBe(0);
     expect(close(s1.dirX, 0)).toBe(true);
     expect(close(s1.dirY, 1)).toBe(true);
   });
@@ -224,4 +227,93 @@ describe('legibility', () => {
     expect(solveView([1000, 1000], 1000, [{ angle: 90, postWidth: 100 }]).rotationRad).toBe(0);
     expect(solveView([1000, 1000], 1000, [{ angle: 270, postWidth: 100 }]).rotationRad).toBe(0);
   });
+});
+
+describe('joints draw flush', () => {
+  // Every configuration the canvas can reach, including the Z that exposed the
+  // problem: a post must never extend above or below the legs it joins.
+  const configs: Array<[string, number[], number[]]> = [
+    ['corner +90',  [1000, 1000],       [90]],
+    ['corner -90',  [1000, 1000],       [-90]],
+    ['corner -135', [1000, 1000],       [-135]],
+    ['Z -90 +90',   [1000, 1000, 1000], [-90, 90]],
+    ['bay +60',     [800, 1200, 800],   [60, 60]],
+  ];
+
+  for (const [name, widths, bends] of configs) {
+    it(`keeps post and window corners level: ${name}`, () => {
+      const connectors = bends.map((b) => ({ angle: 180 - b, postWidth: 100 }));
+      const layout = layoutChain(widths, 1000, connectors);
+      layout.posts.forEach((post, i) => {
+        const postTop = Math.min(...post.corners.map((p) => p.y));
+        const postBottom = Math.max(...post.corners.map((p) => p.y));
+        for (const leg of [layout.segments[i], layout.segments[i + 1]]) {
+          const legTop = Math.min(...leg.corners.map((p) => p.y));
+          const legBottom = Math.max(...leg.corners.map((p) => p.y));
+          expect(postTop).toBeGreaterThanOrEqual(legTop - 0.01);
+          expect(postBottom).toBeLessThanOrEqual(legBottom + 0.01);
+        }
+      });
+    });
+  }
+
+  it('gives every post the same height as the legs, not more', () => {
+    const layout = layoutChain([1000, 1000, 1000], 1000, [
+      { angle: 270, postWidth: 100 },
+      { angle: 90, postWidth: 100 },
+    ]);
+    for (const post of layout.posts) {
+      const span = Math.max(...post.corners.map((p) => p.y)) - Math.min(...post.corners.map((p) => p.y));
+      expect(close(span, layout.drawH, 0.01)).toBe(true);
+    }
+  });
+
+  it('never lets a post collapse to nothing', () => {
+    for (let bend = -175; bend <= 175; bend += 5) {
+      const layout = layoutChain([1000, 1000], 1000, [{ angle: 180 - bend, postWidth: 100 }]);
+      const xs = layout.posts[0].corners.map((p) => p.x);
+      expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('the viewBox has room for the dimensions', () => {
+  // The bounding box is measured from legs and posts, but the dimension lines,
+  // their labels and the angle badges are drawn outside it. Anything landing
+  // beyond the viewBox is cut off on screen.
+  const configs: Array<[string, number[], number[]]> = [
+    ['single leg',  [1000],             []],
+    ['corner +90',  [1000, 1000],       [90]],
+    ['corner -90',  [1000, 1000],       [-90]],
+    ['corner -145', [1000, 1000],       [-145]],
+    ['Z -90 +90',   [1000, 1000, 1000], [-90, 90]],
+    ['bay +60',     [800, 1200, 800],   [60, 60]],
+    ['tall',        [1000, 1000],       [-90]],
+  ];
+
+  for (const [name, widths, bends] of configs) {
+    it(`fits every annotation: ${name}`, () => {
+      const connectors = bends.map((b) => ({ angle: 180 - b, postWidth: 100 }));
+      const layout = layoutChain(widths, 3000, connectors);
+      const corners = layout.segments.flatMap((s) => s.corners);
+
+      // Height dimension, at the far left: line, label, half a rotated glyph.
+      const leftInk = Math.min(...corners.map((p) => p.x)) - DIM_OFFSET - DIM_LABEL_GAP - DIM_FONT / 2;
+      expect(leftInk).toBeGreaterThanOrEqual(0);
+
+      // Width dimensions, below each sill.
+      const bottomInk = Math.max(...corners.map((p) => p.y)) + DIM_OFFSET + DIM_LABEL_GAP + DIM_FONT;
+      expect(bottomInk).toBeLessThanOrEqual(layout.totalH);
+
+      // Angle badge above each post.
+      for (const post of layout.posts) {
+        const badgeTop = Math.min(...post.corners.map((p) => p.y)) - DIM_OFFSET * 0.6 - 10;
+        expect(badgeTop).toBeGreaterThanOrEqual(0);
+      }
+
+      // Nothing at all past the right edge.
+      const rightInk = Math.max(...corners.map((p) => p.x)) + DIM_OFFSET;
+      expect(rightInk).toBeLessThanOrEqual(layout.totalW);
+    });
+  }
 });

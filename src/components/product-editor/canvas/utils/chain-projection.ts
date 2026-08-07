@@ -8,8 +8,27 @@
 // ---------------------------------------------------------------------------
 
 import type { Point } from './types';
-import { MARGIN, BOTTOM_LABEL_SPACE } from './types';
+import { MARGIN, BOTTOM_LABEL_SPACE, DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT } from './types';
 import { OVERLAP_TOLERANCE, worstOverlapFraction } from './chain-overlap';
+
+// ---------------------------------------------------------------------------
+// Gutters
+//
+// The bounding box is measured from the legs and posts alone, but the dimension
+// lines, their labels and the angle badges are all drawn OUTSIDE that box. The
+// viewBox has to carry room for them or they render past its edge and get cut
+// off by whatever the canvas sits next to.
+//
+// Each gutter is MARGIN plus whatever that side's annotation actually reaches.
+// ---------------------------------------------------------------------------
+
+/** Height dimension: line, then label, then half a rotated glyph. */
+const GUTTER_LEFT = MARGIN + DIM_OFFSET + DIM_LABEL_GAP + DIM_FONT / 2;
+/** Angle badge: it sits above the topmost post and is DIM_FONT + padding tall. */
+const GUTTER_TOP = MARGIN + DIM_OFFSET * 0.6 + DIM_FONT + 6;
+/** A slanted sill pushes its dimension line sideways by up to the full offset. */
+const GUTTER_RIGHT = MARGIN + DIM_OFFSET;
+const GUTTER_BOTTOM = MARGIN + BOTTOM_LABEL_SPACE;
 
 /** Depth foreshortening. 0.5 is the classic "cabinet" projection. */
 export const DEPTH_FACTOR = 0.5;
@@ -25,6 +44,12 @@ export const MAX_VIEW_TURN_DEG = 90;
  * no room for its panels -- just as unusable as being covered.
  */
 export const MIN_FACE_RATIO = 0.25;
+/**
+ * Narrowest a corner post may be drawn, as a share of its real width. Posts are
+ * drawn in the picture plane (see walkChain), so one at a corner folded almost
+ * back on itself would otherwise vanish and let the two legs touch.
+ */
+export const MIN_POST_FACE = 0.25;
 
 /** Which way depth recedes on screen. +1 is up and to the right. */
 export type DepthSign = 1 | -1;
@@ -137,15 +162,28 @@ export function walkChain(
     const turn = ((180 - connector.angle) * Math.PI) / 180;
     const bisector = heading + turn / 2;
     const bx = Math.cos(bisector);
-    const by = Math.sin(bisector);
+
+    // The post advances along the bisector, but only its in-plane component.
+    //
+    // Advancing into depth as well would leave the two legs meeting the post at
+    // different distances from the viewer, and a point further away draws
+    // higher: the post's top edge would then rise above the leg beside it as a
+    // wedge, and its bottom edge would stop short. Keeping the advance in the
+    // picture plane means both legs meet the joint at the same depth, so post
+    // and window corners land on exactly the same level.
+    //
+    // The cost is that the footprint loses the post's own depth -- 100mm at a
+    // corner, against window widths in the metres. The legs themselves keep
+    // their true headings and depths, so the corner still reads as a corner.
+    const facing = bx < 0 ? -1 : 1;
+    const inPlane = facing * Math.max(Math.abs(bx), MIN_POST_FACE);
     posts.push({
       index: i,
       startX: x, startY: y,
-      dirX: bx, dirY: by,
+      dirX: inPlane, dirY: 0,
       widthMm: connector.postWidth,
     });
-    x += bx * connector.postWidth;
-    y += by * connector.postWidth;
+    x += inPlane * connector.postWidth;
     heading += turn;
   }
 
@@ -333,8 +371,8 @@ export function layoutChain(
   const maxX = Math.max(...allPoints.map((p) => p.x));
   const maxY = Math.max(...allPoints.map((p) => p.y));
 
-  const ox = MARGIN - minX;
-  const oy = MARGIN - minY;
+  const ox = GUTTER_LEFT - minX;
+  const oy = GUTTER_TOP - minY;
   const placed = measure(ox, oy);
 
   const cosA = Math.cos(DEPTH_ANGLE);
@@ -372,7 +410,7 @@ export function layoutChain(
     view,
     scale,
     drawH: BASE_DRAW_HEIGHT,
-    totalW: maxX - minX + 2 * MARGIN,
-    totalH: maxY - minY + 2 * MARGIN + BOTTOM_LABEL_SPACE,
+    totalW: maxX - minX + GUTTER_LEFT + GUTTER_RIGHT,
+    totalH: maxY - minY + GUTTER_TOP + GUTTER_BOTTOM,
   };
 }
