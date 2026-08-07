@@ -15,10 +15,14 @@ export interface ConnectorSliderProps {
   onChange: (angle: number) => void;
 }
 
-const TRACK_W = 34;
-const HANDLE_W = 22;
-const HANDLE_H = 30;
-const MIN_TRACK_H = 120;
+// Sizes are SVG user units. The chain's draw height is always BASE_DRAW_HEIGHT
+// (180), so these are effectively a fixed fraction of the drawn window -- the
+// handle is about a tenth of the frame's height at any zoom.
+const TRACK_W = 17;
+const HANDLE_W = 11;
+const HANDLE_H = 15;
+const MIN_TRACK_H = 90;
+const DOT = 2;
 
 /**
  * Vertical bend control anchored to a corner post: a hairline track with a
@@ -92,7 +96,7 @@ const ConnectorSlider: React.FC<ConnectorSliderProps> = ({ x, y, height, angle, 
         {/* Centre tick — where the legs are inline */}
         <div
           style={{
-            position: 'absolute', left: '50%', top: '50%', width: 9, height: 1,
+            position: 'absolute', left: '50%', top: '50%', width: 6, height: 1,
             background: '#c4c8d0', transform: 'translate(-50%, -0.5px)',
           }}
         />
@@ -115,25 +119,26 @@ const ConnectorSlider: React.FC<ConnectorSliderProps> = ({ x, y, height, angle, 
           style={{
             position: 'absolute', left: '50%', top: handleTop,
             width: HANDLE_W, height: HANDLE_H, marginLeft: -HANDLE_W / 2,
-            display: 'grid', gridTemplateColumns: '3px 3px', gridTemplateRows: '3px 3px 3px',
-            gap: 3, alignContent: 'center', justifyContent: 'center',
-            background: '#2c2f36', borderRadius: 6,
-            boxShadow: dragging ? '0 0 0 2px rgba(124,58,237,0.55)' : '0 1px 3px rgba(0,0,0,0.35)',
+            display: 'grid',
+            gridTemplateColumns: `${DOT}px ${DOT}px`, gridTemplateRows: `${DOT}px ${DOT}px ${DOT}px`,
+            gap: DOT, alignContent: 'center', justifyContent: 'center',
+            background: '#2c2f36', borderRadius: 3.5,
+            boxShadow: dragging ? '0 0 0 1.5px rgba(124,58,237,0.55)' : '0 1px 2px rgba(0,0,0,0.35)',
             cursor: dragging ? 'grabbing' : 'grab',
             touchAction: 'none', outline: 'none',
           }}
         >
           {Array.from({ length: 6 }).map((_, i) => (
-            <span key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: '#9aa0ab' }} />
+            <span key={i} style={{ width: DOT, height: DOT, borderRadius: '50%', background: '#9aa0ab' }} />
           ))}
         </div>
 
         {/* Readout, pinned beside the handle so it follows the drag */}
         <div
           style={{
-            position: 'absolute', left: TRACK_W / 2 + HANDLE_W / 2 + 4,
-            top: handleTop + HANDLE_H / 2 - 8,
-            fontSize: 11, fontWeight: 600, lineHeight: '16px',
+            position: 'absolute', left: TRACK_W / 2 + HANDLE_W / 2 + 3,
+            top: handleTop + HANDLE_H / 2 - 4.5,
+            fontSize: 7, fontWeight: 600, lineHeight: '9px',
             color: '#4c1d95', whiteSpace: 'nowrap', pointerEvents: 'none',
           }}
         >
