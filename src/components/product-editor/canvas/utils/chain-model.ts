@@ -9,8 +9,48 @@
 import type { Connector, ProductData, Segment } from '@/components/product-editor/types';
 import { generateId } from './canvas-tools';
 
-export const DEFAULT_CONNECTOR_ANGLE = 90;
+/** Interior angle at which the two legs are inline — no bend at all. */
+export const STRAIGHT_ANGLE = 180;
+/** Largest bend the slider allows in either direction. */
+export const MAX_BEND = 179;
+
+/** A new connector starts straight; the user bends it with the slider. */
+export const DEFAULT_CONNECTOR_ANGLE = STRAIGHT_ANGLE;
 export const DEFAULT_POST_WIDTH = 100;
+
+// ---------------------------------------------------------------------------
+// Interior angle vs bend
+//
+// Storage uses the *interior* angle between two legs (180 = inline), because
+// that is what the plan walk in chain-projection consumes. Everything a human
+// reads — the slider, the on-canvas badge, the quotation description, the
+// corner-post line item — uses *bend*: how far the joint deviates from
+// straight, signed by which way the attached leg swings on screen.
+//
+//   bend  0   -> interior 180, legs inline
+//   bend +90  -> interior  90, leg swings toward the top of the screen
+//   bend -90  -> interior 270, leg swings toward the bottom of the screen
+//
+// The two coincide for ordinary inward corners, so "bend 90" really is "a 90
+// degree corner window" — which is how the number was described to us.
+// ---------------------------------------------------------------------------
+
+/** Human-facing bend for a stored interior angle. */
+export function bendFromInterior(interior: number): number {
+  return STRAIGHT_ANGLE - interior;
+}
+
+/** Stored interior angle for a human-facing bend. */
+export function interiorFromBend(bend: number): number {
+  return STRAIGHT_ANGLE - bend;
+}
+
+/** Format a bend for display, with an explicit sign so direction is unambiguous. */
+export function formatBend(bend: number): string {
+  const rounded = Math.round(bend);
+  if (rounded === 0) return '0°';
+  return `${rounded > 0 ? '+' : '−'}${Math.abs(rounded)}°`;
+}
 
 export interface Chain {
   segments: Segment[];

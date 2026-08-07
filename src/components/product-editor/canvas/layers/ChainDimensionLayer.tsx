@@ -14,6 +14,7 @@ import type { Point } from '../utils/types';
 import { DIM_COLOR, DIM_FONT, DIM_LABEL_GAP, DIM_OFFSET } from '../utils/types';
 import type { ChainLayout } from '../utils/chain-projection';
 import type { Chain } from '../utils/chain-model';
+import { bendFromInterior, formatBend } from '../utils/chain-model';
 
 export interface ChainDimensionProps {
   chain: Chain;
@@ -117,7 +118,7 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
             <rect x={cx - 20} y={y - 10} width={40} height={16} rx={8}
               fill="#ffffff" stroke={DIM_COLOR} strokeWidth={1} />
             <text x={cx} y={y + 2} fill={DIM_COLOR} fontSize={DIM_FONT} textAnchor="middle">
-              {`${connector.angle}°`}
+              {formatBend(bendFromInterior(connector.angle))}
             </text>
           </g>
         );

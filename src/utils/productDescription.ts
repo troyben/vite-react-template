@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import type { OpeningDirection, ProductData } from '../components/product-editor/types';
+import { bendFromInterior, formatBend } from '@/components/product-editor/canvas/utils/chain-model';
 import { getFrameColorName, getGlassTypeName, approximateColorName } from './pdf/colorNames';
 
 /**
@@ -82,7 +83,7 @@ export function buildSketchDescription(data: ProductData): string {
   const segments = data.segments ?? [];
   if (connectors.length > 0 && segments.length > 1) {
     const widths = segments.map((s) => Math.round(s.width)).join('+');
-    const angles = connectors.map((c) => `${c.angle}°`).join(', ');
+    const angles = connectors.map((c) => formatBend(bendFromInterior(c.angle))).join(', ');
     const kind = data.type === 'door' ? 'door' : 'window';
     return `Corner ${kind} ${widths}mm x ${Math.round(data.height)}mm @ ${angles}`;
   }

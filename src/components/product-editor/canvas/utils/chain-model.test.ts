@@ -245,3 +245,40 @@ describe('save -> load -> save round trip', () => {
     expect(chain.segments[0].panelWidths).toEqual([1200]);
   });
 });
+
+import { bendFromInterior, interiorFromBend, formatBend, DEFAULT_CONNECTOR_ANGLE, STRAIGHT_ANGLE } from './chain-model';
+
+describe('bend vs interior angle', () => {
+  it('treats 0 bend as inline legs', () => {
+    expect(bendFromInterior(STRAIGHT_ANGLE)).toBe(0);
+    expect(interiorFromBend(0)).toBe(STRAIGHT_ANGLE);
+  });
+
+  it('maps a 90 degree bend to a 90 degree interior corner', () => {
+    // The number the user reads and the stored interior angle coincide for an
+    // ordinary inward corner, which is why "bend 90" is "a 90 degree corner".
+    expect(interiorFromBend(90)).toBe(90);
+    expect(bendFromInterior(90)).toBe(90);
+  });
+
+  it('maps a downward bend to an interior angle past straight', () => {
+    expect(interiorFromBend(-90)).toBe(270);
+    expect(bendFromInterior(270)).toBe(-90);
+  });
+
+  it('round-trips across the whole range', () => {
+    for (const bend of [-179, -45, -1, 0, 1, 45, 179]) {
+      expect(bendFromInterior(interiorFromBend(bend))).toBe(bend);
+    }
+  });
+
+  it('starts a new connector straight', () => {
+    expect(bendFromInterior(DEFAULT_CONNECTOR_ANGLE)).toBe(0);
+  });
+
+  it('signs the display value so direction is unambiguous', () => {
+    expect(formatBend(0)).toBe('0°');
+    expect(formatBend(90)).toBe('+90°');
+    expect(formatBend(-90)).toBe('−90°');
+  });
+});

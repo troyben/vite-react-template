@@ -26,6 +26,7 @@ import {
   sumTotals,
   round,
 } from './costCalculatorCore';
+import { bendFromInterior, formatBend } from '@/components/product-editor/canvas/utils/chain-model';
 
 /**
  * Cost of one flat unit. This is the original calculation, unchanged, run
@@ -108,7 +109,7 @@ function calculatePostItems(product: ProductData, materials: Material[]): CostLi
   return connectors.map((c, i) => {
     const quantity = round(heightM);
     return {
-      material: `Corner Post ${i + 1} (${c.postWidth}mm @ ${c.angle}°) — ${material.name}`,
+      material: `Corner Post ${i + 1} (${c.postWidth}mm @ ${formatBend(bendFromInterior(c.angle))}) — ${material.name}`,
       category: 'Frame Profile',
       quantity,
       unit: 'meters',
