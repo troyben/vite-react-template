@@ -22,6 +22,7 @@ import OpeningsTab from '@/components/product-editor/tabs/OpeningsTab';
 import PanelsTab from '@/components/product-editor/tabs/PanelsTab';
 import type { CanvasTool, PlacedArc } from '@/components/product-editor/canvas/utils/canvas-tools';
 import type { ProductData } from '@/components/product-editor/types';
+import { nudgeBend } from '@/components/product-editor/canvas/utils/chain-model';
 import { useProductEditorState, type ProductEditorTabKey } from './useProductEditorState';
 import { buildActiveSegmentView, buildShapeCanvasHandlers } from './productEditorHandlers';
 
@@ -88,12 +89,22 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         // Don't hijack arrow keys that are the native increment/decrement for
         // whatever form control currently has focus (width/height/panel-width/
-        // row-height/post-width number fields, selects, the slider itself).
+        // row-height/post-width number fields, selects), nor the slider handle,
+        // which runs the same nudge itself when it holds focus.
         const t = e.target as HTMLElement | null;
-        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        if (t && (
+          t.isContentEditable
+          || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)
+          || t.getAttribute('role') === 'slider'
+        )) return;
         e.preventDefault();
-        const delta = e.key === 'ArrowUp' ? 1 : -1;
-        state.chain.setConnectorAngle(idx, state.chain.chain.connectors[idx].angle + delta);
+        // Nudge the BEND, not the stored interior angle -- they run in
+        // opposite directions, so stepping the interior angle sent the handle
+        // and the leg the way the key did not point. Shared with the slider.
+        state.chain.setConnectorAngle(
+          idx,
+          nudgeBend(state.chain.chain.connectors[idx].angle, e.key === 'ArrowUp' ? 1 : -1),
+        );
       }
     };
     window.addEventListener('keydown', handleKeyDown);

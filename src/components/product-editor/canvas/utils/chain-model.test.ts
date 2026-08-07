@@ -246,7 +246,7 @@ describe('save -> load -> save round trip', () => {
   });
 });
 
-import { bendFromInterior, interiorFromBend, formatBend, DEFAULT_CONNECTOR_ANGLE, STRAIGHT_ANGLE } from './chain-model';
+import { bendFromInterior, interiorFromBend, formatBend, nudgeBend, MAX_BEND, DEFAULT_CONNECTOR_ANGLE, STRAIGHT_ANGLE } from './chain-model';
 
 describe('bend vs interior angle', () => {
   it('treats 0 bend as inline legs', () => {
@@ -280,5 +280,46 @@ describe('bend vs interior angle', () => {
     expect(formatBend(0)).toBe('0°');
     expect(formatBend(90)).toBe('90°');
     expect(formatBend(-90)).toBe('90°');
+  });
+});
+
+describe('nudgeBend', () => {
+  // The slider handle sits higher on the track the larger the bend, so "arrow
+  // key moves the handle the way it points" reduces to: up raises the bend,
+  // down lowers it. Both the handle and the editor's global shortcut call this.
+  it('lets the down key lower the bend and the up key raise it', () => {
+    const flat = interiorFromBend(0);
+    expect(bendFromInterior(nudgeBend(flat, -1))).toBe(-1);
+    expect(bendFromInterior(nudgeBend(flat, 1))).toBe(1);
+  });
+
+  it('keeps lowering the bend on the negative side rather than turning back', () => {
+    // Guards the inversion that shipped: stepping the stored interior angle
+    // instead of the bend reverses direction, and does so on both halves.
+    let interior = interiorFromBend(45);
+    const seen: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      interior = nudgeBend(interior, -1);
+      seen.push(bendFromInterior(interior));
+    }
+    expect(seen).toEqual([44, 43, 42, 41]);
+
+    interior = interiorFromBend(-45);
+    const below: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      interior = nudgeBend(interior, -1);
+      below.push(bendFromInterior(interior));
+    }
+    expect(below).toEqual([-46, -47, -48, -49]);
+  });
+
+  it('stops at the ends of the track', () => {
+    expect(bendFromInterior(nudgeBend(interiorFromBend(MAX_BEND), 1))).toBe(MAX_BEND);
+    expect(bendFromInterior(nudgeBend(interiorFromBend(-MAX_BEND), -1))).toBe(-MAX_BEND);
+  });
+
+  it('round-trips a nudge up then down', () => {
+    const start = interiorFromBend(30);
+    expect(nudgeBend(nudgeBend(start, 1), -1)).toBe(start);
   });
 });

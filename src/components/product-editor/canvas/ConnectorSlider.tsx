@@ -4,6 +4,7 @@ import {
   bendFromInterior,
   formatBend,
   interiorFromBend,
+  nudgeBend,
 } from './utils/chain-model';
 
 export interface ConnectorSliderProps {
@@ -71,9 +72,7 @@ const ConnectorSlider: React.FC<ConnectorSliderProps> = ({ x, y, height, angle, 
     };
   }, [dragging, emitFromClientY]);
 
-  const nudge = (delta: number) => {
-    onChange(interiorFromBend(Math.min(MAX_BEND, Math.max(-MAX_BEND, bend + delta))));
-  };
+  const nudge = (delta: number) => onChange(nudgeBend(angle, delta));
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 

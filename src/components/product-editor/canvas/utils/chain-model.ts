@@ -46,6 +46,22 @@ export function interiorFromBend(bend: number): number {
 }
 
 /**
+ * Interior angle after nudging the bend by `bendDelta`, clamped to the slider's
+ * range.
+ *
+ * Both the slider handle and the editor's arrow-key shortcut step a connector,
+ * and they must step it the same way: a positive delta raises the bend, which
+ * raises the handle on the track and swings the attached leg toward the top of
+ * the screen. Stepping the stored interior angle directly does the opposite,
+ * because bend and interior run in opposite directions -- so both callers go
+ * through here rather than doing the arithmetic themselves.
+ */
+export function nudgeBend(interior: number, bendDelta: number): number {
+  const bend = bendFromInterior(interior) + bendDelta;
+  return interiorFromBend(Math.min(MAX_BEND, Math.max(-MAX_BEND, bend)));
+}
+
+/**
  * Format a bend for display. Unsigned: a corner is a 90 degree corner whichever
  * way it turns, and the sketch beside the number already shows which way. The
  * sign stays in the stored interior angle, which is what the geometry and the
