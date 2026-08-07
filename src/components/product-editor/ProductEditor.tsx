@@ -151,6 +151,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
     state.setOpeningPanes([]);
     state.setRemovedSections([]);
     state.setShape({ type: 'rectangle' });
+    state.chain.resetChain(1000);
     setCustomArcs([]);
     setActiveTool(null);
   };

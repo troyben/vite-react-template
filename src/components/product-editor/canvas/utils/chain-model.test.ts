@@ -168,3 +168,80 @@ describe('applyConnectorRemoval', () => {
     expect(before.connectors).toHaveLength(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 12: persistence round trips. These mirror what buildProductData /
+// populateFromData actually do — merge chainToProductData's output over the
+// flat top-level fields, then feed the merged ProductData back through
+// normalizeToChain — rather than exercising chain-model.ts functions in
+// isolation.
+// ---------------------------------------------------------------------------
+
+describe('save -> load -> save round trip', () => {
+  it('a connector-free product serialises with no chain keys after a full round trip', () => {
+    const productData: ProductData = {
+      type: 'door',
+      doorType: 'hinged',
+      width: 900,
+      height: 2100,
+      panels: 1,
+      panelWidths: [900],
+      unit: 'mm',
+      frameColor: '#C0C0C0',
+      glassType: 'clear',
+      shape: { type: 'rectangle' },
+    };
+    const saved = { ...productData, ...chainToProductData(normalizeToChain(productData)) };
+    expect('segments' in saved).toBe(false);
+    expect('connectors' in saved).toBe(false);
+    expect('rootSegmentIndex' in saved).toBe(false);
+    // and the plain fields are untouched
+    expect(saved.width).toBe(900);
+    expect(saved.panelWidths).toEqual([900]);
+  });
+
+  it('a chained product keeps segment count, widths, angles and root through two save cycles', () => {
+    const chain = normalizeToChain(legacy);
+    chain.segments.push(makeSegment(700));
+    chain.connectors.push({ id: 'c0', angle: 120, postWidth: 90 });
+
+    // First save: mirrors buildProductData spreading chainFields over the
+    // flat top-level fields.
+    const savedOnce: ProductData = { ...legacy, ...chainToProductData(chain) };
+
+    // Load: mirrors populateFromData calling normalizeToChain(d).
+    const loaded = normalizeToChain(savedOnce);
+
+    // Second save.
+    const savedTwice: ProductData = { ...legacy, ...chainToProductData(loaded) };
+
+    expect(savedTwice.segments).toHaveLength(2);
+    expect(savedTwice.segments!.map((s) => s.width)).toEqual([1000, 700]);
+    expect(savedTwice.connectors).toHaveLength(1);
+    expect(savedTwice.connectors![0].angle).toBe(120);
+    expect(savedTwice.rootSegmentIndex).toBe(0);
+
+    // The two saves agree with each other structurally.
+    expect(savedTwice.segments!.map((s) => s.width)).toEqual(
+      savedOnce.segments!.map((s) => s.width),
+    );
+    expect(savedTwice.connectors).toEqual(savedOnce.connectors);
+    expect(savedTwice.rootSegmentIndex).toBe(savedOnce.rootSegmentIndex);
+  });
+
+  it('a minimal legacy payload with no chain fields loads into a coherent one-segment chain', () => {
+    const minimal: ProductData = {
+      type: 'window',
+      width: 1200,
+      height: 1500,
+      panels: 1,
+      unit: 'mm',
+    };
+    const chain = normalizeToChain(minimal);
+    expect(chain.segments).toHaveLength(1);
+    expect(chain.connectors).toHaveLength(0);
+    expect(chain.rootIndex).toBe(0);
+    expect(chain.segments[0].width).toBe(1200);
+    expect(chain.segments[0].panelWidths).toEqual([1200]);
+  });
+});

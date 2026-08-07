@@ -10,6 +10,7 @@ import type {
   Unit,
 } from '@/components/product-editor/types';
 import { useSegmentChain } from './useSegmentChain';
+import { normalizeToChain } from '@/components/product-editor/canvas/utils/chain-model';
 
 export type ProductEditorTabKey = 'shape' | 'dimensions' | 'appearance' | 'openings' | 'panels';
 
@@ -163,34 +164,23 @@ export function useProductEditorState() {
   }, [panels, width, syncPanelWidths]);
 
   const buildProductData = useCallback((): ProductData => {
-    const totalWidth = panelWidths.reduce((a, b) => a + b, 0);
+    const chainFields = chainState.toProductData();
     return {
       type,
       doorType: type === 'door' ? doorType : undefined,
       windowType: type === 'window' ? windowType : undefined,
-      width: totalWidth,
       height,
-      panels,
-      openingPanels,
-      openingDirections,
       frameColor,
       glassType,
       customGlassTint: glassType === 'custom-tint' ? customGlassTint : undefined,
-      panelDivisions,
-      openingPanes,
       unit,
-      panelWidths: panelWidths.slice(),
-      panelDivisionHeights: panelDivisionHeights.length > 0 ? panelDivisionHeights : undefined,
-      panelDivisionWidths: panelDivisionWidths.length > 0 ? panelDivisionWidths : undefined,
       shape,
-      removedSections: removedSections.length > 0 ? removedSections : undefined,
       render3D,
+      ...chainFields,
     };
   }, [
-    type, doorType, windowType, height, panels, openingPanels, openingDirections,
-    frameColor, glassType, customGlassTint, panelDivisions, openingPanes, unit,
-    panelWidths, panelDivisionHeights, panelDivisionWidths, shape, removedSections,
-    render3D,
+    type, doorType, windowType, height, frameColor, glassType, customGlassTint,
+    unit, shape, render3D, chainState,
   ]);
 
   const populateFromData = useCallback((d: ProductData) => {
@@ -216,7 +206,8 @@ export function useProductEditorState() {
     setShapeState(d.shape ? { ...d.shape } : { type: 'rectangle' });
     setActiveHingeSelector(null);
     setActiveTab('dimensions');
-  }, []);
+    chainState.loadChain(normalizeToChain(d));
+  }, [chainState]);
 
   const resetToDefaults = useCallback(() => {
     setShapeState(DEFAULTS.shape);
@@ -241,7 +232,8 @@ export function useProductEditorState() {
     setRender3D(DEFAULTS.render3D);
     setActiveHingeSelector(null);
     setActiveTab('dimensions');
-  }, []);
+    chainState.resetChain(DEFAULTS.width);
+  }, [chainState]);
 
   return {
     // Shape
