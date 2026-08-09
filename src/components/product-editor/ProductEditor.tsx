@@ -96,6 +96,10 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
           t.isContentEditable
           || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)
           || t.getAttribute('role') === 'slider'
+          // The chain canvas handles this itself whenever it holds focus, which
+          // is the normal case once a post is selected. This listener is only
+          // the fallback for when focus sits somewhere else entirely.
+          || t.closest?.('[data-chain-canvas]')
         )) return;
         e.preventDefault();
         // Nudge the BEND, not the stored interior angle -- they run in

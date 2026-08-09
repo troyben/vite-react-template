@@ -6,9 +6,10 @@
 // and an erase overlay.
 // ---------------------------------------------------------------------------
 
-import React, { useId, useCallback, useRef, useState } from 'react';
+import React, { useId, useCallback, useEffect, useRef, useState } from 'react';
 import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Chain } from './utils/chain-model';
+import { nudgeBend } from './utils/chain-model';
 import { layoutChain } from './utils/chain-projection';
 import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { renderSegment } from './layers/SegmentLayers';
@@ -115,6 +116,15 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   const [editingDim, setEditingDim] = useState<EditingDim | null>(null);
   const [editValue, setEditValue] = useState('');
 
+  // Take focus when a post is selected so the arrow keys have somewhere to
+  // land. Without this the shortcut depends on whatever the surrounding page
+  // last focused -- which is body on the template page but the portalled popup
+  // inside the quotation dialog, where the window-level fallback never sees
+  // the key.
+  useEffect(() => {
+    if (activeConnectorIndex != null) svgRef.current?.focus({ preventScroll: true });
+  }, [activeConnectorIndex]);
+
   const openDimEditor = (d: EditingDim) => {
     setEditingDim(d);
     setEditValue(String(d.value));
@@ -179,10 +189,23 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
   return (
     <svg
       ref={svgRef}
+      // Marks this subtree as owning the arrow-key shortcut, so ProductEditor's
+      // window-level fallback stands down rather than nudging a second time.
+      data-chain-canvas=""
+      tabIndex={-1}
       viewBox={`0 0 ${layout.totalW} ${layout.totalH}`}
       style={{
         ...(svgStyle ?? { width: '100%', height: '88vh' }),
         cursor: tools.cursor,
+        outline: 'none',
+      }}
+      onKeyDown={(e) => {
+        if (activeConnectorIndex == null || !onConnectorAngleChange) return;
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        const connector = chain.connectors[activeConnectorIndex];
+        if (!connector) return;
+        e.preventDefault();
+        onConnectorAngleChange(activeConnectorIndex, nudgeBend(connector.angle, e.key === 'ArrowUp' ? 1 : -1));
       }}
       preserveAspectRatio="xMidYMid meet"
       onMouseMove={(e) => {
@@ -229,6 +252,10 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
               setRemoveConnectorTarget(null);
             } else {
               onConnectorSelect?.(hitPost);
+              // Also grab focus here, not only when the selected index changes:
+              // re-clicking the post that is already selected has to bring the
+              // keyboard back after focus has wandered elsewhere.
+              svgRef.current?.focus({ preventScroll: true });
             }
             return;
           }
