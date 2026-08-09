@@ -4,6 +4,7 @@ import { worstOverlapFraction, OVERLAP_TOLERANCE } from './chain-overlap';
 import {
   DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT, MARGIN,
   CHAIN_INNER_DIM_OFFSET, CHAIN_INNER_LABEL_GAP, CHAIN_LEG_DIM_OFFSET, CHAIN_LEG_LABEL_GAP, CHAIN_DIM_REACH,
+  CHAIN_PANE_DIM_OFFSET, CHAIN_PANE_LABEL_GAP, CHAIN_LEG_DIM_OFFSET_PANES, chainDimReach,
 } from './types';
 
 const close = (a: number, b: number, tol = 0.01) => Math.abs(a - b) < tol;
@@ -393,6 +394,41 @@ describe('the chain dimension stack', () => {
       expect(Math.min(...corners.map((p) => p.x)) - CHAIN_DIM_REACH).toBeGreaterThanOrEqual(0);
       expect(Math.max(...corners.map((p) => p.x)) + CHAIN_DIM_REACH).toBeLessThanOrEqual(layout.totalW);
       expect(Math.max(...corners.map((p) => p.y)) + CHAIN_DIM_REACH).toBeLessThanOrEqual(layout.totalH);
+    }
+  });
+});
+
+describe('the pane dimension row', () => {
+  it('sits between the panel widths and the leg width', () => {
+    expect(CHAIN_INNER_DIM_OFFSET + CHAIN_INNER_LABEL_GAP).toBeLessThanOrEqual(CHAIN_PANE_DIM_OFFSET);
+    expect(CHAIN_PANE_DIM_OFFSET + CHAIN_PANE_LABEL_GAP).toBeLessThan(CHAIN_LEG_DIM_OFFSET_PANES);
+  });
+
+  it('costs extra reach only when a panel is actually subdivided', () => {
+    expect(chainDimReach(false)).toBe(CHAIN_DIM_REACH);
+    expect(chainDimReach(true)).toBeGreaterThan(chainDimReach(false));
+  });
+
+  it('widens the viewBox by exactly the extra reach it asks for', () => {
+    const conns = [{ angle: 90, postWidth: 100 }];
+    const plain = layoutChain([1000, 1000], 1000, conns, chainDimReach(false));
+    const paned = layoutChain([1000, 1000], 1000, conns, chainDimReach(true));
+    const extra = chainDimReach(true) - chainDimReach(false);
+    expect(paned.totalW - plain.totalW).toBeCloseTo(extra * 2, 6);
+  });
+
+  it('still fits the whole stack once a pane row is present', () => {
+    const reach = chainDimReach(true);
+    for (const bends of [[90], [-90], [-90, 90]]) {
+      const layout = layoutChain(
+        bends.map(() => 1000).concat([1000]), 1000,
+        bends.map((b) => ({ angle: 180 - b, postWidth: 100 })),
+        reach,
+      );
+      const corners = layout.segments.flatMap((s) => s.corners);
+      expect(Math.min(...corners.map((p) => p.x)) - reach).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...corners.map((p) => p.x)) + reach).toBeLessThanOrEqual(layout.totalW);
+      expect(Math.max(...corners.map((p) => p.y)) + reach).toBeLessThanOrEqual(layout.totalH);
     }
   });
 });

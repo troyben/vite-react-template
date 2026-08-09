@@ -337,11 +337,10 @@ export function buildShapeCanvasHandlers(
   };
 
   // onRowHeightChange: same reasoning as onWidthChange/onHeightChange above —
-  // it's the flat canvas's inline row-height editor, unreachable once a chain
-  // exists (SegmentLayers renders legs statically, with no inline editing).
-  // Left on flat state.
+  // The inline row-height editor, reachable on both canvases now that a chain
+  // leg draws its pane rows, so it writes through `view` to reach the right leg.
   const onRowHeightChange = (panelIndex: number, rowIndex: number, v: number) => {
-    const heights = [...state.panelDivisionHeights];
+    const heights = [...view.panelDivisionHeights];
     const entry = heights.find((h) => h.panelIndex === panelIndex);
     if (entry) {
       const newRowHeights = [...entry.rowHeights];
@@ -352,7 +351,7 @@ export function buildShapeCanvasHandlers(
         newRowHeights[neighborRow] = Math.max(newRowHeights[neighborRow] - delta, 1);
       }
       heights[heights.indexOf(entry)] = { ...entry, rowHeights: newRowHeights };
-      state.setPanelDivisionHeights(heights);
+      view.setPanelDivisionHeights(heights);
     }
   };
 

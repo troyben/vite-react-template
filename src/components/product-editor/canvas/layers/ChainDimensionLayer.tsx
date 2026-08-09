@@ -13,8 +13,13 @@ import React from 'react';
 import type { Point } from '../utils/types';
 import {
   DIM_COLOR, DIM_FONT, DIM_LABEL_GAP, DIM_OFFSET, MARKER_SIZE,
-  CHAIN_INNER_DIM_OFFSET, CHAIN_INNER_LABEL_GAP, CHAIN_LEG_DIM_OFFSET, CHAIN_LEG_LABEL_GAP,
+  CHAIN_INNER_DIM_OFFSET, CHAIN_INNER_LABEL_GAP, CHAIN_LEG_DIM_OFFSET, CHAIN_LEG_DIM_OFFSET_PANES,
+  CHAIN_LEG_LABEL_GAP, CHAIN_PANE_DIM_OFFSET, CHAIN_PANE_LABEL_GAP, CHAIN_ROW_DIM_GAP,
 } from '../utils/types';
+import {
+  getRowTopFrac, getRowBottomFrac, getColLeftFrac, getColRightFrac,
+  getRowRealHeight, getColRealWidth,
+} from '../utils/pane-fractions';
 
 /** Panel-width dimensions are quieter than the leg's own overall width. */
 const INNER_DIM_COLOR = '#9CA3C3';
@@ -52,6 +57,8 @@ export interface ChainDimensionProps {
   onLegWidthCommit?: (legIndex: number, widthMm: number) => void;
   /** Commit a new width for one panel of one leg. */
   onPanelWidthCommit?: (legIndex: number, panelIndex: number, widthMm: number) => void;
+  /** Commit a new height for one pane row of one leg. */
+  onRowHeightCommit?: (legIndex: number, panelIndex: number, rowIndex: number, heightMm: number) => void;
   /** Commit a new height. Shared by every leg in the chain. */
   onHeightCommit?: (heightMm: number) => void;
 }
@@ -84,7 +91,15 @@ function outwardNormal(a: Point, b: Point): Point {
 }
 
 export function renderChainDimensions(props: ChainDimensionProps): React.ReactNode {
-  const { chain, layout, heightMm, arrowLId, arrowRId, onEditDim, onLegWidthCommit, onPanelWidthCommit, onHeightCommit } = props;
+  const {
+    chain, layout, heightMm, arrowLId, arrowRId,
+    onEditDim, onLegWidthCommit, onPanelWidthCommit, onRowHeightCommit, onHeightCommit,
+  } = props;
+  // A pane column row sits between the panel widths and the leg's own width,
+  // so the outer row moves out whenever any leg has one.
+  const anyPaneColumns = chain.segments.some((seg) =>
+    (seg.panelDivisions ?? []).some((d) => d.verticalCount > 1));
+  const legDimOffset = anyPaneColumns ? CHAIN_LEG_DIM_OFFSET_PANES : CHAIN_LEG_DIM_OFFSET;
   const editable = Boolean(onEditDim);
   // Double-click to edit, the same gesture the flat canvas uses. A single
   // click has to stay free for selecting the leg underneath.
@@ -124,12 +139,12 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
         });
 
         const a = {
-          x: bl.x + n.x * CHAIN_LEG_DIM_OFFSET + u.x * startInset,
-          y: bl.y + n.y * CHAIN_LEG_DIM_OFFSET + u.y * startInset,
+          x: bl.x + n.x * legDimOffset + u.x * startInset,
+          y: bl.y + n.y * legDimOffset + u.y * startInset,
         };
         const b = {
-          x: br.x + n.x * CHAIN_LEG_DIM_OFFSET - u.x * endInset,
-          y: br.y + n.y * CHAIN_LEG_DIM_OFFSET - u.y * endInset,
+          x: br.x + n.x * legDimOffset - u.x * endInset,
+          y: br.y + n.y * legDimOffset - u.y * endInset,
         };
         const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         const deg = labelAngle(a, b);
@@ -192,9 +207,93 @@ export function renderChainDimensions(props: ChainDimensionProps): React.ReactNo
           });
         }
 
+        // Pane dimensions inside a subdivided panel: column widths along the
+        // sill, row heights vertical. Verticals survive the projection intact,
+        // so a row height can be drawn as a plain vertical line even on a leg
+        // that is sheared away from the viewer.
+        const paneDims: React.ReactNode[] = [];
+        const tl = corners[0];
+        const tr = corners[1];
+        const topAt = (t: number) => ({ x: tl.x + (tr.x - tl.x) * t, y: tl.y + (tr.y - tl.y) * t });
+        for (const div of segment.panelDivisions ?? []) {
+          const { panelIndex, horizontalCount, verticalCount } = div;
+          if (horizontalCount <= 1 && verticalCount <= 1) continue;
+          const before = widths.slice(0, panelIndex).reduce((sum, w) => sum + w, 0);
+          const pw = widths[panelIndex] ?? 0;
+          const tLeft = before / totalW;
+          const tRight = (before + pw) / totalW;
+
+          if (verticalCount > 1) {
+            for (let c = 0; c < verticalCount; c++) {
+              const cl = tLeft + getColLeftFrac(segment.panelDivisionWidths, panelIndex, c, verticalCount) * (tRight - tLeft);
+              const cr = tLeft + getColRightFrac(segment.panelDivisionWidths, panelIndex, c, verticalCount) * (tRight - tLeft);
+              if ((cr - cl) * sillLen < MIN_INNER_DIM_SPAN) continue;
+              const ca = along(cl, CHAIN_PANE_DIM_OFFSET);
+              const cb = along(cr, CHAIN_PANE_DIM_OFFSET);
+              const cmid = along((cl + cr) / 2, CHAIN_PANE_DIM_OFFSET + CHAIN_PANE_LABEL_GAP);
+              const cdeg = labelAngle(ca, cb);
+              paneDims.push(
+                <g key={`chain-dim-col-${i}-${panelIndex}-${c}`}>
+                  <line x1={ca.x} y1={ca.y} x2={cb.x} y2={cb.y}
+                    stroke={INNER_DIM_COLOR} strokeWidth={0.6} strokeDasharray="1.5,1.5"
+                    markerStart={`url(#${arrowLId})`} markerEnd={`url(#${arrowRId})`} />
+                  <text x={cmid.x} y={cmid.y}
+                    transform={`rotate(${cdeg}, ${cmid.x}, ${cmid.y})`}
+                    fill={INNER_DIM_COLOR} fontSize={INNER_DIM_FONT - 1} fontWeight={700}
+                    textAnchor="middle" dominantBaseline="middle">
+                    {getColRealWidth(segment.panelDivisionWidths, widths, panelIndex, c, verticalCount)}
+                  </text>
+                </g>,
+              );
+            }
+          }
+
+          if (horizontalCount > 1) {
+            // Row heights hang off the panel's right edge, over the glass of
+            // whatever is next -- except when that edge is the leg's own end
+            // and another leg is joined there, where the space belongs to the
+            // corner post. Flip inside the panel instead.
+            const atLegEnd = panelIndex === widths.length - 1;
+            const hasNeighbourRight = i < chain.segments.length - 1;
+            const inward = atLegEnd && hasNeighbourRight;
+            const edgeTop = topAt(tRight);
+            const edgeBottom = along(tRight, 0);
+            const dimX = edgeTop.x + (inward ? -CHAIN_ROW_DIM_GAP : CHAIN_ROW_DIM_GAP);
+            const labelX = dimX + (inward ? -7 : 7);
+            const panelH = edgeBottom.y - edgeTop.y;
+            for (let r = 0; r < horizontalCount; r++) {
+              const rowTop = edgeTop.y + getRowTopFrac(segment.panelDivisionHeights, panelIndex, r, horizontalCount) * panelH;
+              const rowBottom = edgeTop.y + getRowBottomFrac(segment.panelDivisionHeights, panelIndex, r, horizontalCount) * panelH;
+              if (rowBottom - rowTop < MIN_INNER_DIM_SPAN) continue;
+              const rowMidY = (rowTop + rowBottom) / 2;
+              const realH = getRowRealHeight(segment.panelDivisionHeights, panelIndex, r, horizontalCount, heightMm);
+              paneDims.push(
+                <g key={`chain-dim-row-${i}-${panelIndex}-${r}`}>
+                  <line x1={dimX} y1={rowTop} x2={dimX} y2={rowBottom}
+                    stroke={INNER_DIM_COLOR} strokeWidth={0.6} strokeDasharray="1.5,1.5"
+                    markerStart={`url(#${arrowLId})`} markerEnd={`url(#${arrowRId})`} />
+                  <text x={labelX} y={rowMidY}
+                    transform={`rotate(-90, ${labelX}, ${rowMidY})`}
+                    fill={INNER_DIM_COLOR} fontSize={INNER_DIM_FONT - 1} fontWeight={700}
+                    textAnchor="middle" dominantBaseline="middle"
+                    {...editProps(() => onEditDim?.({
+                      key: `chain-rh-${i}-${panelIndex}-${r}`,
+                      x: labelX, y: rowMidY, angle: -90,
+                      value: Math.round(realH),
+                      onCommit: (v) => onRowHeightCommit?.(i, panelIndex, r, v),
+                    }))}>
+                    {realH}
+                  </text>
+                </g>,
+              );
+            }
+          }
+        }
+
         return (
           <g key={`chain-dim-w-${i}`}>
             {panelDims}
+            {paneDims}
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               stroke={DIM_COLOR} strokeWidth={1}
               markerStart={`url(#${arrowLId})`} markerEnd={`url(#${arrowRId})`} />

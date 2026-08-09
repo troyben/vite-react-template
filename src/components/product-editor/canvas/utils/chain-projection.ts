@@ -24,15 +24,15 @@ import { OVERLAP_TOLERANCE, worstOverlapFraction } from './chain-overlap';
 
 /**
  * Height dimension (line, label, half a rotated glyph) or a leg's own stack of
- * width dimensions, whichever reaches further -- a leg whose sill slants can
- * throw its dimensions out sideways rather than downward.
+ * dimensions, whichever reaches further -- a leg whose sill slants throws its
+ * whole stack out sideways rather than downward.
  */
-const GUTTER_LEFT = MARGIN + Math.max(DIM_OFFSET + DIM_LABEL_GAP + DIM_FONT / 2, CHAIN_DIM_REACH);
+const gutterLeft = (reach: number) =>
+  MARGIN + Math.max(DIM_OFFSET + DIM_LABEL_GAP + DIM_FONT / 2, reach);
 /** Angle badge: it sits above the topmost post and is DIM_FONT + padding tall. */
 const GUTTER_TOP = MARGIN + DIM_OFFSET * 0.6 + DIM_FONT + 6;
-/** A slanted sill pushes its whole dimension stack sideways, not just down. */
-const GUTTER_RIGHT = MARGIN + CHAIN_DIM_REACH;
-const GUTTER_BOTTOM = MARGIN + Math.max(BOTTOM_LABEL_SPACE, CHAIN_DIM_REACH);
+const gutterRight = (reach: number) => MARGIN + reach;
+const gutterBottom = (reach: number) => MARGIN + Math.max(BOTTOM_LABEL_SPACE, reach);
 
 /** Depth foreshortening. 0.5 is the classic "cabinet" projection. */
 export const DEPTH_FACTOR = 0.5;
@@ -345,7 +345,16 @@ export function layoutChain(
   widthsMm: number[],
   heightMm: number,
   connectors: Array<{ angle: number; postWidth: number }>,
+  /**
+   * How far the dimension stack reaches from a leg's sill. Grows when any panel
+   * is subdivided, because that adds a row between the panel widths and the
+   * leg's own width. Callers that do not draw dimensions can leave it.
+   */
+  dimReach: number = CHAIN_DIM_REACH,
 ): ChainLayout {
+  const GUTTER_LEFT = gutterLeft(dimReach);
+  const GUTTER_RIGHT = gutterRight(dimReach);
+  const GUTTER_BOTTOM = gutterBottom(dimReach);
   const view = solveView(widthsMm, heightMm, connectors);
   const plan = walkChain(widthsMm, connectors, view.rotationRad);
   const scale = BASE_DRAW_HEIGHT / heightMm;

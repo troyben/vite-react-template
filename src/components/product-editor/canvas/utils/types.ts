@@ -37,10 +37,31 @@ export const DIM_LABEL_GAP = 11;        // gap between dimension line and label 
 // ---------------------------------------------------------------------------
 export const CHAIN_INNER_DIM_OFFSET = 12;   // panel-width line, from the sill
 export const CHAIN_INNER_LABEL_GAP = 9;     // its label, further out again
+export const CHAIN_PANE_DIM_OFFSET = 30;    // pane column-width line
+export const CHAIN_PANE_LABEL_GAP = 8;      // its label
 export const CHAIN_LEG_DIM_OFFSET = 32;     // the leg's own width line
+/** Where the leg's width line goes when a pane row is occupying 30..38. */
+export const CHAIN_LEG_DIM_OFFSET_PANES = 48;
 export const CHAIN_LEG_LABEL_GAP = 9;       // its label, outside the line
-/** Furthest any chain dimension reaches from a leg's sill. */
-export const CHAIN_DIM_REACH = CHAIN_LEG_DIM_OFFSET + CHAIN_LEG_LABEL_GAP + DIM_FONT;
+
+/**
+ * Furthest any dimension reaches from a leg's sill.
+ *
+ * Depends on whether a pane column row is present, because that row sits
+ * between the panel widths and the leg's own width and pushes the outermost
+ * row further out. The viewBox is sized from this, so a drawing with no
+ * subdivided panels keeps the tighter gutter rather than paying for a row it
+ * never draws.
+ */
+export function chainDimReach(hasPaneColumns: boolean): number {
+  const legOffset = hasPaneColumns ? CHAIN_LEG_DIM_OFFSET_PANES : CHAIN_LEG_DIM_OFFSET;
+  return legOffset + CHAIN_LEG_LABEL_GAP + DIM_FONT;
+}
+
+/** The reach of a chain with no subdivided panels. */
+export const CHAIN_DIM_REACH = chainDimReach(false);
+/** Vertical pane row-height dimensions sit this far right of a panel edge. */
+export const CHAIN_ROW_DIM_GAP = 10;
 
 // Frame
 export const FRAME_STROKE = 4;

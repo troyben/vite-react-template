@@ -11,6 +11,7 @@ import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Chain } from './utils/chain-model';
 import { nudgeBend } from './utils/chain-model';
 import { layoutChain } from './utils/chain-projection';
+import { chainDimReach } from './utils/types';
 import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { renderSegment } from './layers/SegmentLayers';
 import { renderChainDimensions } from './layers/ChainDimensionLayer';
@@ -160,10 +161,16 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
     effectiveFrameColor, effectiveFrameStroke, effectiveDividerStroke,
   } = getPrintModeRenderColors(printMode, frameColor, glassType, uid);
 
+  // A subdivided panel adds a pane-column row to every sill's dimension stack,
+  // which pushes the outermost row further out and needs more gutter.
+  const hasPaneColumns = chain.segments.some((s) =>
+    (s.panelDivisions ?? []).some((d) => d.verticalCount > 1));
+
   const layout = layoutChain(
     chain.segments.map((s) => s.width),
     height,
     chain.connectors.map((c) => ({ angle: c.angle, postWidth: c.postWidth })),
+    chainDimReach(hasPaneColumns),
   );
 
   // Overall bounding box of every leg's projected corners -- the chain
@@ -336,6 +343,8 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         onLegWidthCommit: (legIndex, widthMm) => segmentTools?.(legIndex).onWidthChange?.(widthMm),
         onPanelWidthCommit: (legIndex, panelIndex, widthMm) =>
           segmentTools?.(legIndex).onPanelWidthChange?.(panelIndex, widthMm),
+        onRowHeightCommit: (legIndex, panelIndex, rowIndex, heightMm) =>
+          segmentTools?.(legIndex).onRowHeightChange?.(panelIndex, rowIndex, heightMm),
         onHeightCommit: onHeightChange,
       })}
 
