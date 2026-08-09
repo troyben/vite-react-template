@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import type { Point } from './types';
-import { MARGIN, BOTTOM_LABEL_SPACE, DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT } from './types';
+import { MARGIN, BOTTOM_LABEL_SPACE, DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT, CHAIN_DIM_REACH } from './types';
 import { OVERLAP_TOLERANCE, worstOverlapFraction } from './chain-overlap';
 
 // ---------------------------------------------------------------------------
@@ -22,13 +22,17 @@ import { OVERLAP_TOLERANCE, worstOverlapFraction } from './chain-overlap';
 // Each gutter is MARGIN plus whatever that side's annotation actually reaches.
 // ---------------------------------------------------------------------------
 
-/** Height dimension: line, then label, then half a rotated glyph. */
-const GUTTER_LEFT = MARGIN + DIM_OFFSET + DIM_LABEL_GAP + DIM_FONT / 2;
+/**
+ * Height dimension (line, label, half a rotated glyph) or a leg's own stack of
+ * width dimensions, whichever reaches further -- a leg whose sill slants can
+ * throw its dimensions out sideways rather than downward.
+ */
+const GUTTER_LEFT = MARGIN + Math.max(DIM_OFFSET + DIM_LABEL_GAP + DIM_FONT / 2, CHAIN_DIM_REACH);
 /** Angle badge: it sits above the topmost post and is DIM_FONT + padding tall. */
 const GUTTER_TOP = MARGIN + DIM_OFFSET * 0.6 + DIM_FONT + 6;
-/** A slanted sill pushes its dimension line sideways by up to the full offset. */
-const GUTTER_RIGHT = MARGIN + DIM_OFFSET;
-const GUTTER_BOTTOM = MARGIN + BOTTOM_LABEL_SPACE;
+/** A slanted sill pushes its whole dimension stack sideways, not just down. */
+const GUTTER_RIGHT = MARGIN + CHAIN_DIM_REACH;
+const GUTTER_BOTTOM = MARGIN + Math.max(BOTTOM_LABEL_SPACE, CHAIN_DIM_REACH);
 
 /** Depth foreshortening. 0.5 is the classic "cabinet" projection. */
 export const DEPTH_FACTOR = 0.5;

@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { walkChain, projectPlanPoint, layoutChain, solveView, narrowestFaceRatio, MIN_FACE_RATIO, MAX_VIEW_TURN_DEG } from './chain-projection';
 import { worstOverlapFraction, OVERLAP_TOLERANCE } from './chain-overlap';
-import { DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT, MARGIN } from './types';
+import {
+  DIM_OFFSET, DIM_LABEL_GAP, DIM_FONT, MARGIN,
+  CHAIN_INNER_DIM_OFFSET, CHAIN_INNER_LABEL_GAP, CHAIN_LEG_DIM_OFFSET, CHAIN_LEG_LABEL_GAP, CHAIN_DIM_REACH,
+} from './types';
 
 const close = (a: number, b: number, tol = 0.01) => Math.abs(a - b) < tol;
 
@@ -357,4 +360,39 @@ describe('the matrix puts a leg where its corners say it is', () => {
       }
     });
   }
+});
+
+describe('the chain dimension stack', () => {
+  // Two rows share each sill: panel widths, then the leg's own width. They are
+  // stacked by distance along the sill's normal, so the order has to hold as
+  // numbers -- on a slanted leg you cannot fall back on screen y to separate
+  // them.
+  it('keeps the panel row strictly inside the leg row', () => {
+    expect(CHAIN_INNER_DIM_OFFSET).toBeGreaterThan(0);
+    expect(CHAIN_INNER_DIM_OFFSET + CHAIN_INNER_LABEL_GAP).toBeLessThan(CHAIN_LEG_DIM_OFFSET);
+  });
+
+  it('reports a reach that covers its own outermost label', () => {
+    expect(CHAIN_DIM_REACH).toBeGreaterThanOrEqual(
+      CHAIN_LEG_DIM_OFFSET + CHAIN_LEG_LABEL_GAP + DIM_FONT / 2,
+    );
+  });
+
+  it('leaves room for the whole stack on every side', () => {
+    const configs: Array<[number[], number[]]> = [
+      [[1000, 1000], [90]],
+      [[1000, 1000], [-90]],
+      [[1000, 900, 1000], [-90, 90]],
+      [[800, 1200, 800], [60, 60]],
+    ];
+    for (const [widths, bends] of configs) {
+      const layout = layoutChain(widths, 1000, bends.map((b) => ({ angle: 180 - b, postWidth: 100 })));
+      const corners = layout.segments.flatMap((s) => s.corners);
+      // A sill's normal can point diagonally, so the stack can be thrown out
+      // sideways as far as it is thrown downward.
+      expect(Math.min(...corners.map((p) => p.x)) - CHAIN_DIM_REACH).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...corners.map((p) => p.x)) + CHAIN_DIM_REACH).toBeLessThanOrEqual(layout.totalW);
+      expect(Math.max(...corners.map((p) => p.y)) + CHAIN_DIM_REACH).toBeLessThanOrEqual(layout.totalH);
+    }
+  });
 });

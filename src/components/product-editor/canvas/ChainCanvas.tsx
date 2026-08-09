@@ -334,6 +334,8 @@ const ChainCanvas: React.FC<ChainCanvasProps> = ({
         // Editing is only offered when there is somewhere to send the result.
         onEditDim: segmentTools || onHeightChange ? openDimEditor : undefined,
         onLegWidthCommit: (legIndex, widthMm) => segmentTools?.(legIndex).onWidthChange?.(widthMm),
+        onPanelWidthCommit: (legIndex, panelIndex, widthMm) =>
+          segmentTools?.(legIndex).onPanelWidthChange?.(panelIndex, widthMm),
         onHeightCommit: onHeightChange,
       })}
 
