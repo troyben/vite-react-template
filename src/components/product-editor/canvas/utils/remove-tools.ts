@@ -13,6 +13,9 @@ import { getRowTopFrac, getRowBottomFrac, getColLeftFrac, getColRightFrac } from
 import type { CanvasTool, PlacedArc } from './canvas-tools';
 import type { SectionId } from './section-outline';
 import { isSectionRemoved } from './section-outline';
+import type { ChainLayout } from './chain-projection';
+import type { Chain } from './chain-model';
+import { connectorRemovalRange } from './chain-model';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,7 +28,8 @@ export type RemovableItem =
   | { type: 'panel-opening'; panelIndex: number }
   | { type: 'pane-opening'; panelIndex: number; rowIndex: number; colIndex: number }
   | { type: 'arc'; arcId: string }
-  | { type: 'section'; panelIndex: number; rowIndex: number; colIndex: number };
+  | { type: 'section'; panelIndex: number; rowIndex: number; colIndex: number }
+  | { type: 'connector'; connectorIndex: number };
 
 // ---------------------------------------------------------------------------
 // Context for hit detection
@@ -378,5 +382,56 @@ export function getHighlightGeometry(
         fill: '#ef4444', opacity: 0.15, stroke: '#ef4444', strokeWidth: 1, strokeOpacity: 0.3,
       });
     }
+    case 'connector':
+      // Chain corner posts are highlighted by getConnectorCascadeHighlight,
+      // which needs the whole chain (to compute the cascade), not just this
+      // item -- ShapeCanvas's single-item highlight path never sees this case.
+      return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Chain corner-post removal (erase tool cascade)
+// ---------------------------------------------------------------------------
+
+/** Index of the corner post under the cursor, or null. Draw-space coords. */
+export function findConnectorAtPoint(layout: ChainLayout, px: number, py: number): number | null {
+  for (let i = 0; i < layout.posts.length; i++) {
+    const xs = layout.posts[i].corners.map((p) => p.x);
+    const ys = layout.posts[i].corners.map((p) => p.y);
+    if (px >= Math.min(...xs) - HIT_TOLERANCE && px <= Math.max(...xs) + HIT_TOLERANCE
+      && py >= Math.min(...ys) && py <= Math.max(...ys)) {
+      return i;
+    }
+  }
+  return null;
+}
+
+/**
+ * Red overlay covering the post plus every segment and post that would go with
+ * it, so the whole doomed set shades before the click lands.
+ */
+export function getConnectorCascadeHighlight(
+  chain: Chain,
+  layout: ChainLayout,
+  connectorIndex: number,
+): React.ReactNode {
+  const range = connectorRemovalRange(chain, connectorIndex);
+  const poly = (corners: Array<{ x: number; y: number }>, key: string) =>
+    React.createElement('polygon', {
+      key,
+      points: corners.map((p) => `${p.x},${p.y}`).join(' '),
+      fill: '#ef4444', opacity: 0.25, stroke: '#ef4444', strokeWidth: 2, strokeOpacity: 0.6,
+    });
+
+  return React.createElement(
+    React.Fragment,
+    null,
+    ...range.segmentIndices
+      .filter((i) => layout.segments[i])
+      .map((i) => poly(layout.segments[i].corners, `doomed-seg-${i}`)),
+    ...range.connectorIndices
+      .filter((i) => layout.posts[i])
+      .map((i) => poly(layout.posts[i].corners, `doomed-post-${i}`)),
+  );
 }

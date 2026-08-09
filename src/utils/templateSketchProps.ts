@@ -1,5 +1,6 @@
 import type { ProductData } from '@/components/product-editor/types';
 import type { ShapeCanvasProps } from '@/components/product-editor/canvas/ShapeCanvas';
+import { normalizeToChain } from '@/components/product-editor/canvas/utils/chain-model';
 
 /**
  * Maps a ProductData object (from a SketchTemplate's sketchData) to the props
@@ -33,6 +34,7 @@ export function extractShapeCanvasProps(
     removedSections: sketchData.removedSections,
     render3D: sketchData.render3D,
     printMode: opts.printMode,
+    chain: normalizeToChain(sketchData),
   };
 }
 

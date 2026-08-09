@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import type { OpeningDirection, ProductData } from '../components/product-editor/types';
+import { bendFromInterior, formatBend } from '@/components/product-editor/canvas/utils/chain-model';
 import { getFrameColorName, getGlassTypeName, approximateColorName } from './pdf/colorNames';
 
 /**
@@ -78,6 +79,15 @@ export function summarizeOpeningTypes(sketch: ProductData): string {
  *   4. Opens: {comma-separated opening kinds}   (omitted when there are none)
  */
 export function buildSketchDescription(data: ProductData): string {
+  const connectors = data.connectors ?? [];
+  const segments = data.segments ?? [];
+  if (connectors.length > 0 && segments.length > 1) {
+    const widths = segments.map((s) => Math.round(s.width)).join('+');
+    const angles = connectors.map((c) => formatBend(bendFromInterior(c.angle))).join(', ');
+    const kind = data.type === 'door' ? 'door' : 'window';
+    return `Corner ${kind} ${widths}mm x ${Math.round(data.height)}mm @ ${angles}`;
+  }
+
   const lines: string[] = [];
 
   lines.push(`${data.width} x ${data.height} ${data.unit}`);

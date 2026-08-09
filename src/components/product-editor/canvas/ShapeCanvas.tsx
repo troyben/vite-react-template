@@ -1,16 +1,17 @@
-import React, { useId, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useId, useState, useRef, useCallback } from 'react';
 import type { ShapeConfig } from '@/components/product-editor/types';
+import type { Chain } from './utils/chain-model';
+import ChainCanvas from './ChainCanvas';
+import type { SegmentToolHandlers } from './useChainTools';
 
 // Utils
 import {
   MARGIN,
   BOTTOM_LABEL_SPACE,
   DIM_COLOR,
-  FRAME_STROKE,
-  DIVIDER_STROKE,
   MARKER_SIZE,
 } from './utils/types';
-import { getGlassSvgDefs, getGlassSvgFill, getGlassSvgFilter, getGlassSvgHighlight } from './utils/glass-color';
+import { getGlassSvgDefs, getPrintModeRenderColors } from './utils/glass-color';
 import { getRealVertices, scaleVertices, getShapePath } from './utils/shape-path';
 import { getPanelDividers, getPanelPolygonPoints, getPanelCenter } from './utils/panels';
 import { getOpeningIndicator } from './utils/opening-indicators';
@@ -23,6 +24,7 @@ import { findPanelAtPoint, getDirectionFromPosition, computeLinePreview, compute
 import type { CanvasGeometry } from './utils/tool-interactions';
 import { findRemovableAtPoint, findSameKindAtPoint, getHighlightGeometry } from './utils/remove-tools';
 import type { RemovableItem, RemoveContext } from './utils/remove-tools';
+import { boundsOf, edgeAtPoint, getConnectorGhost } from './utils/connector-tool';
 import type { SectionId } from './utils/section-outline';
 import { computeSectionOutlinePath, isSectionRemoved, parseOutlineVertices, svgVertsToReal, mergeCollinearVertices, computeEffectiveBounds } from './utils/section-outline';
 
@@ -32,6 +34,8 @@ import type { PaneLayersProps } from './layers/PaneLayers';
 import { renderOuterDimensions, renderArchDimensions, renderBottomDimension, renderInnerDimensions } from './layers/DimensionLayers';
 import type { EditingDim, DimensionLayersProps } from './layers/DimensionLayers';
 import { renderToolPreview } from './layers/ToolPreviewLayer';
+import { renderConnectorGhost } from './layers/ConnectorGhostLayer';
+import InlineDimensionInput from './layers/InlineDimensionInput';
 
 // Re-export RemovableItem for consumers that import it from here
 export type { RemovableItem } from './utils/remove-tools';
@@ -93,6 +97,21 @@ export interface ShapeCanvasProps {
   render3D?: boolean;
   /** Render with grayscale palette + thicker strokes for B&W PDF printing. */
   printMode?: boolean;
+  /** Corner-window chain. When absent or single-segment, the flat path is used. */
+  chain?: Chain;
+  activeSegmentIndex?: number;
+  activeConnectorIndex?: number | null;
+  onSegmentSelect?: (index: number) => void;
+  onConnectorSelect?: (index: number | null) => void;
+  onConnectorAngleChange?: (index: number, angle: number) => void;
+  onConnectorRemove?: (index: number) => void;
+  onSegmentAttach?: (end: 'left' | 'right', width: number) => void;
+  /**
+   * Canvas callbacks bound to a given leg of a chain. Only the chain path uses
+   * it — the flat path has a single shape and takes the individual callbacks
+   * above unchanged.
+   */
+  segmentTools?: (segmentIndex: number) => SegmentToolHandlers;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,12 +160,16 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   onSectionRemove,
   render3D = false,
   printMode = false,
+  chain,
+  activeSegmentIndex,
+  activeConnectorIndex,
+  onSegmentSelect,
+  onConnectorSelect,
+  onConnectorAngleChange,
+  onConnectorRemove,
+  onSegmentAttach,
+  segmentTools,
 }) => {
-  // Print mode overrides for B&W PDF: gray glass + dark frame, ignoring the
-  // user-chosen colours.
-  const PRINT_GLASS = '#bdbdbd';
-  const PRINT_FRAME = '#333333';
-  const PRINT_FRAME_STROKE_MULT = 1.4;
   // Unique prefix for SVG defs IDs
   const uid = useId().replace(/:/g, '');
   const arrowLId = `sc-arrowL-${uid}`;
@@ -156,7 +179,6 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   // --- Inline dimension editing state ---
   const [editingDim, setEditingDim] = useState<EditingDim | null>(null);
   const [editValue, setEditValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // --- Tool interaction state ---
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
@@ -165,6 +187,9 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   // --- Remove tool state ---
   const [removeTarget, setRemoveTarget] = useState<RemovableItem | null>(null);
   const [rightClickTarget, setRightClickTarget] = useState<RemovableItem | null>(null);
+
+  // --- Connector tool state ---
+  const [connectorEdge, setConnectorEdge] = useState<'left' | 'right' | null>(null);
 
   /** Convert mouse event coords to SVG viewBox coords */
   const getSVGPoint = useCallback((e: React.MouseEvent): { x: number; y: number } | null => {
@@ -179,12 +204,60 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     return { x: svgPt.x, y: svgPt.y };
   }, []);
 
-  // Select all text when the input appears
-  useEffect(() => {
-    if (editingDim && inputRef.current) {
-      inputRef.current.select();
+  // The chain branch below is a conditional return inside this same component
+  // instance, not a remount -- so this flat-path hover/remove state would
+  // otherwise sit dormant while ChainCanvas is rendered and resurface stale
+  // (a phantom highlight, or a click that deletes the wrong thing) once the
+  // last connector is removed and the flat path resumes. Clear it the moment
+  // the chain path takes over, adjusted during render (not in an effect, to
+  // avoid an extra cascading render) per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  // It then stays null for as long as this flat <svg> isn't mounted to update it.
+  const chainActive = Boolean(chain && chain.connectors.length > 0);
+  const [wasChainActive, setWasChainActive] = useState(chainActive);
+  if (chainActive !== wasChainActive) {
+    setWasChainActive(chainActive);
+    if (chainActive) {
+      setHoverPos(null);
+      setRemoveTarget(null);
+      setRightClickTarget(null);
+      setConnectorEdge(null);
     }
-  }, [editingDim]);
+  }
+
+  // --- Chain render path -----------------------------------------------------
+  // Only taken once a connector exists. A single-segment product falls through
+  // to the original flat renderer below, unchanged. ChainCanvas owns its own
+  // <svg>/viewBox/defs, so this is a pure delegation with no shared state.
+  if (chain && chain.connectors.length > 0) {
+    return (
+      <ChainCanvas
+        chain={chain}
+        shape={shape}
+        height={height}
+        frameColor={frameColor}
+        glassType={glassType}
+        customGlassTint={customGlassTint}
+        isSliding={isSliding}
+        render3D={render3D}
+        printMode={printMode}
+        activeSegmentIndex={activeSegmentIndex}
+        activeConnectorIndex={activeConnectorIndex}
+        svgStyle={svgStyle}
+        activeTool={activeTool}
+        onSegmentAttach={onSegmentAttach}
+        onSegmentSelect={onSegmentSelect}
+        onConnectorSelect={onConnectorSelect}
+        lineOrientation={lineOrientation}
+        lineTarget={lineTarget}
+        customArcs={customArcs}
+        segmentTools={segmentTools}
+        onHeightChange={onHeightChange}
+        onConnectorAngleChange={onConnectorAngleChange}
+        onConnectorRemove={onConnectorRemove}
+      />
+    );
+  }
 
   function commitEdit() {
     if (!editingDim) return;
@@ -216,6 +289,11 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
   const realVerts = getRealVertices(shape, width, height);
   const svgVerts = scaleVertices(realVerts, width, height, drawW, drawH);
 
+  // Bounding box of the shape's own vertices -- used by the connector tool for
+  // both edge hit-testing and ghost sizing. Computed once per render rather
+  // than at each of its two call sites.
+  const shapeBounds = boundsOf(svgVerts);
+
   // Shape outline path
   const shapePath = getShapePath(shape, svgVerts, drawW, drawH, width, height);
 
@@ -233,13 +311,13 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
     ? svgVertsToReal(effectiveSvgVerts, drawW, drawH, width, height)
     : undefined;
 
-  // Glass fill references — overridden in print mode to grayscale.
-  const glassFill = printMode ? PRINT_GLASS : getGlassSvgFill(glassType, uid);
-  const glassFilter = printMode ? undefined : getGlassSvgFilter(glassType, uid);
-  const glassHighlight = printMode ? undefined : getGlassSvgHighlight(glassType, uid);
-  const effectiveFrameColor = printMode ? PRINT_FRAME : frameColor;
-  const effectiveFrameStroke = printMode ? FRAME_STROKE * PRINT_FRAME_STROKE_MULT : FRAME_STROKE;
-  const effectiveDividerStroke = printMode ? DIVIDER_STROKE * PRINT_FRAME_STROKE_MULT : DIVIDER_STROKE;
+  // Glass fill references — overridden in print mode to grayscale. Shared
+  // with ChainCanvas via getPrintModeRenderColors so the two paths can't
+  // silently diverge.
+  const {
+    glassFill, glassFilter, glassHighlight,
+    effectiveFrameColor, effectiveFrameStroke, effectiveDividerStroke,
+  } = getPrintModeRenderColors(printMode, frameColor, glassType, uid);
 
   // Panel dividers
   const dividers = getPanelDividers(shape, panels, panelWidths, svgVerts, drawW, drawH, width, height);
@@ -343,6 +421,11 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       dispatchRemoval(removeTarget);
       setRemoveTarget(null);
     }
+
+    if (activeTool === 'connector' && connectorEdge && onSegmentAttach) {
+      onSegmentAttach(connectorEdge, width);
+      setConnectorEdge(null);
+    }
   }
 
   // --- Right-click handler for same-kind removal ---
@@ -382,6 +465,8 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
           setHoverPos(pt);
           if (activeTool === 'remove') {
             setRemoveTarget(findRemovableAtPoint(removeCtx, pt.x, pt.y));
+          } else if (activeTool === 'connector') {
+            setConnectorEdge(edgeAtPoint(shapeBounds, pt.x, pt.y));
           } else {
             setRightClickTarget(findSameKindAtPoint(removeCtx, pt.x, pt.y, activeTool, lineTarget));
           }
@@ -391,6 +476,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         setHoverPos(null);
         setRemoveTarget(null);
         setRightClickTarget(null);
+        setConnectorEdge(null);
       }}
       onClick={(e) => {
         if (!activeTool || !hoverPos) return;
@@ -543,35 +629,23 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
         })}</g>
       )}
 
+      {/* --- Layer 9b: Connector tool ghost preview --- */}
+      {activeTool === 'connector' && connectorEdge &&
+        renderConnectorGhost(getConnectorGhost(shapeBounds, connectorEdge, drawW))}
+
       {/* --- Layer 10: Remove / right-click highlight overlay --- */}
       {activeTool === 'remove' && removeTarget && <g key="remove-highlight">{getHighlightGeometry(removeTarget, removeCtx)}</g>}
       {activeTool && activeTool !== 'remove' && rightClickTarget && <g key="rclick-highlight">{getHighlightGeometry(rightClickTarget, removeCtx)}</g>}
 
       {/* --- Inline dimension editor overlay --- */}
       {editingDim && (
-        <foreignObject
-          x={editingDim.x - 25} y={editingDim.y - 8} width={50} height={16}
-          transform={editingDim.angle ? `rotate(${editingDim.angle}, ${editingDim.x}, ${editingDim.y})` : undefined}
-        >
-          <input
-            ref={inputRef}
-            type="number"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitEdit();
-              else if (e.key === 'Escape') setEditingDim(null);
-            }}
-            onBlur={commitEdit}
-            autoFocus
-            style={{
-              width: '100%', height: '100%', fontSize: '7px',
-              textAlign: 'center' as const, border: '1px solid #7E88C3',
-              borderRadius: '2px', outline: 'none', background: 'white',
-              padding: '0 2px', boxSizing: 'border-box' as const,
-            }}
-          />
-        </foreignObject>
+        <InlineDimensionInput
+          editingDim={editingDim}
+          value={editValue}
+          onValueChange={setEditValue}
+          onCommit={commitEdit}
+          onCancel={() => setEditingDim(null)}
+        />
       )}
     </svg>
   );

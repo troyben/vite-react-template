@@ -2,7 +2,7 @@
 // Canvas tool types and helpers
 // ---------------------------------------------------------------------------
 
-export type CanvasTool = 'handle' | 'line' | 'arc' | 'remove' | null;
+export type CanvasTool = 'handle' | 'line' | 'arc' | 'remove' | 'connector' | null;
 
 export interface PlacedArc {
   id: string;

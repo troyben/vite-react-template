@@ -1,3 +1,5 @@
+import type { SectionId } from '@/components/product-editor/canvas/utils/section-outline';
+
 export type OpeningDirection = 'left' | 'right' | 'top' | 'bottom';
 export type Unit = 'cm' | 'mm' | 'm';
 export type GlassType = 'clear' | 'frosted' | 'custom-tint';
@@ -15,6 +17,40 @@ export interface ShapeConfig {
   peakPosition?: number;
   /** Gable: apex rise above the side walls (mm). Total height includes it. */
   gableHeight?: number;
+}
+
+/**
+ * One leg of a corner-window chain. Segment 0 mirrors the legacy top-level
+ * ProductData fields so old payloads keep working; attached segments are
+ * always rectangles.
+ */
+export interface Segment {
+  id: string;
+  width: number;
+  panels: number;
+  panelWidths: number[];
+  panelDivisions?: Array<{ panelIndex: number; horizontalCount: number; verticalCount: number }>;
+  panelDivisionHeights?: Array<{ panelIndex: number; rowHeights: number[] }>;
+  panelDivisionWidths?: Array<{ panelIndex: number; colWidths: number[] }>;
+  openingPanels?: number[];
+  openingDirections?: Record<number, OpeningDirection>;
+  openingPanes?: Array<{
+    panelIndex: number;
+    rowIndex: number;
+    colIndex: number;
+    openingDirection?: OpeningDirection;
+    openingType?: 'hinged' | 'sliding';
+  }>;
+  removedSections?: SectionId[];
+}
+
+/** Joins segments[i] to segments[i+1]. */
+export interface Connector {
+  id: string;
+  /** Interior angle in degrees. Integer, 1-359. 180 is straight. */
+  angle: number;
+  /** Aluminium corner post width in mm. */
+  postWidth: number;
 }
 
 export interface ProductData {
@@ -49,6 +85,9 @@ export interface ProductData {
   shape?: ShapeConfig;
   removedSections?: Array<{ panelIndex: number; rowIndex: number; colIndex: number }>;
   render3D?: boolean;
+  segments?: Segment[];
+  connectors?: Connector[];
+  rootSegmentIndex?: number;
 }
 
 export interface ProductSketchProps {

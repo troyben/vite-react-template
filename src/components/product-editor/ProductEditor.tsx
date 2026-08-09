@@ -22,8 +22,9 @@ import OpeningsTab from '@/components/product-editor/tabs/OpeningsTab';
 import PanelsTab from '@/components/product-editor/tabs/PanelsTab';
 import type { CanvasTool, PlacedArc } from '@/components/product-editor/canvas/utils/canvas-tools';
 import type { ProductData } from '@/components/product-editor/types';
+import { nudgeBend } from '@/components/product-editor/canvas/utils/chain-model';
 import { useProductEditorState, type ProductEditorTabKey } from './useProductEditorState';
-import { buildShapeCanvasHandlers } from './productEditorHandlers';
+import { buildActiveSegmentView, buildShapeCanvasHandlers } from './productEditorHandlers';
 
 export type ProductEditorMode = 'page' | 'dialog';
 
@@ -74,16 +75,87 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
-  // Escape key deactivates tool
+  // Escape deactivates the tool and deselects the connector; arrow keys nudge
+  // the selected connector's angle by 1 degree while one is selected.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setActiveTool(null);
+      if (e.key === 'Escape') {
+        setActiveTool(null);
+        state.chain.setActiveConnectorIndex(null);
+        return;
+      }
+      const idx = state.chain.activeConnectorIndex;
+      if (idx == null) return;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        // Don't hijack arrow keys that are the native increment/decrement for
+        // whatever form control currently has focus (width/height/panel-width/
+        // row-height/post-width number fields, selects), nor the slider handle,
+        // which runs the same nudge itself when it holds focus.
+        const t = e.target as HTMLElement | null;
+        if (t && (
+          t.isContentEditable
+          || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)
+          || t.getAttribute('role') === 'slider'
+          // The chain canvas handles this itself whenever it holds focus, which
+          // is the normal case once a post is selected. This listener is only
+          // the fallback for when focus sits somewhere else entirely.
+          || t.closest?.('[data-chain-canvas]')
+        )) return;
+        e.preventDefault();
+        // Nudge the BEND, not the stored interior angle -- they run in
+        // opposite directions, so stepping the interior angle sent the handle
+        // and the leg the way the key did not point. Shared with the slider.
+        state.chain.setConnectorAngle(
+          idx,
+          nudgeBend(state.chain.chain.connectors[idx].angle, e.key === 'ArrowUp' ? 1 : -1),
+        );
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [state.chain]);
+
+  // Keep the chain's root segment in sync with the editor's own dimension/panel
+  // state, so a chained product reflects edits made through the Dimensions and
+  // Panels tabs (which write to `state`, not directly to `state.chain`).
+  //
+  // Safe to leave targeting `rootIndex` (not `activeSegmentIndex`): every write
+  // path into these flat fields — the tabs, the Panels: input, and the canvas
+  // handlers — now goes through `buildActiveSegmentView`, which only touches
+  // flat `state.*` when the root leg is the active one (see `view` below).
+  // So by the time this effect's deps change, the root leg *is* the one that
+  // was just edited, whichever leg happens to be selected when it runs. Do
+  // NOT swap this to `activeSegmentIndex` — that would instead copy whatever
+  // leg was active into the *newly* active leg on every selection change.
+  useEffect(() => {
+    state.chain.updateSegment(state.chain.chain.rootIndex, {
+      width: state.width,
+      panels: state.panels,
+      panelWidths: state.panelWidths,
+      panelDivisions: state.panelDivisions,
+      panelDivisionHeights: state.panelDivisionHeights,
+      panelDivisionWidths: state.panelDivisionWidths,
+      openingPanels: state.openingPanels,
+      openingDirections: state.openingDirections,
+      openingPanes: state.openingPanes,
+      removedSections: state.removedSections,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.width, state.panels, state.panelWidths, state.panelDivisions,
+      state.panelDivisionHeights, state.panelDivisionWidths, state.openingPanels,
+      state.openingDirections, state.openingPanes, state.removedSections]);
 
   const handlers = buildShapeCanvasHandlers(state, { customArcs, setCustomArcs });
+  // The chain canvas edits the leg under the pointer, which is not always the
+  // selected one, so it asks for that leg's handlers at click time.
+  const segmentTools = (segmentIndex: number) =>
+    buildShapeCanvasHandlers(state, { customArcs, setCustomArcs }, segmentIndex);
+  // Read/write view over the active leg — the root leg's flat state when the
+  // root is active (byte-for-byte the same as before), or the selected leg's
+  // own data otherwise. Backs the Panels: input and the Dims/Open/Panes tabs.
+  // Shape and Look stay bound to flat state: shape-type editing is root-only
+  // by design, and frame color/glass are shared across every leg.
+  const view = buildActiveSegmentView(state);
 
   const handleReset = () => {
     state.setWidth(1000);
@@ -98,6 +170,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
     state.setOpeningPanes([]);
     state.setRemovedSections([]);
     state.setShape({ type: 'rectangle' });
+    state.chain.resetChain(1000);
     setCustomArcs([]);
     setActiveTool(null);
   };
@@ -125,7 +198,12 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
               </svg>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[280px] p-3">
-              <ShapeSelector selected={state.shape.type} onSelect={state.setShapeType} />
+              <ShapeSelector
+                selected={state.shape.type}
+                onSelect={state.setShapeType}
+                onConnectorTool={() => setActiveTool(activeTool === 'connector' ? null : 'connector')}
+                connectorActive={activeTool === 'connector'}
+              />
             </PopoverContent>
           </Popover>
 
@@ -135,8 +213,8 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
               type="number"
               min={1}
               max={8}
-              value={state.panels}
-              onChange={(e) => state.handlePanelCountChange(Number(e.target.value))}
+              value={view.panels}
+              onChange={(e) => view.handlePanelCountChange(Number(e.target.value))}
               className="w-16 rounded-md border border-input px-2 py-1 text-sm text-center"
             />
           </div>
@@ -267,7 +345,16 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
             onArcRemove={handlers.onArcRemove}
             removedSections={state.removedSections}
             onSectionRemove={handlers.onSectionRemove}
+            segmentTools={segmentTools}
             render3D={state.render3D}
+            chain={state.chain.chain}
+            activeSegmentIndex={state.chain.activeSegmentIndex}
+            activeConnectorIndex={state.chain.activeConnectorIndex}
+            onSegmentSelect={state.chain.setActiveSegmentIndex}
+            onConnectorSelect={state.chain.setActiveConnectorIndex}
+            onConnectorAngleChange={state.chain.setConnectorAngle}
+            onConnectorRemove={state.chain.removeConnector}
+            onSegmentAttach={(end, w) => state.chain.attachSegment(end, w)}
           />
         </div>
       </div>
@@ -299,15 +386,15 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
 
           {state.activeTab === 'dimensions' && (
             <DimensionsTab
-              width={state.width}
+              width={view.width}
               height={state.height}
               unit={state.unit}
-              panels={state.panels}
-              panelWidths={state.panelWidths}
-              setWidth={state.setWidth}
+              panels={view.panels}
+              panelWidths={view.panelWidths}
+              setWidth={view.setWidth}
               setUnit={state.setUnit}
-              handleDimensionChange={state.handleDimensionChange}
-              handlePanelWidthChange={state.handlePanelWidthChange}
+              handleDimensionChange={view.handleDimensionChange}
+              handlePanelWidthChange={view.handlePanelWidthChange}
             />
           )}
 
@@ -324,30 +411,30 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
 
           {state.activeTab === 'openings' && (
             <OpeningsTab
-              panels={state.panels}
-              openingPanels={state.openingPanels}
-              openingDirections={state.openingDirections}
+              panels={view.panels}
+              openingPanels={view.openingPanels}
+              openingDirections={view.openingDirections}
               type={state.type}
-              setOpeningPanels={state.setOpeningPanels}
-              setOpeningDirections={state.setOpeningDirections}
+              setOpeningPanels={view.setOpeningPanels}
+              setOpeningDirections={view.setOpeningDirections}
             />
           )}
 
           {state.activeTab === 'panels' && (
             <PanelsTab
-              panels={state.panels}
+              panels={view.panels}
               height={state.height}
               unit={state.unit}
-              panelWidths={state.panelWidths}
-              panelDivisions={state.panelDivisions}
-              panelDivisionHeights={state.panelDivisionHeights}
-              panelDivisionWidths={state.panelDivisionWidths}
-              openingPanes={state.openingPanes}
+              panelWidths={view.panelWidths}
+              panelDivisions={view.panelDivisions}
+              panelDivisionHeights={view.panelDivisionHeights}
+              panelDivisionWidths={view.panelDivisionWidths}
+              openingPanes={view.openingPanes}
               activeHingeSelector={state.activeHingeSelector}
-              setPanelDivisions={state.setPanelDivisions}
-              setPanelDivisionHeights={state.setPanelDivisionHeights}
-              setPanelDivisionWidths={state.setPanelDivisionWidths}
-              setOpeningPanes={state.setOpeningPanes}
+              setPanelDivisions={view.setPanelDivisions}
+              setPanelDivisionHeights={view.setPanelDivisionHeights}
+              setPanelDivisionWidths={view.setPanelDivisionWidths}
+              setOpeningPanes={view.setOpeningPanes}
               setActiveHingeSelector={state.setActiveHingeSelector}
             />
           )}

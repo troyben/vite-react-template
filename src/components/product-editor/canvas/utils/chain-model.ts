@@ -1,0 +1,254 @@
+// ---------------------------------------------------------------------------
+// Pure data model for corner-window chains.
+//
+// Segment 0 is the legacy single-unit product: it round-trips through the
+// top-level ProductData fields so existing saved templates and quotations are
+// untouched. The chain fields are only emitted once a connector exists.
+// ---------------------------------------------------------------------------
+
+import type { Connector, ProductData, Segment } from '@/components/product-editor/types';
+import { generateId } from './canvas-tools';
+
+/** Interior angle at which the two legs are inline — no bend at all. */
+export const STRAIGHT_ANGLE = 180;
+/** Largest bend the slider allows in either direction. */
+export const MAX_BEND = 179;
+
+/** A new connector starts straight; the user bends it with the slider. */
+export const DEFAULT_CONNECTOR_ANGLE = STRAIGHT_ANGLE;
+export const DEFAULT_POST_WIDTH = 100;
+
+// ---------------------------------------------------------------------------
+// Interior angle vs bend
+//
+// Storage uses the *interior* angle between two legs (180 = inline), because
+// that is what the plan walk in chain-projection consumes. Everything a human
+// reads — the slider, the on-canvas badge, the quotation description, the
+// corner-post line item — uses *bend*: how far the joint deviates from
+// straight, signed by which way the attached leg swings on screen.
+//
+//   bend  0   -> interior 180, legs inline
+//   bend +90  -> interior  90, leg swings toward the top of the screen
+//   bend -90  -> interior 270, leg swings toward the bottom of the screen
+//
+// The two coincide for ordinary inward corners, so "bend 90" really is "a 90
+// degree corner window" — which is how the number was described to us.
+// ---------------------------------------------------------------------------
+
+/** Human-facing bend for a stored interior angle. */
+export function bendFromInterior(interior: number): number {
+  return STRAIGHT_ANGLE - interior;
+}
+
+/** Stored interior angle for a human-facing bend. */
+export function interiorFromBend(bend: number): number {
+  return STRAIGHT_ANGLE - bend;
+}
+
+/**
+ * Interior angle after nudging the bend by `bendDelta`, clamped to the slider's
+ * range.
+ *
+ * Both the slider handle and the editor's arrow-key shortcut step a connector,
+ * and they must step it the same way: a positive delta raises the bend, which
+ * raises the handle on the track and swings the attached leg toward the top of
+ * the screen. Stepping the stored interior angle directly does the opposite,
+ * because bend and interior run in opposite directions -- so both callers go
+ * through here rather than doing the arithmetic themselves.
+ */
+export function nudgeBend(interior: number, bendDelta: number): number {
+  const bend = bendFromInterior(interior) + bendDelta;
+  return interiorFromBend(Math.min(MAX_BEND, Math.max(-MAX_BEND, bend)));
+}
+
+/**
+ * Format a bend for display. Unsigned: a corner is a 90 degree corner whichever
+ * way it turns, and the sketch beside the number already shows which way. The
+ * sign stays in the stored interior angle, which is what the geometry and the
+ * pricing read.
+ */
+export function formatBend(bend: number): string {
+  return `${Math.abs(Math.round(bend))}°`;
+}
+
+export interface Chain {
+  segments: Segment[];
+  connectors: Connector[];
+  /** Index of the segment the user created first. Anchors delete cascades. */
+  rootIndex: number;
+}
+
+function cloneSegment(s: Segment): Segment {
+  return {
+    id: s.id,
+    width: s.width,
+    panels: s.panels,
+    panelWidths: s.panelWidths.slice(),
+    panelDivisions: s.panelDivisions?.map((d) => ({ ...d })),
+    panelDivisionHeights: s.panelDivisionHeights?.map((h) => ({
+      panelIndex: h.panelIndex,
+      rowHeights: h.rowHeights.slice(),
+    })),
+    panelDivisionWidths: s.panelDivisionWidths?.map((w) => ({
+      panelIndex: w.panelIndex,
+      colWidths: w.colWidths.slice(),
+    })),
+    openingPanels: s.openingPanels?.slice(),
+    openingDirections: s.openingDirections ? { ...s.openingDirections } : undefined,
+    openingPanes: s.openingPanes?.map((p) => ({ ...p })),
+    removedSections: s.removedSections?.map((r) => ({ ...r })),
+  };
+}
+
+/** A fresh attached leg: one full-width rectangular panel, nothing else. */
+export function makeSegment(width: number): Segment {
+  return {
+    id: generateId(),
+    width,
+    panels: 1,
+    panelWidths: [width],
+    panelDivisions: [{ panelIndex: 0, horizontalCount: 1, verticalCount: 1 }],
+    openingPanels: [],
+    openingDirections: {},
+    openingPanes: [],
+    removedSections: [],
+  };
+}
+
+/** Build segment 0 out of the legacy top-level ProductData fields. */
+function rootSegmentFromLegacy(d: ProductData): Segment {
+  const width = d.width || 1000;
+  return {
+    id: d.segments?.[0]?.id ?? generateId(),
+    width,
+    panels: d.panels || 1,
+    panelWidths: (d.panelWidths || [width]).slice(),
+    panelDivisions: d.panelDivisions?.map((x) => ({ ...x })),
+    panelDivisionHeights: d.panelDivisionHeights?.map((h) => ({
+      panelIndex: h.panelIndex,
+      rowHeights: h.rowHeights.slice(),
+    })),
+    panelDivisionWidths: d.panelDivisionWidths?.map((w) => ({
+      panelIndex: w.panelIndex,
+      colWidths: w.colWidths.slice(),
+    })),
+    openingPanels: (d.openingPanels || []).slice(),
+    openingDirections: { ...(d.openingDirections || {}) },
+    openingPanes: (d.openingPanes || []).map((p) => ({ ...p })),
+    removedSections: (d.removedSections || []).map((r) => ({ ...r })),
+  };
+}
+
+export function normalizeToChain(d: ProductData): Chain {
+  const root = rootSegmentFromLegacy(d);
+  const attached = (d.segments ?? []).slice(1).map(cloneSegment);
+  return {
+    segments: [root, ...attached],
+    connectors: (d.connectors ?? []).map((c) => ({ ...c })),
+    rootIndex: d.rootSegmentIndex ?? 0,
+  };
+}
+
+/**
+ * Flatten a chain back to ProductData fields. Segment 0 always writes to the
+ * legacy top-level fields; the chain fields are omitted entirely when there is
+ * only one segment, so single-unit products serialise exactly as before.
+ */
+export function chainToProductData(
+  chain: Chain
+): Pick<
+  ProductData,
+  | 'width'
+  | 'panels'
+  | 'panelWidths'
+  | 'panelDivisions'
+  | 'panelDivisionHeights'
+  | 'panelDivisionWidths'
+  | 'openingPanels'
+  | 'openingDirections'
+  | 'openingPanes'
+  | 'removedSections'
+  | 'segments'
+  | 'connectors'
+  | 'rootSegmentIndex'
+> {
+  const root = chain.segments[0];
+  const base = {
+    width: root.width,
+    panels: root.panels,
+    panelWidths: root.panelWidths.slice(),
+    panelDivisions: root.panelDivisions,
+    panelDivisionHeights: root.panelDivisionHeights?.length ? root.panelDivisionHeights : undefined,
+    panelDivisionWidths: root.panelDivisionWidths?.length ? root.panelDivisionWidths : undefined,
+    openingPanels: root.openingPanels ?? [],
+    openingDirections: root.openingDirections ?? {},
+    openingPanes: root.openingPanes ?? [],
+    removedSections: root.removedSections?.length ? root.removedSections : undefined,
+  };
+
+  if (chain.connectors.length === 0) return base;
+
+  return {
+    ...base,
+    segments: chain.segments.map(cloneSegment),
+    connectors: chain.connectors.map((c) => ({ ...c })),
+    rootSegmentIndex: chain.rootIndex,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Connector deletion cascade logic
+//
+// When a connector is deleted, everything attached beyond it (away from the
+// root segment) is also deleted. This function calculates which segments and
+// connectors die.
+// ---------------------------------------------------------------------------
+
+export interface RemovalRange {
+  segmentIndices: number[];
+  connectorIndices: number[];
+  newRootIndex: number;
+}
+
+/**
+ * Which segments and connectors die when connector `connectorIndex` is deleted.
+ *
+ * connectors[i] joins segments[i] to segments[i+1]. Everything on the far side
+ * of the joint from the root segment goes.
+ */
+export function connectorRemovalRange(chain: Chain, connectorIndex: number): RemovalRange {
+  const segCount = chain.segments.length;
+  const connCount = chain.connectors.length;
+
+  if (connectorIndex >= chain.rootIndex) {
+    // Connector is at or to the right of root: remove everything to the right
+    const segmentIndices: number[] = [];
+    for (let i = connectorIndex + 1; i < segCount; i++) segmentIndices.push(i);
+    const connectorIndices: number[] = [];
+    for (let i = connectorIndex; i < connCount; i++) connectorIndices.push(i);
+    return { segmentIndices, connectorIndices, newRootIndex: chain.rootIndex };
+  }
+
+  // Connector is to the left of root: remove everything to the left
+  const segmentIndices: number[] = [];
+  for (let i = 0; i <= connectorIndex; i++) segmentIndices.push(i);
+  const connectorIndices: number[] = [];
+  for (let i = 0; i <= connectorIndex; i++) connectorIndices.push(i);
+  return {
+    segmentIndices,
+    connectorIndices,
+    newRootIndex: chain.rootIndex - segmentIndices.length,
+  };
+}
+
+/** Delete a connector and everything attached beyond it. Returns a new chain. */
+export function applyConnectorRemoval(chain: Chain, connectorIndex: number): Chain {
+  const { segmentIndices, connectorIndices, newRootIndex } = connectorRemovalRange(chain, connectorIndex);
+  const deadSegments = new Set(segmentIndices);
+  const deadConnectors = new Set(connectorIndices);
+  return {
+    segments: chain.segments.filter((_, i) => !deadSegments.has(i)).map(cloneSegment),
+    connectors: chain.connectors.filter((_, i) => !deadConnectors.has(i)).map((c) => ({ ...c })),
+    rootIndex: newRootIndex,
+  };
+}
