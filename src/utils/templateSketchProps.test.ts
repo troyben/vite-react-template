@@ -1,6 +1,40 @@
 import { describe, it, expect } from 'vitest';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { extractShapeCanvasProps } from './templateSketchProps';
+import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import type { ProductData } from '@/components/product-editor/types';
+
+// Real production data that triggered a PDF export crash: panelIndex 1
+// claims `horizontalCount: 3` rows but `panelDivisionHeights` only has 2
+// entries recorded for it, which used to sum to NaN downstream.
+const inconsistentDivisionsTemplate: ProductData = {
+  type: 'window',
+  windowType: 'hinged',
+  height: 1020,
+  frameColor: '#C0C0C0',
+  glassType: 'clear',
+  unit: 'mm',
+  shape: { type: 'rectangle' },
+  render3D: false,
+  width: 1500,
+  panels: 2,
+  panelWidths: [750, 750],
+  panelDivisions: [
+    { panelIndex: 0, horizontalCount: 2, verticalCount: 1 },
+    { panelIndex: 1, horizontalCount: 3, verticalCount: 1 },
+  ],
+  panelDivisionHeights: [
+    { panelIndex: 0, rowHeights: [645, 375] },
+    { panelIndex: 1, rowHeights: [645, 375] },
+  ],
+  openingPanels: [],
+  openingDirections: {},
+  openingPanes: [
+    { panelIndex: 0, rowIndex: 0, colIndex: 0, openingDirection: 'top', openingType: 'hinged' },
+    { panelIndex: 1, rowIndex: 0, colIndex: 0, openingDirection: 'top', openingType: 'hinged' },
+  ],
+};
 
 const legacyTemplate: ProductData = {
   type: 'window',
@@ -57,5 +91,22 @@ describe('extractShapeCanvasProps', () => {
     expect(props.width).toBe(1000);
     expect(props.panels).toBe(1);
     expect(props.panelWidths).toEqual([1000]);
+  });
+
+  it('normalizes panelDivisions so horizontalCount never outpaces rowHeights.length', () => {
+    const props = extractShapeCanvasProps(inconsistentDivisionsTemplate);
+    expect(props.panelDivisions?.find((d) => d.panelIndex === 1)?.horizontalCount).toBe(2);
+    expect(props.panelDivisions?.find((d) => d.panelIndex === 0)?.horizontalCount).toBe(2);
+  });
+
+  it('renders ShapeCanvas with no NaN attributes for the previously-inconsistent fixture', () => {
+    const props = extractShapeCanvasProps(inconsistentDivisionsTemplate);
+    const svg = renderToStaticMarkup(
+      React.createElement(ShapeCanvas, {
+        ...props,
+        svgStyle: { width: '600px', height: '500px' },
+      }),
+    );
+    expect(svg).not.toMatch(/NaN/);
   });
 });

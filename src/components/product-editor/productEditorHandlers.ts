@@ -414,6 +414,34 @@ export function buildShapeCanvasHandlers(
     const existing = view.panelDivisions.find((d) => d.panelIndex === panelIndex);
     const currentRows = existing?.horizontalCount ?? 1;
     if (currentRows >= 4) return;
+
+    const existingHeights = view.panelDivisionHeights.find((h) => h.panelIndex === panelIndex);
+    const oldRowHeights = existingHeights?.rowHeights ?? [state.height];
+    const newRowHeights: number[] = [];
+    let accumulated = 0;
+    let matched = false;
+    let didSplit = false;
+    for (let i = 0; i < oldRowHeights.length; i++) {
+      if (!matched && accumulated + oldRowHeights[i] >= splitMm) {
+        const topPart = Math.round(splitMm - accumulated);
+        const bottomPart = Math.round(oldRowHeights[i] - topPart);
+        if (topPart >= 1 && bottomPart >= 1) {
+          newRowHeights.push(topPart, bottomPart);
+          didSplit = true;
+        } else {
+          newRowHeights.push(oldRowHeights[i]);
+        }
+        matched = true;
+      } else {
+        newRowHeights.push(oldRowHeights[i]);
+      }
+      accumulated += oldRowHeights[i];
+    }
+    // No valid split was inserted (the split point landed on a row too thin
+    // to divide) — leave divisions and heights untouched so `horizontalCount`
+    // never outpaces `rowHeights.length` (see `normalizePanelDivisions`).
+    if (!didSplit) return;
+
     const newDivisions = view.panelDivisions.filter((d) => d.panelIndex !== panelIndex);
     newDivisions.push({
       panelIndex,
@@ -421,23 +449,7 @@ export function buildShapeCanvasHandlers(
       verticalCount: existing?.verticalCount ?? 1,
     });
     view.setPanelDivisions(newDivisions);
-    const existingHeights = view.panelDivisionHeights.find((h) => h.panelIndex === panelIndex);
-    const oldRowHeights = existingHeights?.rowHeights ?? [state.height];
-    const newRowHeights: number[] = [];
-    let accumulated = 0;
-    let inserted = false;
-    for (let i = 0; i < oldRowHeights.length; i++) {
-      if (!inserted && accumulated + oldRowHeights[i] >= splitMm) {
-        const topPart = Math.round(splitMm - accumulated);
-        const bottomPart = Math.round(oldRowHeights[i] - topPart);
-        if (topPart >= 1 && bottomPart >= 1) newRowHeights.push(topPart, bottomPart);
-        else newRowHeights.push(oldRowHeights[i]);
-        inserted = true;
-      } else {
-        newRowHeights.push(oldRowHeights[i]);
-      }
-      accumulated += oldRowHeights[i];
-    }
+
     const newHeights = view.panelDivisionHeights.filter((h) => h.panelIndex !== panelIndex);
     newHeights.push({ panelIndex, rowHeights: newRowHeights });
     view.setPanelDivisionHeights(newHeights);
@@ -448,6 +460,35 @@ export function buildShapeCanvasHandlers(
     const existing = view.panelDivisions.find((d) => d.panelIndex === panelIndex);
     const currentCols = existing?.verticalCount ?? 1;
     if (currentCols >= 4) return;
+
+    const panelW = view.panelWidths[panelIndex];
+    const existingWidths = view.panelDivisionWidths.find((w) => w.panelIndex === panelIndex);
+    const oldColWidths = existingWidths?.colWidths ?? [panelW];
+    const newColWidths: number[] = [];
+    let accumulated = 0;
+    let matched = false;
+    let didSplit = false;
+    for (let i = 0; i < oldColWidths.length; i++) {
+      if (!matched && accumulated + oldColWidths[i] >= splitMm) {
+        const leftPart = Math.round(splitMm - accumulated);
+        const rightPart = Math.round(oldColWidths[i] - leftPart);
+        if (leftPart >= 1 && rightPart >= 1) {
+          newColWidths.push(leftPart, rightPart);
+          didSplit = true;
+        } else {
+          newColWidths.push(oldColWidths[i]);
+        }
+        matched = true;
+      } else {
+        newColWidths.push(oldColWidths[i]);
+      }
+      accumulated += oldColWidths[i];
+    }
+    // No valid split was inserted (the split point landed on a column too thin
+    // to divide) — leave divisions and widths untouched so `verticalCount`
+    // never outpaces `colWidths.length` (see `normalizePanelDivisions`).
+    if (!didSplit) return;
+
     const newDivisions = view.panelDivisions.filter((d) => d.panelIndex !== panelIndex);
     newDivisions.push({
       panelIndex,
@@ -455,24 +496,7 @@ export function buildShapeCanvasHandlers(
       verticalCount: currentCols + 1,
     });
     view.setPanelDivisions(newDivisions);
-    const panelW = view.panelWidths[panelIndex];
-    const existingWidths = view.panelDivisionWidths.find((w) => w.panelIndex === panelIndex);
-    const oldColWidths = existingWidths?.colWidths ?? [panelW];
-    const newColWidths: number[] = [];
-    let accumulated = 0;
-    let inserted = false;
-    for (let i = 0; i < oldColWidths.length; i++) {
-      if (!inserted && accumulated + oldColWidths[i] >= splitMm) {
-        const leftPart = Math.round(splitMm - accumulated);
-        const rightPart = Math.round(oldColWidths[i] - leftPart);
-        if (leftPart >= 1 && rightPart >= 1) newColWidths.push(leftPart, rightPart);
-        else newColWidths.push(oldColWidths[i]);
-        inserted = true;
-      } else {
-        newColWidths.push(oldColWidths[i]);
-      }
-      accumulated += oldColWidths[i];
-    }
+
     const newWidthsArr = view.panelDivisionWidths.filter((w) => w.panelIndex !== panelIndex);
     newWidthsArr.push({ panelIndex, colWidths: newColWidths });
     view.setPanelDivisionWidths(newWidthsArr);
