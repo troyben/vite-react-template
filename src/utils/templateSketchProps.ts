@@ -1,6 +1,7 @@
 import type { ProductData } from '@/components/product-editor/types';
 import type { ShapeCanvasProps } from '@/components/product-editor/canvas/ShapeCanvas';
 import { normalizeToChain } from '@/components/product-editor/canvas/utils/chain-model';
+import { normalizePanelDivisions } from '@/components/product-editor/canvas/utils/pane-fractions';
 
 /**
  * Maps a ProductData object (from a SketchTemplate's sketchData) to the props
@@ -27,7 +28,11 @@ export function extractShapeCanvasProps(
       (sketchData.type === 'door' && sketchData.doorType === 'sliding') ||
       (sketchData.type === 'window' && sketchData.windowType === 'sliding') ||
       false,
-    panelDivisions: sketchData.panelDivisions,
+    panelDivisions: normalizePanelDivisions(
+      sketchData.panelDivisions,
+      sketchData.panelDivisionHeights,
+      sketchData.panelDivisionWidths,
+    ),
     panelDivisionHeights: sketchData.panelDivisionHeights || [],
     panelDivisionWidths: sketchData.panelDivisionWidths || [],
     openingPanes: sketchData.openingPanes || [],
