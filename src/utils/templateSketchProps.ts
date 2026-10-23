@@ -15,7 +15,7 @@ export function extractShapeCanvasProps(
   return {
     shape: sketchData.shape || { type: 'rectangle' as const },
     width: sketchData.width,
-    height: sketchData.height,
+    height: sketchData.shape?.type === 'circle' ? sketchData.width : sketchData.height,
     unit: sketchData.unit || 'mm',
     panels: sketchData.panels || 1,
     panelWidths: sketchData.panelWidths || [sketchData.width],

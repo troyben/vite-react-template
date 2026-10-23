@@ -11,6 +11,7 @@ import type {
 } from '@/components/product-editor/types';
 import { useSegmentChain } from './useSegmentChain';
 import { normalizeToChain } from '@/components/product-editor/canvas/utils/chain-model';
+import { rotateLShape } from './shapeTransforms';
 
 export type ProductEditorTabKey = 'shape' | 'dimensions' | 'appearance' | 'openings' | 'panels';
 
@@ -61,8 +62,8 @@ export function useProductEditorState() {
   const [type, setType] = useState<'window' | 'door'>(DEFAULTS.type);
   const [doorType, setDoorType] = useState<'hinged' | 'sliding'>(DEFAULTS.doorType);
   const [windowType, setWindowType] = useState<'hinged' | 'sliding'>(DEFAULTS.windowType);
-  const [width, setWidth] = useState<number>(DEFAULTS.width);
-  const [height, setHeight] = useState<number>(DEFAULTS.height);
+  const [width, setWidthState] = useState<number>(DEFAULTS.width);
+  const [height, setHeightState] = useState<number>(DEFAULTS.height);
   const [panels, setPanels] = useState<number>(DEFAULTS.panels);
   const [unit, setUnit] = useState<Unit>(DEFAULTS.unit);
   const [openingPanels, setOpeningPanels] = useState<number[]>(DEFAULTS.openingPanels);
@@ -84,10 +85,40 @@ export function useProductEditorState() {
   const isSliding =
     (type === 'door' && doorType === 'sliding') || (type === 'window' && windowType === 'sliding');
 
-  const setShape = useCallback((config: ShapeConfig) => setShapeState(config), []);
+  const setWidth = useCallback((value: number) => {
+    setWidthState(value);
+    if (shape.type === 'circle') setHeightState(value);
+  }, [shape.type]);
+  const setHeight = useCallback((value: number) => {
+    setHeightState(value);
+    if (shape.type === 'circle') setWidthState(value);
+  }, [shape.type]);
+  const setShape = useCallback((config: ShapeConfig) => {
+    setShapeState(config);
+    if (config.type === 'circle') setHeightState(width);
+  }, [width]);
   const setShapeType = useCallback((newType: ShapeType) => {
     setShapeState((prev) => ({ ...prev, type: newType }));
-  }, []);
+    if (newType === 'circle') setHeightState(width);
+  }, [width]);
+  const rotateShape = useCallback(() => {
+    const rotated = rotateLShape(shape, width, height);
+    if (shape.type !== 'l-shape') return;
+    const widthRatio = width > 0 ? rotated.width / width : 1;
+    const heightRatio = height > 0 ? rotated.height / height : 1;
+    // The tool rotates the outline; keep the upright pane grid proportionate
+    // to the new bounding dimensions, including explicitly sized subdivisions.
+    setPanelWidths((prev) => prev.map((value) => value * widthRatio));
+    setPanelDivisionWidths((prev) => prev.map((entry) => ({
+      ...entry, colWidths: entry.colWidths.map((value) => value * widthRatio),
+    })));
+    setPanelDivisionHeights((prev) => prev.map((entry) => ({
+      ...entry, rowHeights: entry.rowHeights.map((value) => value * heightRatio),
+    })));
+    setShapeState(rotated.shape);
+    setWidthState(rotated.width);
+    setHeightState(rotated.height);
+  }, [shape, width, height]);
   const updateShapeConfig = useCallback((updates: Partial<ShapeConfig>) => {
     setShapeState((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -102,7 +133,7 @@ export function useProductEditorState() {
     if (isNaN(numValue)) return;
     if (dimension === 'width') setWidth(numValue);
     else setHeight(numValue);
-  }, []);
+  }, [setWidth, setHeight]);
 
   const handleTypeChange = useCallback((newType: 'window' | 'door') => {
     setType(newType);
@@ -187,8 +218,8 @@ export function useProductEditorState() {
     setType(d.type || 'window');
     setDoorType(d.doorType || 'hinged');
     setWindowType(d.windowType || 'hinged');
-    setWidth(d.width || 1000);
-    setHeight(d.height || 1000);
+    setWidthState(d.width || 1000);
+    setHeightState(d.shape?.type === 'circle' ? (d.width || 1000) : (d.height || 1000));
     setPanels(d.panels || 1);
     setUnit(d.unit || 'mm');
     setOpeningPanels((d.openingPanels || []).slice());
@@ -214,8 +245,8 @@ export function useProductEditorState() {
     setType(DEFAULTS.type);
     setDoorType(DEFAULTS.doorType);
     setWindowType(DEFAULTS.windowType);
-    setWidth(DEFAULTS.width);
-    setHeight(DEFAULTS.height);
+    setWidthState(DEFAULTS.width);
+    setHeightState(DEFAULTS.height);
     setPanels(DEFAULTS.panels);
     setUnit(DEFAULTS.unit);
     setOpeningPanels(DEFAULTS.openingPanels);
@@ -237,7 +268,7 @@ export function useProductEditorState() {
 
   return {
     // Shape
-    shape, setShape, setShapeType, updateShapeConfig,
+    shape, setShape, setShapeType, updateShapeConfig, rotateShape,
     // Product state
     type, setType,
     doorType, setDoorType,

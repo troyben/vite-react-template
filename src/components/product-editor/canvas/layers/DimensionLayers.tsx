@@ -15,6 +15,8 @@ import type { EdgeCommitContext } from '../utils/edge-commit';
 import { getEdgeCommitFn } from '../utils/edge-commit';
 import type { SectionId } from '../utils/section-outline';
 import { isSectionRemoved } from '../utils/section-outline';
+import { renderCircleDimension } from './CircleDimension';
+import { getPanelCenter } from '../utils/panels';
 
 // ---------------------------------------------------------------------------
 // Shared editing state types
@@ -68,6 +70,7 @@ export interface DimensionLayersProps {
 // ---------------------------------------------------------------------------
 
 export function renderOuterDimensions(props: DimensionLayersProps): React.ReactNode {
+  if (props.shape.type === 'circle' && !props.effectiveSvgVerts) return renderCircleDimension(props);
   const {
     shape: _shape, width: _width, height: _height, svgVerts, realVerts, svgCenterX, svgCenterY,
     arrowLId, arrowRId, editingDim, setEditingDim, setEditValue, edgeCommitCtx,
@@ -97,7 +100,7 @@ export function renderOuterDimensions(props: DimensionLayersProps): React.ReactN
     const j = (i + 1) % useSvg.length;
     const rv1 = useReal[i];
     const rv2 = useReal[j];
-    if (isBottomEdge(rv1, rv2, maxRealY)) continue;
+    if (isBottomEdge(rv1, rv2, maxRealY) && props.shape.type !== 'n-shape') continue;
     edges.push({
       sv1: useSvg[i], sv2: useSvg[j], rv1, rv2,
       realLen: realEdgeLength(rv1, rv2),
@@ -110,10 +113,18 @@ export function renderOuterDimensions(props: DimensionLayersProps): React.ReactN
 
   // Pre-compute all label positions, then stagger any that overlap
   const dimData = edges.map((edge, i) => {
-    const { nx, ny } = getOutwardNormal(
+    let { nx, ny } = getOutwardNormal(
       edge.sv1.x, edge.sv1.y, edge.sv2.x, edge.sv2.y,
       cX, cY,
     );
+    if (props.shape.type === 'n-shape' && !hasEffective) {
+      // Clockwise outline: inner-edge normals must point into the opening,
+      // rather than away from a center that lies inside the concave gap.
+      const dx = edge.sv2.x - edge.sv1.x;
+      const dy = edge.sv2.y - edge.sv1.y;
+      const length = Math.hypot(dx, dy);
+      if (length > 0) { nx = dy / length; ny = -dx / length; }
+    }
     // For effective outlines: only full-span edges are editable
     let commitFn: ((v: number) => void) | undefined | null;
     if (!hasEffective) {
@@ -297,6 +308,7 @@ export function renderArchDimensions(props: DimensionLayersProps): React.ReactNo
 // ---------------------------------------------------------------------------
 
 export function renderBottomDimension(props: DimensionLayersProps): React.ReactNode {
+  if (props.shape.type === 'circle' || props.shape.type === 'n-shape') return null;
   const {
     svgVerts, realVerts, svgCenterX, svgCenterY,
     arrowLId, arrowRId, editingDim, setEditingDim, setEditValue, edgeCommitCtx,
@@ -501,8 +513,11 @@ export function renderInnerDimensions(props: DimensionLayersProps): React.ReactN
       const panelLeft = MARGIN + leftFrac * drawW;
       const panelRight = MARGIN + rightFrac * drawW;
       const panelCenterX = (panelLeft + panelRight) / 2;
-      const panelTopY = getTopYAtX(panelCenterX, svgVerts, shape, drawW, drawH, width, height);
-      const panelBottomY = getBottomYAtX(panelCenterX, svgVerts);
+      const nBounds = shape.type === 'n-shape'
+        ? getPanelCenter(shape, panelIndex, panels, panelWidths, svgVerts, drawW, drawH, width, height)
+        : null;
+      const panelTopY = nBounds ? nBounds.cy - nBounds.h / 2 : getTopYAtX(panelCenterX, svgVerts, shape, drawW, drawH, width, height);
+      const panelBottomY = nBounds ? nBounds.cy + nBounds.h / 2 : getBottomYAtX(panelCenterX, svgVerts);
       const panelH = panelBottomY - panelTopY;
       const panelW = panelRight - panelLeft;
 

@@ -286,6 +286,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
             lineTarget={lineTarget}
             onLineTargetChange={setLineTarget}
             onReset={() => setResetConfirmOpen(true)}
+            onRotateShape={state.shape.type === 'l-shape' ? state.rotateShape : undefined}
             render3D={state.render3D}
             onRender3DChange={state.setRender3D}
           />
@@ -382,11 +383,12 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
 
         <div className="flex-1 overflow-y-auto p-4">
           {state.activeTab === 'shape' && (
-            <ShapeTab shape={state.shape} height={state.height} unit={state.unit} onChange={state.updateShapeConfig} />
+            <ShapeTab shape={state.shape} width={state.width} height={state.height} unit={state.unit} onChange={state.updateShapeConfig} />
           )}
 
           {state.activeTab === 'dimensions' && (
             <DimensionsTab
+              isCircle={view.isRootActive && state.shape.type === 'circle'}
               width={view.width}
               height={state.height}
               unit={state.unit}

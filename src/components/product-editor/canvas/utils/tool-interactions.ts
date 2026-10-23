@@ -10,6 +10,7 @@ import { getPanelCenter } from './panels';
 import { getRowTopFrac, getRowBottomFrac, getColLeftFrac, getColRightFrac } from './pane-fractions';
 import type { PlacedArc } from './canvas-tools';
 import { svgToReal, realToSvg, snapToGrid, generateId } from './canvas-tools';
+import { pointInPolygon } from './chain-interaction';
 
 // ---------------------------------------------------------------------------
 // Geometry context shared by tool interaction functions
@@ -52,6 +53,7 @@ export interface PanelHitResult {
 /** Find which panel (and optionally pane) the hover position falls within */
 export function findPanelAtPoint(geo: CanvasGeometry, px: number, py: number): PanelHitResult | null {
   const { panels, panelWidths, svgVerts, drawW, drawH, width, height, shape, panelDivisions, panelDivisionHeights, panelDivisionWidths } = geo;
+  if ((shape.type === 'circle' || shape.type === 'n-shape') && !pointInPolygon({ x: px, y: py }, svgVerts)) return null;
 
   for (let i = 0; i < panels; i++) {
     const { cx, cy, w: pw, h: ph } = getPanelCenter(

@@ -47,6 +47,33 @@ const legacyTemplate: ProductData = {
   shape: { type: 'rectangle' },
 };
 
+describe('Circle and N-Shape preview/export rendering', () => {
+  it.each([false, true])('renders a round Circle with one diameter annotation (print=%s)', (printMode) => {
+    const props = extractShapeCanvasProps({ ...legacyTemplate, shape: { type: 'circle' } }, { printMode });
+    expect(props.height).toBe(props.width);
+    const svg = renderToStaticMarkup(React.createElement(ShapeCanvas, props));
+    expect(svg).toContain('A 90 90 0 1 1');
+    expect(svg).toContain('Ø 1000');
+    expect((svg.match(/<text /g) ?? []).length).toBe(1);
+    expect(svg).not.toMatch(/NaN|Infinity/);
+  });
+
+  it.each([false, true])('renders the N-Shape opening and clips subdivisions (print=%s)', (printMode) => {
+    const data: ProductData = {
+      ...legacyTemplate, height: 1000, shape: { type: 'n-shape', cutoutWidth: 600, cutoutHeight: 700 },
+      panelDivisions: [{ panelIndex: 0, horizontalCount: 2, verticalCount: 2 }],
+    };
+    const svg = renderToStaticMarkup(React.createElement(ShapeCanvas, extractShapeCanvasProps(data, { printMode })));
+    expect(svg).toContain('M 40 40 L 220 40 L 220 220 L 184 220 L 184 94 L 76 94 L 76 220 L 40 220 Z');
+    expect(svg).toMatch(/>600<\/text>/);
+    expect(svg).toMatch(/>700<\/text>/);
+    // The horizontal row crosses both legs below the top bar; the SVG group
+    // must clip its middle away instead of drawing across the open cutout.
+    expect(/<g clip-path="url\(#[^)]+\)"><g><line[^>]+x1="40"[^>]+y1="129\.5"/.test(svg)).toBe(true);
+    expect(svg).not.toMatch(/NaN|Infinity/);
+  });
+});
+
 describe.each(['slope-left', 'slope-right'] as const)('%s saved sketch rendering', (type) => {
   it('keeps its outline and edge labels in preview and print mode after JSON round-trip', () => {
     const data: ProductData = JSON.parse(JSON.stringify({

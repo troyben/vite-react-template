@@ -39,6 +39,24 @@ const oneSegment: ProductData = {
   shape: { type: 'rectangle' },
 };
 
+describe('Circle and N-Shape material measurements', () => {
+  it('uses circle area and circumference from its diameter', () => {
+    const cost = calculateProductCost({ ...oneSegment, shape: { type: 'circle' } }, materials);
+    expect(cost.glassItems[0].quantity).toBe(0.79);
+    expect(cost.frameItems[0].quantity).toBe(3.14);
+  });
+
+  it.each([
+    ['mm', 1200, 1000, 600, 700], ['cm', 120, 100, 60, 70], ['m', 1.2, 1, 0.6, 0.7],
+  ] as const)('subtracts the N opening and includes all inner edges in %s', (unit, width, height, cutoutWidth, cutoutHeight) => {
+    const cost = calculateProductCost({
+      ...oneSegment, width, height, unit, shape: { type: 'n-shape', cutoutWidth, cutoutHeight },
+    }, materials);
+    expect(cost.glassItems[0].quantity).toBe(0.78);
+    expect(cost.frameItems[0].quantity).toBe(5.8);
+  });
+});
+
 describe('calculateProductCost with chains', () => {
   it('leaves a single-segment product unchanged when chain fields are absent', () => {
     const withChain = { ...oneSegment, segments: [
