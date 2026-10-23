@@ -4,13 +4,15 @@ export type OpeningDirection = 'left' | 'right' | 'top' | 'bottom';
 export type Unit = 'cm' | 'mm' | 'm';
 export type GlassType = 'clear' | 'frosted' | 'custom-tint';
 
-export type ShapeType = 'rectangle' | 'arch' | 'trapezoid' | 'l-shape' | 'triangle' | 'gable' | 'pentagon' | 'hexagon';
+export type ShapeType = 'rectangle' | 'arch' | 'trapezoid' | 'slope-left' | 'slope-right' | 'l-shape' | 'triangle' | 'gable' | 'pentagon' | 'hexagon';
 
 export interface ShapeConfig {
   type: ShapeType;
   archHeight?: number;
   archType?: 'semicircle' | 'segmental';
   topWidth?: number;
+  /** Sloped top: shorter vertical side, in the product's dimension unit. */
+  shortSideHeight?: number;
   cutoutWidth?: number;
   cutoutHeight?: number;
   cutoutPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';

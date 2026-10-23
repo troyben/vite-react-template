@@ -27,6 +27,12 @@ export function getGableRise(shape: ShapeConfig, realH: number): number {
   return Math.max(0, Math.min(rise, realH));
 }
 
+/** Sloped panels keep the shorter side within the overall height. */
+export function getShortSideHeight(shape: ShapeConfig, height: number): number {
+  const shortHeight = shape.shortSideHeight ?? height * 0.4;
+  return Math.max(0, Math.min(Number.isFinite(shortHeight) ? shortHeight : height * 0.4, height));
+}
+
 // ---------------------------------------------------------------------------
 // Vertex computation -- real-world coordinates (mm)
 //
@@ -55,6 +61,17 @@ export function getRealVertices(
       return [
         { x: inset, y: 0 },
         { x: w - inset, y: 0 },
+        { x: w, y: h },
+        { x: 0, y: h },
+      ];
+    }
+
+    case 'slope-left':
+    case 'slope-right': {
+      const drop = h - getShortSideHeight(shape, h);
+      return [
+        { x: 0, y: shape.type === 'slope-left' ? 0 : drop },
+        { x: w, y: shape.type === 'slope-left' ? drop : 0 },
         { x: w, y: h },
         { x: 0, y: h },
       ];

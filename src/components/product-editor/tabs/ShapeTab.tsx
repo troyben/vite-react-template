@@ -1,10 +1,13 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { ShapeConfig } from '@/components/product-editor/types';
+import type { ShapeConfig, Unit } from '@/components/product-editor/types';
+import { getShortSideHeight } from '@/components/product-editor/canvas/utils/shape-path';
 
 interface ShapeTabProps {
   shape: ShapeConfig;
+  height: number;
+  unit: Unit;
   onChange: (updates: Partial<ShapeConfig>) => void;
 }
 
@@ -24,7 +27,7 @@ const handleNumericChange = (
   }
 };
 
-const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
+const ShapeTab: React.FC<ShapeTabProps> = ({ shape, height, unit, onChange }) => {
   switch (shape.type) {
     case 'arch':
       return (
@@ -71,6 +74,31 @@ const ShapeTab: React.FC<ShapeTabProps> = ({ shape, onChange }) => {
               Bottom width is the main width set in the Dimensions tab.
             </p>
           </div>
+        </div>
+      );
+
+    case 'slope-left':
+    case 'slope-right':
+      return (
+        <div className="space-y-1.5">
+          <Label htmlFor="short-side-height" className="text-xs text-muted-foreground">
+            {shape.type === 'slope-left' ? 'Right' : 'Left'} Side Height ({unit})
+          </Label>
+          <Input
+            id="short-side-height"
+            type="number"
+            min={0}
+            max={height}
+            step="any"
+            value={shape.shortSideHeight ?? ''}
+            onChange={(e) => handleNumericChange(e, 'shortSideHeight', onChange)}
+            placeholder={String(getShortSideHeight(shape, height))}
+            className="h-8 text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            The taller side uses the overall height in Dimensions. The shorter side
+            is limited to that height; leave blank for 40% of the overall height.
+          </p>
         </div>
       );
 

@@ -79,6 +79,16 @@ export function getEdgeCommitFn(
       return null;
     }
 
+    case 'slope-left':
+    case 'slope-right': {
+      if (isHoriz && onWidthChange) return onWidthChange;
+      if (!isVert) return null;
+      const tallX = shape.type === 'slope-left' ? 0 : width;
+      if (Math.abs(rv1.x - tallX) < 0.5) return onHeightChange ?? null;
+      if (onShapeConfigChange) return (v) => onShapeConfigChange({ shortSideHeight: v });
+      return null;
+    }
+
     case 'arch':
       // Arch dimensions are handled separately in Layer 5b
       if (isHoriz && onWidthChange) return onWidthChange;
