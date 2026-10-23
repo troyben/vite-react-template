@@ -130,3 +130,27 @@ describe('calculateProductCost with chains', () => {
     expect(chained.totalCost).toBeCloseTo(rootOnlyArch + legBOnly + postsCost, 2);
   });
 });
+
+describe.each(['slope-left', 'slope-right'] as const)('%s costing', (type) => {
+  it.each([
+    ['mm', 1200, 1000, 400],
+    ['cm', 120, 100, 40],
+    ['m', 1.2, 1, 0.4],
+  ] as const)('uses trapezoid area and sloped perimeter in %s', (unit, width, height, shortSideHeight) => {
+    const breakdown = calculateProductCost({
+      ...oneSegment, width, height, unit, shape: { type, shortSideHeight },
+    }, materials);
+    // Glass: 1.2 * (1 + 0.4) / 2 = 0.84 m²; top = hypot(1.2, 0.6).
+    expect(breakdown.glassItems[0].quantity).toBe(0.84);
+    expect(breakdown.frameItems[0].quantity).toBe(3.94);
+    expect(breakdown.totalCost).toBe(56.22);
+  });
+
+  it('uses the same height clamp as the rendered outline', () => {
+    const breakdown = calculateProductCost({
+      ...oneSegment, shape: { type, shortSideHeight: 2000 },
+    }, materials);
+    expect(breakdown.glassItems[0].quantity).toBe(1);
+    expect(breakdown.frameItems[0].quantity).toBe(4);
+  });
+});

@@ -1,5 +1,5 @@
 import type { ProductData, Unit } from '@/components/product-editor/types';
-import { GABLE_RISE_RATIO } from '@/components/product-editor/canvas/utils/shape-path';
+import { GABLE_RISE_RATIO, getShortSideHeight } from '@/components/product-editor/canvas/utils/shape-path';
 import type { Material, MaterialCategory } from '@/services/materialService';
 
 export interface CostLineItem {
@@ -60,6 +60,16 @@ export function findMaterial(
 // Frame calculation
 // ---------------------------------------------------------------------------
 
+function getOuterPerimeter(product: ProductData): number {
+  const w = toMeters(product.width, product.unit);
+  const h = toMeters(product.height, product.unit);
+  if (product.shape?.type === 'slope-left' || product.shape?.type === 'slope-right') {
+    const shortH = toMeters(getShortSideHeight(product.shape, product.height), product.unit);
+    return w + h + shortH + Math.hypot(w, h - shortH);
+  }
+  return 2 * (w + h);
+}
+
 export function calculateFrameItems(product: ProductData, materials: Material[]): CostLineItem[] {
   const items: CostLineItem[] = [];
   const frameProfiles = byCategory(materials, 'frame_profile');
@@ -72,7 +82,7 @@ export function calculateFrameItems(product: ProductData, materials: Material[])
   // --- Outer frame ---
   const outerFrame = findMaterial(frameProfiles, p => p.profileType === 'outer_frame');
   if (outerFrame) {
-    const perimeter = 2 * (wMeters + hMeters);
+    const perimeter = getOuterPerimeter(product);
     items.push({
       material: outerFrame.name,
       category: 'Frame Profile',
@@ -161,6 +171,12 @@ export function calculateGlassItems(product: ProductData, materials: Material[])
   let area: number;
   const shape = product.shape?.type || 'rectangle';
   switch (shape) {
+    case 'slope-left':
+    case 'slope-right': {
+      const shortHeight = toMeters(getShortSideHeight(product.shape!, product.height), product.unit);
+      area = wMeters * (hMeters + shortHeight) / 2;
+      break;
+    }
     case 'triangle':
       area = 0.5 * wMeters * hMeters;
       break;
@@ -332,9 +348,7 @@ export function calculateAccessoryItems(product: ProductData, materials: Materia
   if (accessories.length === 0) return items;
 
   const productType = product.type;
-  const wMeters = toMeters(product.width, product.unit);
-  const hMeters = toMeters(product.height, product.unit);
-  const perimeter = 2 * (wMeters + hMeters);
+  const perimeter = getOuterPerimeter(product);
 
   for (const mat of accessories) {
     // Filter by applicableTo

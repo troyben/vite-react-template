@@ -1,4 +1,5 @@
 import type { ShapeType } from '@/components/product-editor/types';
+import { shapeLabels } from '@/components/product-editor/shapeLabels';
 
 interface ShapeSelectorProps {
   selected: ShapeType;
@@ -32,6 +33,24 @@ const shapes: { type: ShapeType; label: string; icon: React.ReactNode }[] = [
     icon: (
       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M10 8H30L36 32H4L10 8Z" stroke="currentColor" strokeWidth="2" fill="none" />
+      </svg>
+    ),
+  },
+  {
+    type: 'slope-left',
+    label: shapeLabels['slope-left'],
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 4L36 23V36H4Z" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
+    type: 'slope-right',
+    label: shapeLabels['slope-right'],
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 23L36 4V36H4Z" stroke="currentColor" strokeWidth="2" />
       </svg>
     ),
   },

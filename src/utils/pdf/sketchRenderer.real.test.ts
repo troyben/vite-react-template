@@ -41,6 +41,15 @@ const fixture: ProductData = {
 };
 
 describe('renderSketchToPdf (real svg2pdf)', () => {
+  it.each(['slope-left', 'slope-right'] as const)('exports a %s sketch with panes', async (type) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    await expect(renderSketchToPdf(doc, {
+      ...fixture, shape: { type, shortSideHeight: 400 },
+    }, 14, 20, 44, 30)).resolves.toBeUndefined();
+    expect(doc.isAdvancedAPI()).toBe(false);
+    expect(doc.output()).not.toMatch(/NaN|Infinity/);
+  });
+
   it('renders the previously failing sketch without throwing', async () => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 

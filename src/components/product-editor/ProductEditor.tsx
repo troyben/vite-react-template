@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import ShapeSelector from '@/components/product-editor/canvas/ShapeSelector';
+import { shapeLabels } from '@/components/product-editor/shapeLabels';
 import CanvasToolbar from '@/components/product-editor/canvas/CanvasToolbar';
 import ShapeTab from '@/components/product-editor/tabs/ShapeTab';
 import DimensionsTab from '@/components/product-editor/tabs/DimensionsTab';
@@ -192,7 +193,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
           <Popover>
             <PopoverTrigger className="flex items-center gap-2 rounded-md border border-input bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors">
               <span className="text-muted-foreground text-xs">Shape:</span>
-              <span className="capitalize">{state.shape.type.replace('-', ' ')}</span>
+              <span>{shapeLabels[state.shape.type]}</span>
               <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
                 <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
               </svg>
@@ -381,7 +382,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
 
         <div className="flex-1 overflow-y-auto p-4">
           {state.activeTab === 'shape' && (
-            <ShapeTab shape={state.shape} onChange={state.updateShapeConfig} />
+            <ShapeTab shape={state.shape} height={state.height} unit={state.unit} onChange={state.updateShapeConfig} />
           )}
 
           {state.activeTab === 'dimensions' && (
