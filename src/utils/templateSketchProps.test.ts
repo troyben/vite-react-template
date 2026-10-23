@@ -47,6 +47,27 @@ const legacyTemplate: ProductData = {
   shape: { type: 'rectangle' },
 };
 
+describe.each(['slope-left', 'slope-right'] as const)('%s saved sketch rendering', (type) => {
+  it('keeps its outline and edge labels in preview and print mode after JSON round-trip', () => {
+    const data: ProductData = JSON.parse(JSON.stringify({
+      ...legacyTemplate, width: 1200, height: 1000, panelWidths: [600, 600], panels: 2,
+      shape: { type, shortSideHeight: 400 },
+    }));
+    const expectedPath = type === 'slope-left'
+      ? 'M 40 40 L 256 148 L 256 220 L 40 220 Z'
+      : 'M 40 148 L 256 40 L 256 220 L 40 220 Z';
+    for (const printMode of [false, true]) {
+      const props = extractShapeCanvasProps(data, { printMode });
+      const svg = renderToStaticMarkup(React.createElement(ShapeCanvas, props));
+      expect(svg).toContain(`d="${expectedPath}"`);
+      expect(svg).toMatch(/>400<\/text>/);
+      expect(svg).toMatch(/>1000<\/text>/);
+      expect(svg).toMatch(/>1342<\/text>/);
+      expect(svg).not.toMatch(/NaN|Infinity/);
+    }
+  });
+});
+
 const chainedTemplate: ProductData = {
   ...legacyTemplate,
   segments: [
