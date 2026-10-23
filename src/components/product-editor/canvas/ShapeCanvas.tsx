@@ -547,6 +547,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
       </g>
 
       {/* --- Layer 2: Panel divider lines --- */}
+      <g clipPath={`url(#${clipId})`}>
       {dividers.map((d, i) => {
         // Skip divider if ALL cells on both adjacent sides are removed
         if (removedSections?.length) {
@@ -575,6 +576,7 @@ const ShapeCanvas: React.FC<ShapeCanvasProps> = ({
 
       {/* --- Layer 2b: Pane subdivision lines --- */}
       {renderSubdivisionLines(paneLayerProps)}
+      </g>
 
       {/* --- Layer 3: Frame border --- */}
       <path d={effectivePath} fill="none" stroke={effectiveFrameColor}

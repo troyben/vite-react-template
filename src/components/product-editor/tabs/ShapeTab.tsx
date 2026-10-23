@@ -3,9 +3,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ShapeConfig, Unit } from '@/components/product-editor/types';
 import { getShortSideHeight } from '@/components/product-editor/canvas/utils/shape-path';
+import NShapeSettings from './NShapeSettings';
 
 interface ShapeTabProps {
   shape: ShapeConfig;
+  width: number;
   height: number;
   unit: Unit;
   onChange: (updates: Partial<ShapeConfig>) => void;
@@ -27,8 +29,14 @@ const handleNumericChange = (
   }
 };
 
-const ShapeTab: React.FC<ShapeTabProps> = ({ shape, height, unit, onChange }) => {
+const ShapeTab: React.FC<ShapeTabProps> = ({ shape, width, height, unit, onChange }) => {
   switch (shape.type) {
+    case 'circle':
+      return <p className="text-sm text-muted-foreground">Set the diameter in Dimensions. Width and height stay equal.</p>;
+
+    case 'n-shape':
+      return <NShapeSettings shape={shape} width={width} height={height} unit={unit} onChange={onChange} />;
+
     case 'arch':
       return (
         <div className="space-y-4">

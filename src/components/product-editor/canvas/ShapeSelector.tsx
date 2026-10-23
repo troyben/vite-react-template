@@ -19,6 +19,24 @@ const shapes: { type: ShapeType; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
+    type: 'circle',
+    label: shapeLabels.circle,
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
+    type: 'n-shape',
+    label: shapeLabels['n-shape'],
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 4H36V36H28V13H12V36H4Z" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
     type: 'arch',
     label: 'Arch',
     icon: (

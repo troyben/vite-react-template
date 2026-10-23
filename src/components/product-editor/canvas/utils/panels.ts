@@ -141,6 +141,16 @@ export function getPanelCenter(
   const rightX = MARGIN + rightFrac * drawW;
   const midX = (leftX + rightX) / 2;
 
+  if (shape.type === 'n-shape') {
+    const clipped = clipPolygonToVerticalStrip(svgVerts, leftX, rightX);
+    if (clipped.length > 0) {
+      const ys = clipped.map((p) => p.y);
+      const top = Math.min(...ys);
+      const bottom = Math.max(...ys);
+      return { cx: midX, cy: (top + bottom) / 2, w: rightX - leftX, h: bottom - top };
+    }
+  }
+
   // Get approximate top and bottom at midX
   if (shape.type === 'arch') {
     const archHPx = getArchRy(shape, drawW, drawH, realH);

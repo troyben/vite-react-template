@@ -1,5 +1,5 @@
 import type { ProductData, Unit } from '@/components/product-editor/types';
-import { GABLE_RISE_RATIO, getShortSideHeight } from '@/components/product-editor/canvas/utils/shape-path';
+import { GABLE_RISE_RATIO, getShortSideHeight, getNShapeOpening } from '@/components/product-editor/canvas/utils/shape-path';
 import type { Material, MaterialCategory } from '@/services/materialService';
 
 export interface CostLineItem {
@@ -63,6 +63,11 @@ export function findMaterial(
 function getOuterPerimeter(product: ProductData): number {
   const w = toMeters(product.width, product.unit);
   const h = toMeters(product.height, product.unit);
+  if (product.shape?.type === 'circle') return Math.PI * w;
+  if (product.shape?.type === 'n-shape') {
+    const opening = getNShapeOpening(product.shape, product.width, product.height);
+    return 2 * (w + h) + 2 * toMeters(opening.height, product.unit);
+  }
   if (product.shape?.type === 'slope-left' || product.shape?.type === 'slope-right') {
     const shortH = toMeters(getShortSideHeight(product.shape, product.height), product.unit);
     return w + h + shortH + Math.hypot(w, h - shortH);
@@ -171,6 +176,14 @@ export function calculateGlassItems(product: ProductData, materials: Material[])
   let area: number;
   const shape = product.shape?.type || 'rectangle';
   switch (shape) {
+    case 'circle':
+      area = Math.PI * (wMeters / 2) ** 2;
+      break;
+    case 'n-shape': {
+      const opening = getNShapeOpening(product.shape!, product.width, product.height);
+      area = wMeters * hMeters - toMeters(opening.width, product.unit) * toMeters(opening.height, product.unit);
+      break;
+    }
     case 'slope-left':
     case 'slope-right': {
       const shortHeight = toMeters(getShortSideHeight(product.shape!, product.height), product.unit);

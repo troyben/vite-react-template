@@ -33,6 +33,16 @@ export function getShortSideHeight(shape: ShapeConfig, height: number): number {
   return Math.max(0, Math.min(Number.isFinite(shortHeight) ? shortHeight : height * 0.4, height));
 }
 
+/** Bottom opening of the N-Shape, bounded by the enclosing rectangle. */
+export function getNShapeOpening(shape: ShapeConfig, width: number, height: number) {
+  const bounded = (value: number | undefined, fallback: number, max: number) =>
+    Math.max(0, Math.min(value !== undefined && Number.isFinite(value) ? value : fallback, max));
+  const openingW = bounded(shape.cutoutWidth, width * 0.6, width);
+  const openingH = bounded(shape.cutoutHeight, height * 0.7, height);
+  const left = bounded(shape.cutoutOffset, (width - openingW) / 2, width - openingW);
+  return { width: openingW, height: openingH, left, right: left + openingW, top: height - openingH };
+}
+
 // ---------------------------------------------------------------------------
 // Vertex computation -- real-world coordinates (mm)
 //
@@ -47,6 +57,22 @@ export function getRealVertices(
   h: number,
 ): Point[] {
   switch (shape.type) {
+    case 'circle':
+      // Smooth arcs draw the frame; sampled vertices serve clipping and hit tests.
+      return Array.from({ length: 128 }, (_, i) => {
+        const angle = (i / 128) * Math.PI * 2;
+        return { x: w / 2 + w / 2 * Math.cos(angle), y: h / 2 + h / 2 * Math.sin(angle) };
+      });
+
+    case 'n-shape': {
+      const opening = getNShapeOpening(shape, w, h);
+      return [
+        { x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h },
+        { x: opening.right, y: h }, { x: opening.right, y: opening.top },
+        { x: opening.left, y: opening.top }, { x: opening.left, y: h }, { x: 0, y: h },
+      ];
+    }
+
     case 'rectangle':
       return [
         { x: 0, y: 0 },
@@ -247,6 +273,12 @@ export function getShapePath(
   _realW: number,
   realH: number,
 ): string {
+  if (shape.type === 'circle') {
+    const rx = drawW / 2;
+    const ry = drawH / 2;
+    const cy = MARGIN + ry;
+    return `M ${MARGIN} ${cy} A ${rx} ${ry} 0 1 1 ${MARGIN + drawW} ${cy} A ${rx} ${ry} 0 1 1 ${MARGIN} ${cy} Z`;
+  }
   if (shape.type === 'arch') {
     // Semicircle: ry = rx (true half-circle, arch height = half the width)
     // Segmental: ry = user-defined archHeight (shallower curve)
