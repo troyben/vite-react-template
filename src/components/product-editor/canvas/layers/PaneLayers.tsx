@@ -120,8 +120,11 @@ export function renderSubdivisionLines(props: PaneLayersProps): React.ReactNode 
 
     // Find top and bottom Y at this panel's x range by sampling the center x
     const panelCenterX = (panelLeft + panelRight) / 2;
-    const panelTopY = getTopYAtX(panelCenterX, svgVerts, shape, drawW, drawH, width, height);
-    const panelBottomY = getBottomYAtX(panelCenterX, svgVerts);
+    const nBounds = shape.type === 'n-shape'
+      ? getPanelCenter(shape, panelIndex, props.panels, panelWidths, svgVerts, drawW, drawH, width, height)
+      : null;
+    const panelTopY = nBounds ? nBounds.cy - nBounds.h / 2 : getTopYAtX(panelCenterX, svgVerts, shape, drawW, drawH, width, height);
+    const panelBottomY = nBounds ? nBounds.cy + nBounds.h / 2 : getBottomYAtX(panelCenterX, svgVerts);
     const panelH = panelBottomY - panelTopY;
 
     const gap = 1; // gap between double lines

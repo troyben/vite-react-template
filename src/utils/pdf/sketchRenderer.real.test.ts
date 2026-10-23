@@ -41,6 +41,21 @@ const fixture: ProductData = {
 };
 
 describe('renderSketchToPdf (real svg2pdf)', () => {
+  it.each(['bottom-right', 'bottom-left'] as const)('exports the L-Shape with a %s cutout', async (cutoutPosition) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    await expect(renderSketchToPdf(doc, {
+      ...fixture, shape: { type: 'l-shape', cutoutPosition },
+    }, 14, 20, 44, 30)).resolves.toBeUndefined();
+    expect(doc.output()).not.toMatch(/NaN|Infinity/);
+  });
+
+  it.each(['circle', 'n-shape'] as const)('exports a %s sketch with dimensions and panes', async (type) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    await expect(renderSketchToPdf(doc, { ...fixture, shape: { type } }, 14, 20, 44, 30)).resolves.toBeUndefined();
+    expect(doc.isAdvancedAPI()).toBe(false);
+    expect(doc.output()).not.toMatch(/NaN|Infinity/);
+  });
+
   it.each(['slope-left', 'slope-right'] as const)('exports a %s sketch with panes', async (type) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     await expect(renderSketchToPdf(doc, {

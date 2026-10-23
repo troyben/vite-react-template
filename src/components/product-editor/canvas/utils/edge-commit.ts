@@ -6,7 +6,7 @@
 import type { ShapeConfig } from '@/components/product-editor/types';
 import type { Point } from './types';
 import { realEdgeLength } from './geometry';
-import { getGableRise } from './shape-path';
+import { getGableRise, getNShapeOpening } from './shape-path';
 
 export interface EdgeCommitContext {
   shape: ShapeConfig;
@@ -34,6 +34,25 @@ export function getEdgeCommitFn(
   const isVert = Math.abs(rv1.x - rv2.x) < 0.5;
 
   switch (shape.type) {
+    case 'circle':
+      return null;
+
+    case 'n-shape': {
+      const opening = getNShapeOpening(shape, width, height);
+      if (isHoriz && Math.abs(rv1.y) < 0.5) return onWidthChange ?? null;
+      if (isVert && (Math.abs(rv1.x) < 0.5 || Math.abs(rv1.x - width) < 0.5)) return onHeightChange ?? null;
+      if (!onShapeConfigChange) return null;
+      if (isVert) return (v) => onShapeConfigChange({ cutoutHeight: v });
+      if (isHoriz && Math.abs(rv1.y - opening.top) < 0.5) {
+        return (v) => onShapeConfigChange({ cutoutWidth: v });
+      }
+      if (isHoriz) {
+        const leftLeg = Math.min(rv1.x, rv2.x) < 0.5;
+        return (v) => onShapeConfigChange({ cutoutOffset: leftLeg ? v : width - opening.width - v });
+      }
+      return null;
+    }
+
     case 'rectangle':
       if (isHoriz && onWidthChange) return onWidthChange;
       if (isVert && onHeightChange) return onHeightChange;

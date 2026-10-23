@@ -95,11 +95,13 @@ export function renderSegment(props: SegmentRenderProps): React.ReactNode {
       </g>
 
       {/* Panel dividers */}
+      <g clipPath={`url(#${clipId})`}>
       {dividers.map((d, i) => (
         <line key={`div-${i}`} x1={d.x} y1={d.topY} x2={d.x} y2={d.bottomY}
           stroke={frameColor} strokeWidth={dividerStroke} />
       ))}
       {renderSubdivisionLines(paneProps)}
+      </g>
 
       {/* Frame */}
       <path d={path} fill="none" stroke={frameColor} strokeWidth={frameStroke} strokeLinejoin="miter" />

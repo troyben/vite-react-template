@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import type { Unit } from '../types';
 
 interface DimensionsTabProps {
+  isCircle?: boolean;
   width: number;
   height: number;
   unit: Unit;
@@ -16,6 +17,7 @@ interface DimensionsTabProps {
 }
 
 const DimensionsTab: React.FC<DimensionsTabProps> = ({
+  isCircle = false,
   width,
   height,
   unit,
@@ -51,7 +53,7 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Width ({unit})</Label>
+            <Label className="text-xs text-muted-foreground">{isCircle ? 'Diameter' : 'Width'} ({unit})</Label>
             <Input
               type="number"
               value={width || ''}
@@ -60,7 +62,7 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
               className="h-8 text-sm"
             />
           </div>
-          <div className="space-y-1.5">
+          {!isCircle && <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Height ({unit})</Label>
             <Input
               type="number"
@@ -69,7 +71,7 @@ const DimensionsTab: React.FC<DimensionsTabProps> = ({
               step="0.1"
               className="h-8 text-sm"
             />
-          </div>
+          </div>}
         </div>
       </div>
 

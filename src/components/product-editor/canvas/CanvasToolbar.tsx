@@ -1,5 +1,5 @@
 import React from 'react';
-import { GripHorizontal, Minus, MousePointer2, Eraser, RotateCcw, Box } from 'lucide-react';
+import { GripHorizontal, Minus, MousePointer2, Eraser, RotateCcw, RotateCw, Box } from 'lucide-react';
 import type { CanvasTool } from './utils/canvas-tools';
 
 interface CanvasToolbarProps {
@@ -10,6 +10,7 @@ interface CanvasToolbarProps {
   lineTarget: 'panel' | 'pane';
   onLineTargetChange: (t: 'panel' | 'pane') => void;
   onReset?: () => void;
+  onRotateShape?: () => void;
   render3D: boolean;
   onRender3DChange: (v: boolean) => void;
 }
@@ -22,6 +23,7 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   lineTarget,
   onLineTargetChange,
   onReset,
+  onRotateShape,
   render3D,
   onRender3DChange,
 }) => {
@@ -171,6 +173,17 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       </button>
 
       {/* Reset */}
+      {onRotateShape && (
+        <button
+          type="button"
+          className={`${btnBase} ${btnInactive}`}
+          onClick={onRotateShape}
+          title="Rotate the L-Shape outline 90° clockwise; swaps width and height"
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+          <span>Rotate 90°</span>
+        </button>
+      )}
       {onReset && (
         <button
           type="button"
