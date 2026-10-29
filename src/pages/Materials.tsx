@@ -41,12 +41,12 @@ const Materials = () => {
     <div className="p-6 space-y-6">
       <ScreenLoader isLoading={loading} />
 
-      <PageHeader>
+      <PageHeader className="[&>button[data-slot=button]]:h-auto">
         <div className="flex items-center gap-3">
           <Package className="h-6 w-6 text-muted-foreground" />
           <div><h1 className="text-2xl font-semibold">Materials</h1><p className="mt-1 text-sm text-muted-foreground">Set unit costs and default consumption for doors and windows. Quotations calculate material quantities and costs automatically.</p></div>
         </div>
-        <Button onClick={openAddForm}>
+        <Button onClick={openAddForm} className="min-h-10 self-stretch">
           <Plus className="h-4 w-4" />
           Add Material
         </Button>
