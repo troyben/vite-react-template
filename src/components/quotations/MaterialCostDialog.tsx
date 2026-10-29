@@ -16,10 +16,10 @@ export const MaterialCostDialog: React.FC<MaterialCostDialogProps> = ({ items, q
       <DialogTitle>Material costs</DialogTitle>
       <DialogDescription className="text-xs">{title} · Internal material estimate</DialogDescription>
     </DialogHeader>
-    <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" aria-busy={loading} aria-live="polite">
+    <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4" aria-busy={loading} aria-live="polite">
       {loading && <p role="status" className="text-muted-foreground">Calculating material costs…</p>}
       {error && <p role="alert" className="text-destructive">{error} Close and reopen this modal to retry.</p>}
-      {report && <MaterialCostReport report={report} title={title} />}
+      {report && <MaterialCostReport report={report} title={title} items={items} />}
     </div>
     <DialogFooter className="m-0 shrink-0 px-6">
       <DialogClose render={<Button type="button" variant="outline" />}>Close</DialogClose>
@@ -28,7 +28,7 @@ export const MaterialCostDialog: React.FC<MaterialCostDialogProps> = ({ items, q
       </Button>
     </DialogFooter>
     {report && !loading && !error && createPortal(<div data-material-cost-print-root>
-      <MaterialCostReport report={report} title={title} />
+      <MaterialCostReport report={report} title={title} items={items} />
     </div>, document.body)}
   </>;
 };
