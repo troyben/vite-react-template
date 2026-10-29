@@ -10,9 +10,9 @@ import { useCostingCatalogue } from '@/hooks/useCostingCatalogue';
 import { MaterialCostTotal } from './MaterialCostTotal';
 import { MaterialCostReport } from './MaterialCostReport';
 
-interface MaterialCostDialogProps { items: QuotationItem[]; quotationId?: string; clientName?: string; manualMaterials?: CostingLine[]; onManualMaterialsChange?: (lines: CostingLine[]) => void; itemApprovals?: ItemMaterialApproval[]; onItemApprovalsChange?: (approvals: ItemMaterialApproval[]) => void }
-export const MaterialCostDialog: React.FC<MaterialCostDialogProps> = ({ items, quotationId, clientName, manualMaterials, onManualMaterialsChange, itemApprovals, onItemApprovalsChange }) => {
-  const { report, displayReport, loading, error } = useMaterialCostReport(items, quotationId, manualMaterials, itemApprovals);
+interface MaterialCostDialogProps { items: QuotationItem[]; quotationId?: string; clientName?: string; savedOnly?: boolean; manualMaterials?: CostingLine[]; onManualMaterialsChange?: (lines: CostingLine[]) => void; itemApprovals?: ItemMaterialApproval[]; onItemApprovalsChange?: (approvals: ItemMaterialApproval[]) => void }
+export const MaterialCostDialog: React.FC<MaterialCostDialogProps> = ({ items, quotationId, clientName, manualMaterials, onManualMaterialsChange, itemApprovals, onItemApprovalsChange, savedOnly }) => {
+  const { report, displayReport, loading, error } = useMaterialCostReport(items, quotationId, manualMaterials, itemApprovals, savedOnly);
   const catalogue = useCostingCatalogue(!!onManualMaterialsChange);
   const editing = manualMaterials && onManualMaterialsChange && onItemApprovalsChange ? {
     lines: manualMaterials, materials: catalogue.materials, approvals: itemApprovals ?? [], busy: loading,
