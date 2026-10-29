@@ -7,7 +7,7 @@ import type { QuotationItem } from '@/services/quotationService';
 import { MaterialCostDialog } from './MaterialCostDialog';
 import '@/styles/MaterialCostReport.css';
 
-interface MaterialCostActionProps { items: QuotationItem[]; quotationId?: string; clientName?: string; manualMaterials?: CostingLine[]; onManualMaterialsChange?: (lines: CostingLine[]) => void; itemApprovals?: ItemMaterialApproval[]; onItemApprovalsChange?: (approvals: ItemMaterialApproval[]) => void }
+interface MaterialCostActionProps { items: QuotationItem[]; quotationId?: string; clientName?: string; savedOnly?: boolean; manualMaterials?: CostingLine[]; onManualMaterialsChange?: (lines: CostingLine[]) => void; itemApprovals?: ItemMaterialApproval[]; onItemApprovalsChange?: (approvals: ItemMaterialApproval[]) => void }
 export const MaterialCostAction: React.FC<MaterialCostActionProps> = props => {
   const [open, setOpen] = useState(false);
   return <Dialog open={open} onOpenChange={setOpen}>

@@ -1,85 +1,24 @@
+import { X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { TableCell, TableRow } from '@/components/ui/table';
+import { formatCurrency } from '@/config/currency';
 import type { QuotationItem } from '@/services/quotationService';
-import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
-import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
+import type { QuotationItemEditing } from './quotationItemEditing';
+import { QuotationItemSketch } from './QuotationItemSketch';
+import { QuotationItemNumber } from './QuotationItemFields';
 
-interface QuotationItemRowProps {
-  item: QuotationItem;
-}
-
-function SketchDetails({ sketchData }: { sketchData: any }) {
-  const openingCount = sketchData.openingPanels?.length || 0;
-  const dividedPanelsCount = sketchData.panelDivisions?.length || 0;
-  const openingPanesCount = sketchData.openingPanes?.length || 0;
-
-  return (
-    <div className="sketch-details-grid">
-      <div className="sketch-details-main">
-        <div className="sketch-type">
-          {sketchData.type === 'door' ? `${sketchData.doorType} Door` : 'Window'}
-        </div>
-        <div className="sketch-dimensions">
-          {sketchData.width} &times; {sketchData.height} {sketchData.unit}
-        </div>
-      </div>
-      <div className="sketch-details-specs">
-        <div className="spec-item">
-          <span className="spec-label">Panels:</span>
-          <span className="spec-value">{sketchData.panels} total ({openingCount} opening)</span>
-        </div>
-        {dividedPanelsCount > 0 && (
-          <div className="spec-item">
-            <span className="spec-label">Divided Panels:</span>
-            <span className="spec-value">{dividedPanelsCount} panels with divisions</span>
-          </div>
-        )}
-        {openingPanesCount > 0 && (
-          <div className="spec-item">
-            <span className="spec-label">Opening Panes:</span>
-            <span className="spec-value">{openingPanesCount} panes</span>
-          </div>
-        )}
-        <div className="spec-item">
-          <span className="spec-label">Frame:</span>
-          <span className="spec-value">
-            {sketchData.frameColor === '#C0C0C0' ? 'Natural/Silver' :
-             sketchData.frameColor === '#4F4F4F' ? 'Charcoal Grey' :
-             sketchData.frameColor === '#CD7F32' ? 'Bronze' : 'Custom'}
-          </span>
-        </div>
-        <div className="spec-item">
-          <span className="spec-label">Glass:</span>
-          <span className="spec-value">{sketchData.glassType}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function QuotationItemRow({ item }: QuotationItemRowProps) {
-  const sketchData = item.productSketch;
-
-  return (
-    <tr>
-      <td>
-        <div>{item.item}</div>
-        <div style={{ color: 'var(--text-light)', fontSize: '14px' }}>{item.description}</div>
-        <br />
-        {sketchData && (
-          <div className="preview-sketch">
-            <div className="sketch-preview-container">
-              <div className="sketch-preview-specs">
-                <SketchDetails sketchData={sketchData} />
-              </div>
-              <div className="w-[320px] h-[160px]">
-                <ShapeCanvas {...extractShapeCanvasProps(sketchData)} svgStyle={{ width: '100%', height: '100%' }} />
-              </div>
-            </div>
-          </div>
-        )}
-      </td>
-      <td>{item.quantity}</td>
-      <td>${item.price.toFixed(2)}</td>
-      <td className="text-right">${item.total.toFixed(2)}</td>
-    </tr>
-  );
-}
+interface QuotationItemRowProps { item: QuotationItem; index: number; count: number; editing?: QuotationItemEditing }
+export const QuotationItemRow: React.FC<QuotationItemRowProps> = ({ item, index, count, editing }) => (
+  <TableRow className="align-top">
+    <TableCell className="py-1.5 text-xs font-medium text-muted-foreground">{index + 1}</TableCell>
+    <TableCell className="py-1.5"><QuotationItemSketch item={item} index={index} editing={editing} /></TableCell>
+    <TableCell className="py-1.5"><Input aria-label={`Item ${index + 1} name`} value={item.item} readOnly={!editing} onChange={editing ? event => editing.onChange(index, 'item', event.target.value) : undefined} placeholder="Item name" className="h-7 text-xs" required={!!editing} /></TableCell>
+    <TableCell className="py-1.5"><Textarea aria-label={`Item ${index + 1} description`} value={item.description ?? ''} readOnly={!editing} onChange={editing ? event => editing.onChange(index, 'description', event.target.value) : undefined}
+      placeholder="Add description..." className="field-sizing-fixed h-20 min-h-0 resize-y px-2 py-1 text-xs leading-4" rows={4} /></TableCell>
+    {(['quantity', 'rate', 'price'] as const).map(field => <TableCell key={field} className="py-1.5"><QuotationItemNumber item={item} index={index} field={field} editing={editing} /></TableCell>)}
+    <TableCell className="py-1.5 text-right text-sm font-medium">{formatCurrency(item.total)}</TableCell>
+    {editing && <TableCell className="py-1.5"><button type="button" aria-label={`Remove item ${index + 1}`} disabled={count <= 1} onClick={() => editing.onRemove(index)}
+      className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"><X className="h-3.5 w-3.5" /></button></TableCell>}
+  </TableRow>
+);

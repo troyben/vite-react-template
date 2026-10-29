@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import api from '@/api';
 import type { QuotationItem } from './quotationService';
 import { MaterialCostReport } from '@/components/quotations/MaterialCostReport';
-import { allMaterialApprovals, materialCostReportTitle, previewMaterialCostReport, printMaterialCostReport, type MaterialCostReportData } from './materialCostReportService';
+import { allMaterialApprovals, materialCostReportTitle, previewMaterialCostReport, savedMaterialCostReport, printMaterialCostReport, type MaterialCostReportData } from './materialCostReportService';
 const items: QuotationItem[] = [{ item: '<Window>', quantity: 1, price: 0, total: 0, productSketch: { type: 'window', width: 2500, height: 1400, unit: 'mm', panels: 1 } }];
 const report: MaterialCostReportData = { currency: 'USD', incomplete: true, total: 5.71, warnings: ['Item 2 needs a drawing'],
   additional: { lines: [], total: 0 }, items: [{ index: 0, status: 'calculated', name: '<Window>', description: '2500 × 1400 mm', quantity: 1, total: 5.71,
@@ -13,6 +13,19 @@ const report: MaterialCostReportData = { currency: 'USD', incomplete: true, tota
     { index: 1, status: 'needs_review', name: 'No drawing', description: '', quantity: 2, lines: [], total: 0 }] };
 
 describe('material cost report', () => {
+  it('reads the saved item report with GET and rejects absent or failed responses', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, itemCosts: report } });
+    const post = vi.spyOn(api, 'post');
+    try {
+      expect(await savedMaterialCostReport('30')).toEqual(report);
+      expect(get).toHaveBeenCalledWith('/quotations/30/costing', { params: { includeItemCosts: true } });
+      expect(post).not.toHaveBeenCalled();
+      get.mockResolvedValue({ data: { success: true, data: {} } });
+      await expect(savedMaterialCostReport('30')).rejects.toThrow();
+      get.mockResolvedValue({ data: { success: false, itemCosts: report } });
+      await expect(savedMaterialCostReport('30')).rejects.toThrow();
+    } finally { get.mockRestore(); post.mockRestore(); }
+  });
   it('requests an opt-in item report without changing the existing preview or saving data', async () => {
     const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { success: true, data: { itemCosts: report } } });
     try {

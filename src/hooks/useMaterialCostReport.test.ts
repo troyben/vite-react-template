@@ -3,15 +3,15 @@ import { act, createElement, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useMaterialCostReport } from './useMaterialCostReport';
-import { previewMaterialCostReport, type MaterialCostReportData } from '@/services/materialCostReportService';
+import { previewMaterialCostReport, savedMaterialCostReport, type MaterialCostReportData } from '@/services/materialCostReportService';
 import type { CostingLine, ItemMaterialApproval } from '@/services/costingTypes';
 import type { QuotationItem } from '@/services/quotationService';
-vi.mock('@/services/materialCostReportService', () => ({ previewMaterialCostReport: vi.fn() }));
+vi.mock('@/services/materialCostReportService', () => ({ previewMaterialCostReport: vi.fn(), savedMaterialCostReport: vi.fn() }));
 const items: QuotationItem[] = [{ item: 'Window', quantity: 1, price: 0, total: 0 }];
 const report: MaterialCostReportData = { currency: 'USD', incomplete: false, items: [], additional: { lines: [], total: 0 }, total: 4, warnings: [] };
 let state: ReturnType<typeof useMaterialCostReport>;
-const Harness = ({ rows, manual, approvals }: { rows: QuotationItem[]; manual?: CostingLine[]; approvals?: ItemMaterialApproval[] }) => {
-  const current = useMaterialCostReport(rows, undefined, manual, approvals);
+const Harness = ({ rows, manual, approvals, id, savedOnly }: { rows: QuotationItem[]; manual?: CostingLine[]; approvals?: ItemMaterialApproval[]; id?: string; savedOnly?: boolean }) => {
+  const current = useMaterialCostReport(rows, id, manual, approvals, savedOnly);
   useEffect(() => { state = current; }, [current]);
   return null;
 };
@@ -21,6 +21,20 @@ beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.useFakeTimers(); vi.resetAllMocks();
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
+});
+
+it('loads only the saved report in readonly mode and hides a draft report when switching modes', async () => {
+  vi.mocked(previewMaterialCostReport).mockResolvedValue(report);
+  vi.mocked(savedMaterialCostReport).mockResolvedValue({ ...report, total: 9 });
+  await act(() => root.render(createElement(Harness, { rows: items, id: '30' })));
+  await act(() => vi.advanceTimersByTime(200));
+  expect(state.report?.total).toBe(4);
+  await act(() => root.render(createElement(Harness, { rows: items, id: '30', savedOnly: true })));
+  expect(state.report).toBeUndefined(); expect(state.displayReport).toBeUndefined();
+  await act(() => vi.advanceTimersByTime(200));
+  expect(savedMaterialCostReport).toHaveBeenCalledExactlyOnceWith('30');
+  expect(previewMaterialCostReport).toHaveBeenCalledTimes(1);
+  expect(state.report?.total).toBe(9);
 });
 afterEach(async () => { await act(() => root.unmount()); container.remove(); vi.useRealTimers(); });
 
