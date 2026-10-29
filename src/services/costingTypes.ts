@@ -16,7 +16,9 @@ export interface CostingLine {
   unitCost: number;
   wastagePercent: number;
 }
+export interface ItemMaterialApproval { quotationItemId: string; signature: string }
 export interface CostingSnapshot {
+  itemApprovals?: ItemMaterialApproval[];
   catalogue?: { id: number; name: string; category: string; unit: string; costPrice: number; currency: string; properties: Record<string, unknown> }[];
   sourceKey?: string;
   totalMaterialCost?: number;

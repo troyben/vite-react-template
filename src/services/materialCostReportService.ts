@@ -1,4 +1,4 @@
-import type { CostingLine } from './costingTypes';
+import type { CostingLine, ItemMaterialApproval } from './costingTypes';
 import api from '@/api';
 import { costingMoney } from './costingService';
 import type { QuotationItem } from './quotationService';
@@ -6,16 +6,16 @@ import type { QuotationItem } from './quotationService';
 export interface MaterialCostReportLine {
   manual?: boolean; id: string; name: string; category: string; unit: string; quantity: number; unitCost: number; total: number;
 }
-export type MaterialConfigurationStatus = 'calculated' | 'not_configured' | 'needs_review';
+export type MaterialConfigurationStatus = 'calculated' | 'not_configured' | 'needs_review' | 'approved';
 export interface MaterialCostReportItem {
-  index: number; name: string; description: string; quantity: number; status: MaterialConfigurationStatus; lines: MaterialCostReportLine[]; total: number;
+  approvalKey?: string; canApprove?: boolean; index: number; name: string; description: string; quantity: number; status: MaterialConfigurationStatus; lines: MaterialCostReportLine[]; total: number;
 }
 export interface MaterialCostReportData {
   currency: string; incomplete: boolean; items: MaterialCostReportItem[];
   additional: { lines: MaterialCostReportLine[]; total: number }; total: number; warnings: string[];
 }
-export async function previewMaterialCostReport(items: QuotationItem[], quotationId?: string, manualMaterials?: CostingLine[]): Promise<MaterialCostReportData> {
-  const response = await api.post('/quotations/costing-preview', { items, quotationId, ...(manualMaterials === undefined ? {} : { manualMaterials }), includeItemCosts: true });
+export async function previewMaterialCostReport(items: QuotationItem[], quotationId?: string, manualMaterials?: CostingLine[], itemApprovals?: ItemMaterialApproval[]): Promise<MaterialCostReportData> {
+  const response = await api.post('/quotations/costing-preview', { items, quotationId, ...(manualMaterials === undefined ? {} : { manualMaterials }), ...(itemApprovals === undefined ? {} : { itemApprovals }), includeItemCosts: true });
   if (!response.data.success || !response.data.data?.itemCosts) throw new Error('Unable to load material costs');
   return response.data.data.itemCosts;
 }

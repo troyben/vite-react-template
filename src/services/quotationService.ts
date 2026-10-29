@@ -1,4 +1,4 @@
-import type { CostingLine } from './costingTypes';
+import type { CostingLine, ItemMaterialApproval } from './costingTypes';
 import api from '../api';
 import type { ProductData } from '../components/product-editor/types';
 import { AxiosResponse } from 'axios';
@@ -26,6 +26,7 @@ export interface QuotationItem {
 export interface QuotationFormData {
   /** Private write-only costing draft; never returned by ordinary quotation endpoints. */
   manualMaterials?: CostingLine[];
+  itemApprovals?: ItemMaterialApproval[];
   id?: number;
   revision?: number;
   clientId: number;           // Required
@@ -86,7 +87,7 @@ export const getQuotationById = async (id: number): Promise<AxiosResponse<ApiRes
 
 export const updateQuotation = async (
   id: number,
-  quotation: Partial<Quotation> & { manualMaterials?: CostingLine[] }
+  quotation: Partial<Quotation> & { manualMaterials?: CostingLine[]; itemApprovals?: ItemMaterialApproval[] }
 ): Promise<AxiosResponse<ApiResponse<Quotation>>> => {
   try {
     // grand_total is response-only; never send it back to the server

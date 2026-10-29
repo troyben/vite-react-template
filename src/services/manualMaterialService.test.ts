@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import api from '@/api';
-import { addManualMaterial, catalogueOptions, manualMaterialsWithoutItem, validManualQuantity, withQuotationItemIds } from './manualMaterialService';
+import { addManualMaterial, catalogueOptions, manualMaterialsWithoutItem, validManualQuantity, withQuotationItemIds, saveManualLine, removeManualLine, setItemMaterialApproval } from './manualMaterialService';
 import { PROFILE_OPTIONS, matchesOption } from './describedOptions';
 import { previewMaterialCostReport } from './materialCostReportService';
 import { createQuotation, updateQuotation, type QuotationItem } from './quotationService';
@@ -38,15 +38,26 @@ it('creates distinct stable item IDs and preserves surviving IDs across removal 
 });
 it('sends private manual drafts only through explicit costing-preview and quotation write fields', async () => {
   const manualMaterials = [addManualMaterial(material, 6, 0, 'door')];
+  const itemApprovals = [{ quotationItemId: 'door', signature: 'a'.repeat(64) }];
   const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { success: true, data: { itemCosts: { total: 18 } } } });
   const put = vi.spyOn(api, 'put').mockResolvedValue({ data: { success: true } });
   try {
-    await previewMaterialCostReport([{ ...item, id: 'door' }], '1', manualMaterials);
-    expect(post.mock.calls[0][1]).toMatchObject({ manualMaterials, includeItemCosts: true });
-    const data = { clientId: 1, client_name: 'Client', client_email: '', items: [{ ...item, id: 'door' }], total_amount: 20, vat_percent: 0, transport_fee: 0, status: 'draft' as const, manualMaterials };
+    await previewMaterialCostReport([{ ...item, id: 'door' }], '1', manualMaterials, itemApprovals);
+    expect(post.mock.calls[0][1]).toMatchObject({ manualMaterials, itemApprovals, includeItemCosts: true });
+    const data = { clientId: 1, client_name: 'Client', client_email: '', items: [{ ...item, id: 'door' }], total_amount: 20, vat_percent: 0, transport_fee: 0, status: 'draft' as const, manualMaterials, itemApprovals };
     await createQuotation(data); await updateQuotation(1, { ...data, revision: 1 });
     expect(post.mock.calls[1][1]).toMatchObject({ manualMaterials, items: [{ ...item, id: 'door' }] });
-    expect(put.mock.calls[0][1]).toMatchObject({ manualMaterials, revision: 1 });
+    expect(put.mock.calls[0][1]).toMatchObject({ manualMaterials, itemApprovals, revision: 1 });
     expect(data.items[0]).not.toHaveProperty('manualMaterials');
   } finally { post.mockRestore(); put.mockRestore(); }
+});
+
+it('updates only the targeted manual line or approval and preserves other product drafts', () => {
+  const one = addManualMaterial(material, 1, 0, 'one'), two = addManualMaterial(material, 2, 0, 'two');
+  const updated = saveManualLine([one, two], { ...two, unitCost: 4 });
+  expect(updated[0]).toBe(one); expect(updated[1].unitCost).toBe(4); expect(two.unitCost).toBe(3);
+  expect(removeManualLine(updated, one.id)).toEqual([updated[1]]);
+  const approvals = [{ quotationItemId: 'one', signature: 'old' }, { quotationItemId: 'two', signature: 'kept' }];
+  expect(setItemMaterialApproval(approvals, 'one', 'new')).toEqual([{ quotationItemId: 'two', signature: 'kept' }, { quotationItemId: 'one', signature: 'new' }]);
+  expect(setItemMaterialApproval(approvals, 'one')).toEqual([approvals[1]]);
 });
