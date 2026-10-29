@@ -33,3 +33,17 @@ export function materialItemEmptyMessage(item: MaterialCostReportItem) {
   if (item.status === 'not_configured') return 'No matching material defaults. Review this product’s material configuration.';
   return item.status === 'calculated' ? 'No material usage for the configured rules.' : 'Review this product’s drawing and material checks.';
 }
+
+/** Bulk approval uses only the current report’s eligible products and retains other saved reviews. */
+export function allMaterialApprovals(items: QuotationItem[], report: MaterialCostReportData | undefined, current: ItemMaterialApproval[] = []) {
+  const pending: ItemMaterialApproval[] = [];
+  for (const row of report?.items ?? []) {
+    const id = items[row.index]?.id;
+    if (row.canApprove && row.status !== 'approved' && row.approvalKey && id && items.filter(item => item.id === id).length === 1) {
+      pending.push({ quotationItemId: id, signature: row.approvalKey });
+    }
+  }
+  const approvals = new Map(current.map(approval => [approval.quotationItemId, approval]));
+  pending.forEach(approval => approvals.set(approval.quotationItemId, approval));
+  return { count: pending.length, approvals: [...approvals.values()] };
+}

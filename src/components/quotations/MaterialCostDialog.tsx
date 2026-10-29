@@ -1,11 +1,11 @@
 import { createPortal } from 'react-dom';
-import { Printer } from 'lucide-react';
+import { CheckCheck, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CostingLine, ItemMaterialApproval } from '@/services/costingTypes';
 import type { QuotationItem } from '@/services/quotationService';
 import { useMaterialCostReport } from '@/hooks/useMaterialCostReport';
-import { materialCostReportTitle, printMaterialCostReport } from '@/services/materialCostReportService';
+import { allMaterialApprovals, materialCostReportTitle, printMaterialCostReport } from '@/services/materialCostReportService';
 import { useCostingCatalogue } from '@/hooks/useCostingCatalogue';
 import { MaterialCostTotal } from './MaterialCostTotal';
 import { MaterialCostReport } from './MaterialCostReport';
@@ -18,6 +18,7 @@ export const MaterialCostDialog: React.FC<MaterialCostDialogProps> = ({ items, q
     lines: manualMaterials, materials: catalogue.materials, approvals: itemApprovals ?? [], busy: loading,
     error: catalogue.error, retry: catalogue.retry, onChange: onManualMaterialsChange, onApprove: onItemApprovalsChange,
   } : undefined;
+  const bulkApproval = allMaterialApprovals(items, report, itemApprovals);
   const title = materialCostReportTitle(quotationId, clientName);
   return <>
     <DialogHeader className="shrink-0 border-b px-6 py-3 pr-12">
@@ -32,6 +33,8 @@ export const MaterialCostDialog: React.FC<MaterialCostDialogProps> = ({ items, q
     {displayReport && <div className="shrink-0 bg-background px-3 sm:px-4" aria-live="polite"><MaterialCostTotal report={displayReport} /></div>}
     <DialogFooter className="m-0 shrink-0 px-6">
       <DialogClose render={<Button type="button" variant="outline" />}>Close</DialogClose>
+      {editing && <Button type="button" variant="outline" disabled={!bulkApproval.count || loading || !!error}
+        onClick={() => onItemApprovalsChange?.(bulkApproval.approvals)}><CheckCheck className="h-4 w-4" />Approve all</Button>}
       <Button type="button" onClick={printMaterialCostReport} disabled={!report || loading || !!error}>
         <Printer className="h-4 w-4" />Print
       </Button>
