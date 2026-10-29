@@ -6,13 +6,14 @@ import type { MaterialUsageProperties } from '@/services/materialUsageService';
 
 const fields = {
   frame_profile: { title: 'Frame profile properties', label: 'Profile type', key: 'profileType',
-    options: { outer_frame: 'Outer Frame', mullion: 'Mullion', transom: 'Transom' } },
+    options: { outer_frame: 'Outer Frame', mullion: 'Mullion', transom: 'Transom', corner_post: 'Corner Post' } },
   glass: { title: 'Glass properties', label: 'Glass type', key: 'glassType',
     options: { clear: 'Clear', frosted: 'Frosted', 'custom-tint': 'Custom Tint' } },
   hardware: { title: 'Hardware properties', label: 'Hardware type', key: 'hardwareType',
     options: { handle: 'Handle', lock: 'Lock', hinge: 'Hinge', roller: 'Roller' } },
 };
 const profileHelp: Record<string, string> = {
+  corner_post: 'Profiles joining connected sections at a corner.',
   outer_frame: 'The main perimeter frame that runs around the entire window or door opening.',
   mullion: 'Vertical divider bars between panels within the frame.',
   transom: 'Horizontal or vertical bars that subdivide individual panels into smaller panes.',
