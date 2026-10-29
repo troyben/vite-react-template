@@ -49,13 +49,12 @@ export function ClientFormDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="phone">Phone *</Label>
+              <Label htmlFor="phone">Phone (optional)</Label>
               <Input
                 id="phone"
                 type="tel"
                 name="phone"
-                defaultValue={editingClient?.phone}
-                required
+                defaultValue={editingClient?.phone ?? ''}
               />
             </div>
           </div>

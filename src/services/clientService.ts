@@ -12,7 +12,7 @@ export interface Client {
   id: number;
   name: string;
   email?: string;
-  phone?: string;
+  phone?: string | null;
   company?: string;
   address: string;
   createdAt?: string;

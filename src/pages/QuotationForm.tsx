@@ -471,13 +471,9 @@ const QuotationForm = () => {
 
       {/* Modals */}
       <QuotationPreviewModal open={showPreviewModal} onClose={() => setShowPreviewModal(false)}>
-        <div className="mb-4 px-2">
-          <h2 className="text-lg font-semibold">Quotation Preview</h2>
-        </div>
-        <div className="overflow-auto max-h-[80vh]">
           <QuotationPDFPreview
             clientName={selectedClient?.name || 'Client Name'}
-            clientPhone={selectedClient?.phone}
+            clientPhone={selectedClient?.phone ?? undefined}
             clientAddress={selectedClient?.address}
             items={formData.items.map(item => ({ ...item, total: item.quantity * item.price }))}
             totalAmount={calculateTotal(formData.items)}
@@ -486,7 +482,6 @@ const QuotationForm = () => {
             quotationId={formData.id}
             createdAt={formData.created_at}
           />
-        </div>
       </QuotationPreviewModal>
 
       {showClientSelector && (
