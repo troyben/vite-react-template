@@ -431,7 +431,7 @@ const QuotationForm = () => {
   if (loading) return <div className="p-6">Loading quotation data...</div>;
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className="p-3 md:p-4 space-y-3">
       {/* Header */}
       <PageHeader>
         <div className="flex items-center gap-3">
@@ -465,49 +465,32 @@ const QuotationForm = () => {
 
       <form id="quotation-form" onSubmit={handleSubmit}>
         {/* Items Table */}
-        <Card>
-          <CardHeader className="py-3 px-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Line Items</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add Item
-              </Button>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t pt-2">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3 min-w-0 flex-1">
-                <span className="text-sm font-medium text-muted-foreground shrink-0">Client:</span>
-                {selectedClient ? (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="font-semibold text-sm truncate">{selectedClient.name}</span>
-                    {selectedClient.phone && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3 w-3" />{selectedClient.phone}
-                      </span>
-                    )}
-                    {selectedClient.address && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                        <MapPin className="h-3 w-3 shrink-0" />{selectedClient.address}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground italic">No client selected</span>
-                )}
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => setShowClientSelector(true)}>
+        <Card className="gap-0 py-0">
+          <CardHeader className="flex flex-wrap items-center gap-2 border-b-[1px] px-3 py-2">
+            <CardTitle className="mr-2 text-sm">Line Items</CardTitle>
+            <div className="order-3 flex min-w-0 flex-1 basis-full items-center gap-2 sm:order-none sm:basis-auto">
+              <span className="shrink-0 text-xs text-muted-foreground">Client:</span>
+              {selectedClient ? <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+                <span className="truncate text-xs font-semibold">{selectedClient.name}</span>
+                {selectedClient.phone && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="h-3 w-3" />{selectedClient.phone}</span>}
+                {selectedClient.address && <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" />{selectedClient.address}</span>}
+              </div> : <span className="min-w-0 flex-1 text-xs italic text-muted-foreground">No client selected</span>}
+              <Button type="button" variant="outline" size="sm" className="h-7 shrink-0 text-xs" onClick={() => setShowClientSelector(true)}>
                 {selectedClient ? 'Change' : 'Select Client'}
               </Button>
             </div>
+            <Button type="button" variant="outline" size="sm" className="ml-auto h-7 text-xs sm:ml-0" onClick={handleAddItem}>
+              <Plus className="h-3.5 w-3.5" />Add Item
+            </Button>
           </CardHeader>
           <CardContent className="p-0">
             {/* Mobile cards */}
-            <div className="md:hidden space-y-3 p-3">
+            <div className="@container md:hidden space-y-2 p-2">
               {(formData.items as QuotationItem[]).map((item, index) => (
-                <div key={index} className="rounded-lg border bg-card p-3 space-y-3 relative">
+                <div key={index} className="rounded-lg border bg-card p-2 space-y-2 relative">
                   {/* Header: # + remove */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-muted-foreground">Item #{index + 1}</span>
+                    <span className="text-sm font-medium text-muted-foreground">{index + 1}</span>
                     <button type="button" onClick={() => handleRemoveItem(index)}
                       disabled={(formData.items as QuotationItem[]).length <= 1}
                       className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30">
@@ -516,9 +499,9 @@ const QuotationForm = () => {
                   </div>
 
                   {/* Sketch + Item name row */}
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     {/* Sketch thumbnail */}
-                    <div className="shrink-0">
+                    <div className="w-[100px] shrink-0">
                       {item.productSketch ? (
                         <div className="flex flex-col gap-1">
                           <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors w-[100px] h-[70px]"
@@ -554,27 +537,27 @@ const QuotationForm = () => {
                     </div>
 
                     {/* Item name + description */}
-                    <div className="flex-1 space-y-1.5">
+                    <div className="min-w-0 flex-1 space-y-1.5">
                       <Input value={item.item} onChange={(e) => handleItemChange(index, 'item', e.target.value)}
-                        placeholder="Item name" className="h-8 text-sm" required />
+                        placeholder="Item name" className="h-7 text-xs" required />
                       <Textarea value={item.description ?? ''} onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        placeholder="Description" className="text-sm min-h-[48px]" rows={2} />
+                        placeholder="Description" className="field-sizing-fixed h-16 min-h-0 resize-y text-xs leading-4" rows={2} />
                     </div>
                   </div>
 
-                  {/* Numbers: 2x2 grid */}
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Compact numeric fields */}
+                  <div className="grid grid-cols-2 gap-2 @min-[280px]:grid-cols-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Qty</Label>
                       <Input type="number" value={item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                        className="h-8 text-sm" required />
+                        className="h-7 text-xs" required />
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Rate</Label>
                       <Input type="number" min="0" step="0.01" value={item.rate ?? ''}
                         onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
-                        placeholder="—" className="h-8 text-sm" />
+                        placeholder="—" className="h-7 text-xs" />
                       {item.productSketch && item.rate && (
                         <span className="text-[10px] text-muted-foreground mt-0.5 block">
                           {(() => {
@@ -590,7 +573,7 @@ const QuotationForm = () => {
                       <Label className="text-xs text-muted-foreground">Price</Label>
                       <Input type="number" min="0" step="0.01" value={item.price}
                         onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
-                        className="h-8 text-sm" required
+                        className="h-7 text-xs" required
                         readOnly={!!(item.rate !== undefined && item.productSketch)}
                         disabled={!!(item.rate !== undefined && item.productSketch)} />
                     </div>
@@ -616,12 +599,12 @@ const QuotationForm = () => {
 
             {/* Desktop table */}
             <div className="hidden md:block">
-            <Table>
+            <Table className="[&_th]:h-8 [&_th]:text-xs">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">#</TableHead>
-                  <TableHead className="w-[250px]">Sketch</TableHead>
-                  <TableHead>Item</TableHead>
+                  <TableHead className="w-[172px]">Sketch</TableHead>
+                  <TableHead className="w-[23%]">Item</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-16">Qty</TableHead>
                   <TableHead className="w-24">Rate</TableHead>
@@ -634,18 +617,18 @@ const QuotationForm = () => {
                 {(formData.items as QuotationItem[]).map((item, index) => (
                   <TableRow key={index} className="align-top">
                     {/* Row number */}
-                    <TableCell className="text-muted-foreground font-medium pt-4">
+                    <TableCell className="py-1.5 text-xs text-muted-foreground font-medium">
                       {index + 1}
                     </TableCell>
 
                     {/* Sketch thumbnail */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       {item.productSketch ? (
-                        <div className="flex flex-col gap-1">
-                          <div className="cursor-pointer w-[180px] h-[110px]" onClick={() => handleOpenSketch(index)}>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="cursor-pointer w-[144px] h-[80px]" onClick={() => handleOpenSketch(index)}>
                             <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
                           </div>
-                          <div className="flex gap-1 justify-center">
+                          <div className="flex gap-1 justify-center leading-3.5">
                             <button type="button" onClick={() => handleOpenSketch(index)}
                               className="text-[10px] text-primary hover:underline">Edit</button>
                             <span className="text-muted-foreground text-[10px]">·</span>
@@ -673,40 +656,40 @@ const QuotationForm = () => {
                     </TableCell>
 
                     {/* Item name */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       <Input
                         value={item.item}
                         onChange={(e) => handleItemChange(index, 'item', e.target.value)}
                         placeholder="Item name"
-                        className="h-8 text-sm"
+                        className="h-7 text-xs"
                         required
                       />
                     </TableCell>
 
                     {/* Description */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       <Textarea
                         value={item.description ?? ''}
                         onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                         placeholder="Add description..."
-                        className="text-sm min-h-[60px]"
-                        rows={3}
+                        className="field-sizing-fixed h-20 min-h-0 resize-y px-2 py-1 text-xs leading-4"
+                        rows={4}
                       />
                     </TableCell>
 
                     {/* Qty */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       <Input
                         type="number"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                        className="h-8 text-sm w-16"
+                        className="h-7 text-xs w-16"
                         required
                       />
                     </TableCell>
 
                     {/* Rate */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       <Input
                         type="number"
                         min="0"
@@ -714,7 +697,7 @@ const QuotationForm = () => {
                         value={item.rate ?? ''}
                         onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
                         placeholder="—"
-                        className="h-8 text-sm w-24"
+                        className="h-7 text-xs w-24"
                       />
                       {item.productSketch && item.rate && (
                         <span className="text-[10px] text-muted-foreground mt-0.5 block">
@@ -729,14 +712,14 @@ const QuotationForm = () => {
                     </TableCell>
 
                     {/* Price */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
                         value={item.price}
                         onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
-                        className="h-8 text-sm w-24"
+                        className="h-7 text-xs w-24"
                         required
                         readOnly={!!(item.rate !== undefined && item.productSketch)}
                         disabled={!!(item.rate !== undefined && item.productSketch)}
@@ -744,12 +727,12 @@ const QuotationForm = () => {
                     </TableCell>
 
                     {/* Total */}
-                    <TableCell className="pt-4 text-right font-medium">
+                    <TableCell className="py-1.5 text-right text-sm font-medium">
                       {formatAmount(item.total)}
                     </TableCell>
 
                     {/* Remove */}
-                    <TableCell className="pt-3">
+                    <TableCell className="py-1.5">
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(index)}
@@ -765,9 +748,9 @@ const QuotationForm = () => {
             </Table>
 
             {/* Add item row */}
-            <div className="border-t px-4 py-2">
+            <div className="border-t px-3 py-1">
               <button type="button" onClick={handleAddItem}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors py-1">
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
                 <Plus className="h-3.5 w-3.5" />
                 Add another item
               </button>
@@ -785,7 +768,7 @@ const QuotationForm = () => {
               const transportFee = Number(formData.transport_fee) || 0;
               const { vatAmount, grandTotal } = computeTotals(subtotal, vatPercent, transportFee);
               return (
-                <Card className="w-full">
+                <Card className="w-full gap-0 py-0">
                   <CardContent className="p-3 space-y-2">
                     {/* VAT + Transport inputs */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

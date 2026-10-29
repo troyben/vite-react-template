@@ -151,7 +151,7 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
         <div className="my-[4mm]" style={{ borderTop: '0.3mm solid rgb(215, 220, 235)' }} />
 
         {/* ── Items Table ── */}
-        <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+        <table className="w-full border-collapse [&_th:not(:last-child)]:border-r [&_th]:border-r-white/30 [&_td:not(:last-child)]:border-r [&_td]:border-r-slate-300" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '26%' }} />
             <col style={{ width: '38%' }} />
