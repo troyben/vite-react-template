@@ -34,10 +34,10 @@ const QuotationDetail = () => {
     </div></PageHeader>
     <QuotationItemsCard items={quotation.items} client={{ name: quotation.client_name, phone: quotation.client_phone, address: quotation.client_address }} />
     <QuotationTotals subtotal={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} />
-    <QuotationPreviewModal open={preview} onClose={() => setPreview(false)}><div className="mb-4 px-2"><h2 className="text-lg font-semibold">Quotation Preview</h2></div>
-      <div className="max-h-[80vh] overflow-auto"><QuotationPDFPreview clientName={quotation.client_name} clientPhone={quotation.client_phone} clientAddress={quotation.client_address}
+    <QuotationPreviewModal open={preview} onClose={() => setPreview(false)}>
+      <QuotationPDFPreview clientName={quotation.client_name} clientPhone={quotation.client_phone} clientAddress={quotation.client_address}
         items={quotation.items} totalAmount={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0}
-        grandTotal={Number(quotation.grand_total) || undefined} quotationId={quotation.id} createdAt={quotation.createdAt || quotation.created_at} /></div>
+        grandTotal={Number(quotation.grand_total) || undefined} quotationId={quotation.id} createdAt={quotation.createdAt || quotation.created_at} />
     </QuotationPreviewModal>
   </div>;
 };
