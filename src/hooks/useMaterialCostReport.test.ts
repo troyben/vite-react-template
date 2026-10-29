@@ -7,7 +7,7 @@ import { previewMaterialCostReport, type MaterialCostReportData } from '@/servic
 import type { QuotationItem } from '@/services/quotationService';
 vi.mock('@/services/materialCostReportService', () => ({ previewMaterialCostReport: vi.fn() }));
 const items: QuotationItem[] = [{ item: 'Window', quantity: 1, price: 0, total: 0 }];
-const report: MaterialCostReportData = { currency: 'USD', items: [], additional: { lines: [], total: 0 }, total: 4, warnings: [] };
+const report: MaterialCostReportData = { currency: 'USD', incomplete: false, items: [], additional: { lines: [], total: 0 }, total: 4, warnings: [] };
 let state: ReturnType<typeof useMaterialCostReport>;
 const Harness = ({ rows }: { rows: QuotationItem[] }) => {
   const current = useMaterialCostReport(rows);
