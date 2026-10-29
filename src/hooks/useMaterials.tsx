@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Loader2, Package } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as materialApi from '@/services/materialService';
 import type { Material, MaterialCategory } from '@/services/materialService';
@@ -177,13 +177,12 @@ export function useMaterials() {
       accessorKey: 'name',
       header: 'Name',
       cell: info => (
-        <div>
-          <div className="font-medium">{info.getValue()}</div>
-          {info.row.original.description && (
-            <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-              {info.row.original.description}
-            </div>
-          )}
+        <div className="flex items-center gap-3">
+          {info.row.original.image ? <img src={info.row.original.image} alt="" className="h-12 w-12 shrink-0 rounded-md border object-contain bg-muted/20" />
+            : <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border bg-muted/20 text-muted-foreground"><Package className="h-5 w-5" /></span>}
+          <div><div className="font-medium">{info.getValue()}</div>
+            {info.row.original.description && <div className="max-w-[200px] truncate text-xs text-muted-foreground">{info.row.original.description}</div>}
+          </div>
         </div>
       ),
     },
