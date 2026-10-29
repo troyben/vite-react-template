@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,12 +19,16 @@ const SystemSettings = () => {
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">System Settings</h1>
+      <PageHeader>
+        <div><h1 className="text-2xl font-semibold">System Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Configure default rates and system-wide preferences.
-        </p>
-      </div>
+        </p></div>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saving ? 'Saving...' : 'Save Settings'}
+        </Button>
+      </PageHeader>
 
       <Card>
         <CardHeader>
@@ -65,13 +70,6 @@ const SystemSettings = () => {
             <p className="text-xs text-muted-foreground">
               Applied automatically when a window sketch is attached to a quotation item with no rate set.
             </p>
-          </div>
-
-          <div className="pt-2">
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {saving ? 'Saving...' : 'Save Settings'}
-            </Button>
           </div>
         </CardContent>
       </Card>

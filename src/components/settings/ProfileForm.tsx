@@ -1,14 +1,11 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import type { ProfileData } from '@/services/settingsService';
 import AvatarUpload from './AvatarUpload';
 
 interface ProfileFormProps {
   profileData: ProfileData;
   avatarPreview: string;
-  loading: boolean;
-  submitting: boolean;
   success: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -18,8 +15,6 @@ interface ProfileFormProps {
 const ProfileForm = ({
   profileData,
   avatarPreview,
-  loading,
-  submitting,
   success,
   onChange,
   onAvatarChange,
@@ -27,7 +22,7 @@ const ProfileForm = ({
 }: ProfileFormProps) => {
   return (
     <section>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form id="profile-settings" onSubmit={onSubmit} className="space-y-4">
         <AvatarUpload
           avatarPreview={avatarPreview}
           profileData={profileData}
@@ -65,15 +60,6 @@ const ProfileForm = ({
             onChange={onChange}
             placeholder="e.g. 0771234567"
           />
-        </div>
-        <div className="pt-4">
-          <Button
-            type="submit"
-            className="w-full sm:w-auto sm:min-w-[160px]"
-            disabled={loading || submitting}
-          >
-            {loading || submitting ? 'Saving...' : 'Save Changes'}
-          </Button>
         </div>
         {success && (
           <div className="text-center mt-4 text-sm font-medium text-emerald-600">

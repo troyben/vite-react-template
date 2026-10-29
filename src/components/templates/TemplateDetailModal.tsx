@@ -14,8 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Pencil } from 'lucide-react';
 import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
 import { MaterialBreakdownView } from '@/components/CostBreakdown';
-import { getAllMaterials } from '@/services/materialService';
-import { calculateProductCost } from '@/utils/costCalculator';
+import { previewProductMaterials } from '@/services/costingService';
 import { extractShapeCanvasProps, formatTemplateDate } from '@/utils/templateSketchProps';
 import type { CostBreakdown } from '@/utils/costCalculator';
 import type { SketchTemplate } from '@/services/templateService';
@@ -50,19 +49,10 @@ export default function TemplateDetailModal({
       setCostBreakdown(null);
       setCostError(null);
       try {
-        const response = await getAllMaterials({ limit: 1000 });
+        const result = await previewProductMaterials(template.sketchData);
         if (cancelled) return;
-        if (response.data.success) {
-          const materials = response.data.data.items;
-          if (materials.length === 0) {
-            setCostError('No materials found. Add materials in Materials management to see material breakdown.');
-            return;
-          }
-          const breakdown = calculateProductCost(template.sketchData, materials);
-          setCostBreakdown(breakdown);
-        } else {
-          setCostError('Failed to load materials.');
-        }
+        setCostBreakdown(result.breakdown);
+        if (result.warnings.length) setCostError(result.warnings.join(' '));
       } catch {
         if (!cancelled) {
           setCostError('Failed to fetch materials. Please try again.');

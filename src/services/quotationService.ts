@@ -23,6 +23,7 @@ export interface QuotationItem {
 
 export interface QuotationFormData {
   id?: number;
+  revision?: number;
   clientId: number;           // Required
   client_name: string;        // Required
   client_email: string;       // Required even if empty
@@ -40,6 +41,7 @@ export interface QuotationFormData {
 
 export interface Quotation {
   id: number;
+  revision: number;
   clientId: number;
   client_name: string;
   client_email: string;

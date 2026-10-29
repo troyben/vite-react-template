@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers } from '@/hooks/useUsers';
@@ -53,13 +54,13 @@ function UsersContent({ currentUserId }: { currentUserId: number }) {
   return (
     <div className="p-6 space-y-6">
       <ScreenLoader isLoading={loading} />
-      <div className="flex items-center justify-between">
+      <PageHeader>
         <h1 className="text-2xl font-semibold">Users Management</h1>
         <Button onClick={openAddForm}>
           <Plus className="h-4 w-4" />
           New User
         </Button>
-      </div>
+      </PageHeader>
       {error && <div className="text-destructive mb-4">{error}</div>}
       {!loading && (
         <BaseDataTable

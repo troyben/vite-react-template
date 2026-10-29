@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAllTemplates, deleteTemplate, type SketchTemplate } from '../services/templateService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -117,8 +118,8 @@ const Templates = () => {
       <ScreenLoader isLoading={loading && templates.length === 0} />
 
       {/* Header -- compact row with title, pills, and search */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <PageHeader className="mb-4">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">Templates</h1>
           <div className="flex items-center gap-1 rounded-full bg-muted p-0.5">
             {tabs.map((tab) => (
@@ -147,7 +148,7 @@ const Templates = () => {
             className="pl-8 h-8 text-sm"
           />
         </div>
-      </div>
+      </PageHeader>
 
       {error && (
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive mb-3">{error}</div>
