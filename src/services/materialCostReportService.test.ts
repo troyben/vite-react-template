@@ -74,3 +74,13 @@ it('distinguishes missing defaults from valid zero usage in both screen and prin
   expect(partial.querySelector('.material-cost-items > tbody > tr > td:last-child')?.textContent?.trim()).toBe('$5.71');
 
 });
+
+it('prints manual material labels, assigned costs and quote-wide additions without editor controls', () => {
+  const line = { id: 'manual', name: 'Extra hinge', category: 'Hardware', unit: 'pcs', quantity: 6, unitCost: 3, total: 18, manual: true };
+  const data = { ...report, items: [{ ...report.items[0], lines: [line], total: 18 }], additional: { lines: [{ ...line, id: 'shared' }], total: 18 }, total: 36 };
+  const root = document.createElement('div');
+  root.innerHTML = renderToStaticMarkup(createElement(MaterialCostReport, { report: data, title: 'Quotation', items }));
+  expect(root.textContent).toContain('Manual'); expect(root.textContent).toContain('Additional quotation materials');
+  expect(root.querySelector('footer')?.textContent).toContain('$36.00');
+  expect(root.querySelectorAll('input,button').length).toBe(0);
+});
