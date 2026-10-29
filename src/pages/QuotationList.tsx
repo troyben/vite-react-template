@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Loader2 } from 'lucide-react';
@@ -152,7 +153,7 @@ const QuotationList = () => {
   return (
     <div className="p-6 space-y-6">
       <ScreenLoader isLoading={loading} />
-      <div className="flex items-center justify-between">
+      <PageHeader>
         <h1 className="text-2xl font-semibold">Quotations</h1>
         {user?.role !== 'client' && (
           <Link to="/quotations/new" className={buttonVariants()}>
@@ -160,7 +161,7 @@ const QuotationList = () => {
             New Quotation
           </Link>
         )}
-      </div>
+      </PageHeader>
       <BaseDataTable
         columns={columns}
         data={quotations}

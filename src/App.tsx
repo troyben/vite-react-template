@@ -24,7 +24,7 @@ function AppContent() {
   return (
     <div className="flex min-h-screen">
       {!hideNavbar && <Navbar />}
-      <div className={hideNavbar ? 'flex-1' : `flex-1 transition-[margin] duration-200 ${expanded ? 'ml-56' : 'ml-16'}`}>
+      <div className={hideNavbar ? 'min-w-0 flex-1' : `min-w-0 flex-1 transition-[margin] duration-200 ${expanded ? 'ml-56' : 'ml-16'}`}>
         <AppRoutes />
       </div>
     </div>

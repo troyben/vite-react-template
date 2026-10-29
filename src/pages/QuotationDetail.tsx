@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuotationDetail } from '@/hooks/useQuotationDetail';
@@ -65,15 +66,15 @@ const QuotationDetail = () => {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* ── Page Header ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <PageHeader>
+        <div className="flex flex-wrap items-center gap-3">
           <Link to="/quotations" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <h1 className="text-2xl font-semibold">Quotation #{quotation.id}</h1>
           <StatusBadge status={quotation.status} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canWrite && (
             <Select
               value={quotation.status || 'draft'}
@@ -97,6 +98,8 @@ const QuotationDetail = () => {
           </Button>
           {canWrite && (
             <>
+              <Link to={`/quotations/${id}/history`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>History</Link>
+              <Link to={`/quotations/${id}/costing`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Costing & BOQ</Link>
               <Link to={`/quotations/edit/${id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                 <Pencil className="h-4 w-4 mr-1.5" />
                 Edit
@@ -108,7 +111,7 @@ const QuotationDetail = () => {
             </>
           )}
         </div>
-      </div>
+      </PageHeader>
 
       {/* ── Zoom Controls ── */}
       <div className="flex items-center gap-1.5">

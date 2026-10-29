@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { Link } from 'react-router-dom';
 import { CircleCheck, Clock, FileText, Plus } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
@@ -15,7 +16,7 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <PageHeader>
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-muted-foreground">Welcome to your quotation management system</p>
@@ -24,7 +25,7 @@ const Dashboard = () => {
           <Plus className="h-4 w-4" />
           New Quotation
         </Link>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={<CircleCheck className="h-5 w-5" />} iconClassName="paid-icon" title="Paid" amount={data.paid.amount} count={data.paid.quotations.length} />

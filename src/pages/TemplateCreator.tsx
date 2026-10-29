@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Package, Save } from 'lucide-react';
@@ -12,8 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import ProductEditor, { type ProductEditorHandle } from '@/components/product-editor/ProductEditor';
 import { MaterialBreakdownView } from '@/components/CostBreakdown';
-import { calculateProductCost } from '@/utils/costCalculator';
-import { getAllMaterials } from '@/services/materialService';
+import { previewProductMaterials } from '@/services/costingService';
 import {
   createTemplate,
   getTemplateById,
@@ -73,22 +73,11 @@ const TemplateCreator: React.FC = () => {
     setCostBreakdown(null);
     setCostError(null);
     try {
-      const response = await getAllMaterials({ limit: 1000 });
-      if (response.data.success) {
-        const materials = response.data.data.items;
-        if (materials.length === 0) {
-          setCostError('No materials found. Add materials in the Materials management page to calculate costs.');
-          return;
-        }
-        const productData = editorRef.current?.buildProductData();
-        if (!productData) {
-          setCostError('Editor is not ready.');
-          return;
-        }
-        setCostBreakdown(calculateProductCost(productData, materials));
-      } else {
-        setCostError('Failed to load materials.');
-      }
+      const productData = editorRef.current?.buildProductData();
+      if (!productData) { setCostError('Editor is not ready.'); return; }
+      const result = await previewProductMaterials(productData);
+      setCostBreakdown(result.breakdown);
+      if (result.warnings.length) setCostError(result.warnings.join(' '));
     } catch {
       setCostError('Failed to fetch materials. Please try again.');
     } finally {
@@ -151,7 +140,7 @@ const TemplateCreator: React.FC = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b px-4 py-3">
+      <PageHeader className="px-4">
         <Button variant="ghost" size="sm" onClick={() => navigate('/templates')}>
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back
@@ -171,7 +160,7 @@ const TemplateCreator: React.FC = () => {
           <Save className="h-4 w-4 mr-1" />
           Save Template
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Editor body */}
       <div className="flex flex-1 min-h-0">

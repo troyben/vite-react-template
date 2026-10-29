@@ -110,6 +110,7 @@ function calculatePostItems(product: ProductData, materials: Material[]): CostLi
     const quantity = round(heightM);
     return {
       material: `Corner Post ${i + 1} (${c.postWidth}mm @ ${formatBend(bendFromInterior(c.angle))}) — ${material.name}`,
+      materialId: material.id,
       category: 'Frame Profile',
       quantity,
       unit: 'meters',
