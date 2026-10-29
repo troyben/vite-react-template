@@ -1,4 +1,6 @@
 import { CircleUser } from 'lucide-react';
+import { useRef } from 'react';
+import { Button } from '@/components/ui/button';
 import type { ProfileData } from '@/services/settingsService';
 
 interface AvatarUploadProps {
@@ -9,30 +11,33 @@ interface AvatarUploadProps {
 
 const AvatarUpload = ({ avatarPreview, profileData, onAvatarChange }: AvatarUploadProps) => {
   const hasAvatar = avatarPreview || (profileData && profileData.avatar);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-col items-center mb-6">
-      <label htmlFor="avatar-upload" className="cursor-pointer flex flex-col items-center">
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#f3f3fb] flex items-center justify-center overflow-hidden mb-3 border-2 border-[#e0e7ff]">
-          {hasAvatar ? (
-            <img
-              src={avatarPreview || profileData?.avatar}
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <CircleUser className="w-14 h-14 sm:w-16 sm:h-16 text-[#7c5dfa]" />
-          )}
-        </div>
+    <div className="flex flex-wrap items-center gap-4 md:flex-col md:items-start">
+      <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted">
+        {hasAvatar ? (
+          <img
+            src={avatarPreview || profileData?.avatar}
+            alt="Your profile photo"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <CircleUser className="size-14 text-muted-foreground" />
+        )}
+      </div>
+      <div className="space-y-2">
         <input
+          ref={inputRef}
           id="avatar-upload"
           type="file"
           accept="image/*"
           className="hidden"
           onChange={onAvatarChange}
         />
-        <span className="text-[#7c5dfa] font-medium text-sm">Change Avatar</span>
-      </label>
+        <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>Change Avatar</Button>
+        <p className="text-xs text-muted-foreground">Choose a photo from your device.</p>
+      </div>
     </div>
   );
 };
