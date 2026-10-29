@@ -14,3 +14,8 @@ export function boundedQuotationNumber(value: string, max = Infinity) {
 export function canAccessQuotationCosts(user: { id: number; role: string } | null | undefined, quotation: Pick<Quotation, 'createdBy'>) {
   return !!user && (user.role === 'admin' || user.role === 'user' && quotation.createdBy === user.id);
 }
+export function quotationAmount(quotation: Quotation) {
+  const subtotal = Number(quotation.total_amount) || 0;
+  const grand = Number(quotation.grand_total);
+  return { subtotal, headline: Number.isFinite(grand) ? grand : subtotal, showSubtotal: Number.isFinite(grand) && grand !== subtotal };
+}

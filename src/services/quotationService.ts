@@ -1,4 +1,5 @@
 import type { CostingLine, ItemMaterialApproval } from './costingTypes';
+import type { StaffIdentity } from './staffIdentity';
 import api from '../api';
 import type { ProductData } from '../components/product-editor/types';
 import { AxiosResponse } from 'axios';
@@ -45,6 +46,7 @@ export interface QuotationFormData {
 }
 
 export interface Quotation {
+  creator?: StaffIdentity | null;
   id: number;
   revision: number;
   clientId: number;
