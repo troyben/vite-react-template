@@ -1,11 +1,12 @@
 import { costingMoney } from '@/services/costingService';
 import type { MaterialCostReportData } from '@/services/materialCostReportService';
 import type { QuotationItem } from '@/services/quotationService';
+import { MaterialCostTotal } from './MaterialCostTotal';
 import { MaterialCostItems } from './MaterialCostItems';
 import { MaterialCostTable } from './MaterialCostTable';
 
-interface MaterialCostReportProps { report: MaterialCostReportData; title: string; items: QuotationItem[] }
-export const MaterialCostReport: React.FC<MaterialCostReportProps> = ({ report, title, items }) => (
+interface MaterialCostReportProps { report: MaterialCostReportData; title: string; items: QuotationItem[]; showTotal?: boolean }
+export const MaterialCostReport: React.FC<MaterialCostReportProps> = ({ report, title, items, showTotal = true }) => (
   <article className="material-cost-report space-y-3">
     <header className="hidden print:block"><h1 className="text-xl font-semibold">Material costs</h1><p>{title}</p><p className="text-sm">Internal material estimate · {report.currency}</p></header>
     <p className="text-xs text-muted-foreground">Usage includes wastage and the full quoted quantity. Purchasing quantities are rounded once per quotation, with shared costs allocated across items.</p>
@@ -20,9 +21,6 @@ export const MaterialCostReport: React.FC<MaterialCostReportProps> = ({ report, 
         <strong>{costingMoney(report.additional.total, report.currency)}</strong></header>
       <MaterialCostTable lines={report.additional.lines} currency={report.currency} />
     </section>}
-    <footer className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-      <div><h2 className="font-semibold">Total material cost</h2><p className="mt-1 text-xs text-muted-foreground">{report.currency} · Materials only, before labour, markup, VAT and transport.</p></div>
-      <strong className="text-xl">{costingMoney(report.total, report.currency)}</strong>
-    </footer>
+    {showTotal && <MaterialCostTotal report={report} />}
   </article>
 );
