@@ -31,6 +31,26 @@ it('uses an accessible standard dialog that closes with Escape and returns focus
   expect(document.activeElement).toBe(opener);
 });
 
+it('zooms between 50 and 200 percent, resets, and starts each preview opening at 100 percent', async () => {
+  const Harness = () => {
+    const [open, setOpen] = useState(false);
+    return <><button onClick={() => setOpen(true)}>Open preview</button><QuotationPreviewModal open={open} onClose={() => setOpen(false)}><p>Document</p></QuotationPreviewModal></>;
+  };
+  await act(() => root.render(<Harness />));
+  const opener = container.querySelector('button')!;
+  await act(() => opener.click());
+  const button = (label: string) => document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  const percentage = () => document.querySelector('output')?.textContent;
+  expect(percentage()).toBe('100%');
+  for (let index = 0; index < 5; index++) await act(() => button('Zoom in').click());
+  expect(percentage()).toBe('200%'); expect(button('Zoom in').disabled).toBe(true);
+  await act(() => button('Reset zoom to 100%').click()); expect(percentage()).toBe('100%');
+  for (let index = 0; index < 3; index++) await act(() => button('Zoom out').click());
+  expect(percentage()).toBe('50%'); expect(button('Zoom out').disabled).toBe(true);
+  await act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+  await act(() => opener.click()); expect(percentage()).toBe('100%');
+});
+
 it('creates and selects a client from a quote without requiring a phone', async () => {
   vi.mocked(getAllClients).mockResolvedValue(apiResponse({ success: true, data: { items: [], pagination: { page: 1, limit: 100, totalItems: 0, totalPages: 0 } } }));
   const client = { id: 5, name: 'No phone client', address: 'Test address', phone: null };
