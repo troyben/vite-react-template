@@ -1,3 +1,5 @@
+import { loadCosting } from '@/services/costingService';
+import { withQuotationItemIds, manualMaterialsWithoutItem } from '@/services/manualMaterialService';
 import { PageHeader } from '@/components/PageHeader';
 import { MaterialCostAction } from '@/components/quotations/MaterialCostAction';
 import { useState, useEffect } from 'react';
@@ -43,20 +45,21 @@ const QuotationForm = () => {
   const navigate = useNavigate();
   const isEditing = !!id;
 
-  const [formData, setFormData] = useState<QuotationFormData>({
+  const [formData, setFormData] = useState<QuotationFormData>(() => ({
     id: isEditing ? parseInt(id) : undefined,
     clientId: -1,
     client_name: '',
     client_email: '',
     client_phone: '',
     client_address: '',
-    items: [{ ...emptyItem }],
+    items: withQuotationItemIds([{ ...emptyItem }]),
+    manualMaterials: isEditing ? undefined : [],
     total_amount: 0,
     vat_percent: 0,
     transport_fee: 0,
     status: 'draft',
     notes: ''
-  });
+  }));
 
   const [loading, setLoading] = useState<boolean>(isEditing);
   const [error, setError] = useState<string | null>(null);
@@ -77,9 +80,11 @@ const QuotationForm = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        if (isEditing) setFormData(previous => ({ ...previous, manualMaterials: undefined }));
         const clientsResponse = await getAllClients();
         if (isEditing && id) {
-          const quotationResponse = await getQuotationById(parseInt(id));
+          const [quotationResponse, privateCosting] = await Promise.all([getQuotationById(parseInt(id)), loadCosting(id)]);
+          if (quotationResponse.data.data.revision !== privateCosting.revision) throw new Error('Quotation changed while loading. Reload to try again.');
           if (quotationResponse.data.success) {
             const quotationData = quotationResponse.data.data;
             const parsedItems = typeof quotationData.items === 'string'
@@ -102,7 +107,8 @@ const QuotationForm = () => {
               client_email: quotationData.client_email || '',
               client_phone: quotationData.client_phone || '',
               client_address: quotationData.client_address || '',
-              items: parsedItems,
+              items: withQuotationItemIds(parsedItems),
+              manualMaterials: privateCosting.snapshot?.lines.filter(line => line.source !== 'automatic') ?? [],
               total_amount: total,
               vat_percent: Number.isFinite(vatPercent) ? vatPercent : 0,
               transport_fee: Number.isFinite(transportFee) ? transportFee : 0,
@@ -115,7 +121,7 @@ const QuotationForm = () => {
           }
         }
       } catch (err) {
-        setError('Failed to fetch data. Please try again later.');
+        setError('Failed to load the quotation and its private material costs. Reload before saving.');
       } finally {
         setLoading(false);
       }
@@ -155,13 +161,13 @@ const QuotationForm = () => {
   };
 
   const handleAddItem = () => {
-    setFormData({ ...formData, items: [...(formData.items as QuotationItem[]), { ...emptyItem }] });
+    setFormData({ ...formData, items: [...(formData.items as QuotationItem[]), ...withQuotationItemIds([{ ...emptyItem }])] });
   };
 
   const handleRemoveItem = (index: number) => {
     if ((formData.items as QuotationItem[]).length <= 1) return;
     const updatedItems = (formData.items as QuotationItem[]).filter((_, i) => i !== index);
-    setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
+    setFormData({ ...formData, items: updatedItems, manualMaterials: manualMaterialsWithoutItem(formData.manualMaterials, formData.items[index].id), total_amount: calculateTotal(updatedItems) });
   };
 
   const handleSaveSketch = (productData: ProductData) => {
@@ -304,18 +310,20 @@ const QuotationForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.manualMaterials === undefined) { setError('Reload the quotation and its material costs before saving.'); return; }
     if (!selectedClient) { setError('Please select a client first.'); return; }
     try {
       setSubmitting(true);
       const quotationData: Omit<QuotationFormData, 'id'> = {
         revision: formData.revision,
+        manualMaterials: formData.manualMaterials,
         clientId: selectedClient.id,
         client_name: selectedClient.name,
         client_email: selectedClient.email || '',
         client_phone: selectedClient.phone || '',
         client_address: selectedClient.address || '',
         items: formData.items.map(item => ({
-          item: item.item, description: item.description || '',
+          id: item.id, item: item.item, description: item.description || '',
           quantity: item.quantity, price: item.price,
           total: item.quantity * item.price, rate: item.rate,
           productSketch: item.productSketch ? { ...item.productSketch } : undefined
@@ -359,6 +367,7 @@ const QuotationForm = () => {
           transport_fee: Number(formData.transport_fee) || 0,
           status: formData.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'paid',
           notes: formData.notes || '',
+          manualMaterials: formData.manualMaterials,
         };
         const response = await createQuotation(saveData);
         if (response.data?.data?.id) {
@@ -401,7 +410,7 @@ const QuotationForm = () => {
 
   const handleRemoveSketch = (index: number) => {
     const updatedItems = formData.items.map((item, i) =>
-      i === index ? { ...emptyItem } : item
+      i === index ? { ...emptyItem, id: item.id } : item
     );
     setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
   };
@@ -441,19 +450,19 @@ const QuotationForm = () => {
           <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Quotation' : 'New Quotation'}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <MaterialCostAction items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} clientName={formData.client_name} />
+          <MaterialCostAction items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} clientName={formData.client_name} manualMaterials={formData.manualMaterials} onManualMaterialsChange={lines => setFormData(previous => ({ ...previous, manualMaterials: lines }))} />
           <Button variant="outline" size="sm" onClick={() => setShowPreviewModal(true)}>
             <Eye className="h-4 w-4 mr-1.5" />
             Preview
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={pdfLoading}>
+          <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={pdfLoading || formData.manualMaterials === undefined}>
             {pdfLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
             {pdfLoading ? 'Generating...' : 'PDF'}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => navigate('/quotations')}>
             Cancel
           </Button>
-          <Button type="submit" form="quotation-form" size="sm" disabled={submitting}>
+          <Button type="submit" form="quotation-form" size="sm" disabled={submitting || formData.manualMaterials === undefined}>
             {submitting ? 'Saving...' : isEditing ? 'Update Quotation' : 'Save Quotation'}
           </Button>
         </div>

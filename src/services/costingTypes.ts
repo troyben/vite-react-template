@@ -6,6 +6,7 @@ export interface CostingLine {
   materialSnapshot?: MaterialSnapshot;
   source?: 'automatic' | 'manual';
   sourceMaterialId?: number;
+  quotationItemId?: string;
   id: string;
   materialId: number | null;
   name: string;
