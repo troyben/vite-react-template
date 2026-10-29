@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import type { CostingLine } from '@/services/costingTypes';
+import type { CostingLine, ItemMaterialApproval } from '@/services/costingTypes';
 import type { QuotationItem } from '@/services/quotationService';
 import { MaterialCostDialog } from './MaterialCostDialog';
 import '@/styles/MaterialCostReport.css';
 
-interface MaterialCostActionProps { items: QuotationItem[]; quotationId?: string; clientName?: string; manualMaterials?: CostingLine[]; onManualMaterialsChange?: (lines: CostingLine[]) => void }
+interface MaterialCostActionProps { items: QuotationItem[]; quotationId?: string; clientName?: string; manualMaterials?: CostingLine[]; onManualMaterialsChange?: (lines: CostingLine[]) => void; itemApprovals?: ItemMaterialApproval[]; onItemApprovalsChange?: (approvals: ItemMaterialApproval[]) => void }
 export const MaterialCostAction: React.FC<MaterialCostActionProps> = props => {
   const [open, setOpen] = useState(false);
   return <Dialog open={open} onOpenChange={setOpen}>

@@ -1,5 +1,5 @@
 import type { QuotationItem } from './quotationService';
-import type { CostingLine } from './costingTypes';
+import type { CostingLine, ItemMaterialApproval } from './costingTypes';
 import type { Material } from './materialService';
 import { COSTING_CATEGORIES, COSTING_UNITS } from './costingTypes';
 import { costingMoney, materialLine } from './costingService';
@@ -29,4 +29,13 @@ export function addManualMaterial(material: Material, quantity: number, wastageP
 }
 export function validManualQuantity(quantity: number, wastage: number) {
   return Number.isFinite(quantity) && quantity > 0 && quantity <= 1e6 && Number.isFinite(wastage) && wastage >= 0 && wastage <= 1000;
+}
+
+export function saveManualLine(lines: CostingLine[], line: CostingLine) {
+  return lines.some(existing => existing.id === line.id) ? lines.map(existing => existing.id === line.id ? line : existing) : [...lines, line];
+}
+export function removeManualLine(lines: CostingLine[], id: string) { return lines.filter(line => line.id !== id); }
+export function setItemMaterialApproval(approvals: ItemMaterialApproval[], quotationItemId: string, signature?: string) {
+  const others = approvals.filter(approval => approval.quotationItemId !== quotationItemId);
+  return signature ? [...others, { quotationItemId, signature }] : others;
 }
