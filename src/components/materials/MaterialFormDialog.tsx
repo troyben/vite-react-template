@@ -15,9 +15,9 @@ interface MaterialFormDialogProps {
 export function MaterialFormDialog(props: MaterialFormDialogProps) {
   return <Dialog open={props.open} onOpenChange={props.onOpenChange} disablePointerDismissal>
     <DialogContent className="flex max-h-[90dvh] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:w-[80vw] sm:max-w-none">
-      <DialogHeader className="shrink-0 border-b px-6 py-5 pr-12">
+      <DialogHeader className="shrink-0 border-b px-6 py-3 pr-12">
         <DialogTitle>{props.editingMaterial ? 'Edit Material' : 'Add New Material'}</DialogTitle>
-        <DialogDescription>Set material details, pricing and automatic usage. An image is optional.</DialogDescription>
+        <DialogDescription className="text-xs leading-4">Set material details, pricing and automatic usage. An image is optional.</DialogDescription>
       </DialogHeader>
       {props.open && <MaterialForm key={props.editingMaterial?.id ?? 'new'} {...props} />}
     </DialogContent>
