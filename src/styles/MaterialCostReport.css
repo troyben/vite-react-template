@@ -23,6 +23,9 @@
   [data-material-cost-print-root] header { break-after: avoid; }
   [data-material-cost-print-root] [data-slot="table-container"] { overflow: visible; }
   [data-material-cost-print-root] table { font-size: 9pt; }
+  [data-material-cost-print-root] .material-cost-items { min-width: 0; }
+  [data-material-cost-print-root] .material-cost-items svg { max-height: 80px; }
+  [data-material-cost-print-root] .material-cost-items > tbody > tr > td:last-child { width: 18mm; }
   [data-material-cost-print-root] thead { display: table-header-group; }
   [data-material-cost-print-root] tr,
   [data-material-cost-print-root] footer { break-inside: avoid; }
