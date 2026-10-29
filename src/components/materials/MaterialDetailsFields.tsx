@@ -6,8 +6,9 @@ import { CATEGORY_OPTIONS, CURRENCY_OPTIONS, UNIT_OPTIONS } from '@/services/mat
 import { CURRENCY_SYMBOLS } from '@/hooks/useMaterials';
 import type { Material, MaterialCategory, MaterialUnit } from '@/services/materialService';
 
-export function MaterialDetailsFields({ material, category, unit, currency, onCategory, onUnit, onCurrency }: {
+export function MaterialDetailsFields({ material, category, unit, currency, unitOptions = UNIT_OPTIONS, onCategory, onUnit, onCurrency }: {
   material: Material | null; category: MaterialCategory; unit: MaterialUnit; currency: string;
+  unitOptions?: { value: MaterialUnit; label: string }[];
   onCategory: (value: MaterialCategory) => void; onUnit: (value: MaterialUnit) => void; onCurrency: (value: string) => void;
 }) {
   return <section className="space-y-4 rounded-lg border p-4">
@@ -21,7 +22,7 @@ export function MaterialDetailsFields({ material, category, unit, currency, onCa
     <div className="grid gap-4 sm:grid-cols-3">
       <div className="space-y-2"><Label htmlFor="unit">Unit *</Label><Select value={unit} onValueChange={v => { if (v) onUnit(v); }}>
         <SelectTrigger id="unit" className="w-full"><SelectValue>{UNIT_OPTIONS.find(o => o.value === unit)?.label}</SelectValue></SelectTrigger>
-        <SelectContent>{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
+        <SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="currency">Currency *</Label><Select value={currency} onValueChange={v => { if (v) onCurrency(v); }}>
         <SelectTrigger id="currency" className="w-full"><SelectValue>{currency}</SelectValue></SelectTrigger>
         <SelectContent>{CURRENCY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
