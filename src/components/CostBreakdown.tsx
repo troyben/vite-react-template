@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import type { CostBreakdown as CostBreakdownType, CostLineItem } from '@/utils/costCalculator';
 import { formatCurrency } from '@/config/currency';
+import { cn } from '@/lib/utils';
 
 interface CostBreakdownProps {
   breakdown: CostBreakdownType;
@@ -94,17 +95,17 @@ function MaterialSection({
       <Badge variant="secondary" className={color}>
         {title}
       </Badge>
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="h-8 text-xs">Material</TableHead>
-            <TableHead className="h-8 text-xs text-right">Quantity</TableHead>
+            <TableHead className="h-8 w-28 text-xs text-right">Quantity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((item, idx) => (
             <TableRow key={idx} className="hover:bg-muted/50">
-              <TableCell className="py-1.5 text-sm">{item.material}</TableCell>
+              <TableCell className="py-1.5 text-sm whitespace-normal break-words">{item.material}</TableCell>
               <TableCell className="py-1.5 text-sm text-right">
                 {formatQuantity(item.quantity, item.unit)}
               </TableCell>
@@ -116,7 +117,7 @@ function MaterialSection({
   );
 }
 
-export function MaterialBreakdownView({ breakdown }: CostBreakdownProps) {
+export function MaterialBreakdownView({ breakdown, className }: CostBreakdownProps & { className?: string }) {
   const hasItems =
     breakdown.frameItems.length > 0 ||
     breakdown.glassItems.length > 0 ||
@@ -135,13 +136,13 @@ export function MaterialBreakdownView({ breakdown }: CostBreakdownProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2', className)}>
       {SECTION_CONFIG.map((section) => {
         const items = breakdown[section.key];
         if (items.length === 0) return null;
         return (
-          <Card key={section.key}>
-            <CardContent className="p-4">
+          <Card key={section.key} className="min-w-0">
+            <CardContent>
               <MaterialSection
                 title={section.title}
                 items={items}
