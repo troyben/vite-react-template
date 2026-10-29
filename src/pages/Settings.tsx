@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/PageHeader';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { useSettings } from '@/hooks/useSettings';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import ProfileForm from '@/components/settings/ProfileForm';
@@ -29,12 +29,16 @@ const Settings = () => {
   if (!profileData) return <div className="p-6 text-muted-foreground">No profile data available</div>;
 
   return (
-    <div className="p-6 space-y-6">
-      <PageHeader><h1 className="text-2xl font-semibold">Profile Settings</h1>
+    <div className="space-y-4 p-4 sm:p-6">
+      <PageHeader>
+        <div>
+          <h1 className="text-2xl font-semibold">Profile Settings</h1>
+          <p className="text-muted-foreground">Manage your profile and password.</p>
+        </div>
         <Button type="submit" form="profile-settings" disabled={loading || submitting}>{submitting ? 'Saving...' : 'Save Changes'}</Button>
       </PageHeader>
-      <Card>
-        <CardContent className="space-y-6">
+      <div className="max-w-5xl space-y-4">
+        <Card className="gap-0 py-0">
           <ProfileForm
             profileData={profileData}
             avatarPreview={avatarPreview}
@@ -43,6 +47,8 @@ const Settings = () => {
             onAvatarChange={handleAvatarChange}
             onSubmit={handleSubmit}
           />
+        </Card>
+        <Card>
           <PasswordForm
             showPasswordForm={showPasswordForm}
             passwordData={passwordData}
@@ -51,8 +57,8 @@ const Settings = () => {
             onChange={handlePasswordChange}
             onSubmit={handlePasswordSubmit}
           />
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
