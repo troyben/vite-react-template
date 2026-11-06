@@ -1,4 +1,5 @@
 import React from 'react';
+import { DataTableRow } from './DataTableRow';
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,6 +30,8 @@ interface BaseDataTableProps<T extends object> {
   totalItems?: number;
   onPageChange?: (page: number) => void;
   isLoading?: boolean;
+  onRowClick?: (item: T) => void;
+  getRowLabel?: (item: T) => string;
 }
 
 function BaseDataTable<T extends object>({
@@ -42,6 +45,8 @@ function BaseDataTable<T extends object>({
   totalItems,
   onPageChange,
   isLoading: _isLoading,
+  onRowClick,
+  getRowLabel,
 }: BaseDataTableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -124,16 +129,7 @@ function BaseDataTable<T extends object>({
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <DataTableRow key={row.id} row={row} onRowClick={onRowClick} label={getRowLabel?.(row.original)} />
               ))
             )}
           </TableBody>

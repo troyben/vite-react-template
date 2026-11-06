@@ -1,29 +1,30 @@
-import type { RevisionDetail } from '@/services/quotationHistoryService';
-import { revisionReason } from '@/services/quotationHistoryService';
-import { costingMoney } from '@/services/costingService';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import QuotationPDFPreview from '@/components/QuotationPDFPreview';
+import { FileText, Layers, LockKeyhole } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { archivedQuotation, revisionDate, revisionReason, type RevisionDetail } from '@/services/quotationHistoryService';
+import { StaffIdentity } from './StaffIdentity';
+import { QuotationItemsCard } from './QuotationItemsCard';
+import { QuotationTotals } from './QuotationTotals';
+import { StatusBadge } from './StatusBadge';
+import { ArchivedMaterialCosts } from './ArchivedMaterialCosts';
+import { RevisionPreview } from './RevisionPreview';
 
-export function RevisionSnapshot({ detail }: { detail: RevisionDetail }) {
-  const { quotation, costing, originalCostingText } = detail.snapshot;
-  const frozenQuote = { ...quotation, items: typeof quotation.items === 'string' ? JSON.parse(quotation.items) : quotation.items };
-  const money = (n: number) => costingMoney(n, costing?.currency || 'USD');
-  return <section className="min-w-0 space-y-4" aria-label={`Revision ${detail.revision}`}>
-    <div><h2 className="text-lg font-semibold">Revision {detail.revision} · {revisionReason(detail.reason)}</h2>
-      <p className="text-sm text-muted-foreground">{new Date(detail.createdAt).toLocaleString()} · {detail.actorId ? `Staff #${detail.actorId}` : 'Migration baseline'} · Read only</p></div>
-    {costing ? <div className="rounded-xl border p-4 space-y-3">
-      <h3 className="font-semibold">Saved materials and costs ({costing.currency})</h3>
-      <Table><TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Usage</TableHead><TableHead>Wastage</TableHead><TableHead>Buy</TableHead><TableHead>Unit cost</TableHead><TableHead>Amount</TableHead></TableRow></TableHeader>
-        <TableBody>{costing.lines.map(line => <TableRow key={line.id}><TableCell>{line.name}</TableCell><TableCell>{line.quantity} {line.unit}</TableCell><TableCell>{line.wastagePercent}%</TableCell><TableCell>{line.quantityToBuy ?? '—'} {line.unit}</TableCell><TableCell>{money(line.unitCost)}</TableCell><TableCell>{line.lineTotal === undefined ? '—' : money(line.lineTotal)}</TableCell></TableRow>)}</TableBody></Table>
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm"><span>Materials: <strong>{money(costing.totalMaterialCost ?? 0)}</strong></span><span>Labour: {money(costing.labour)}</span><span>Other: {money(costing.otherCosts)}</span><span>Markup: {costing.markupPercent}%</span>
-        {costing.totals && <span>Suggested price: <strong>{money(costing.totals.suggestedPrice)}</strong></span>}</div>
-      {costing.notes && <p className="whitespace-pre-wrap text-sm">{costing.notes}</p>}
-      {costing.warnings.length > 0 && <details className="text-sm"><summary>Saved checks and assumptions</summary><ul className="list-disc pl-5">{costing.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></details>}
-      <details className="text-sm"><summary>Captured material specifications and usage rules</summary><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify({ catalogue: costing.catalogue ?? [], materials: costing.lines.map(line => ({ name: line.name, specification: line.materialSnapshot ?? null })) }, null, 2)}</pre></details>
-    </div> : <p className="text-sm text-muted-foreground">{originalCostingText ? 'The original costing could not be parsed. Its original text is preserved in this revision.' : 'No internal costing was saved with this revision.'}</p>}
-    <div className="overflow-x-auto"><QuotationPDFPreview clientName={frozenQuote.client_name} clientPhone={frozenQuote.client_phone}
-      clientAddress={frozenQuote.client_address} items={frozenQuote.items} totalAmount={Number(frozenQuote.total_amount)}
-      vatPercent={Number(frozenQuote.vat_percent) || 0} transportFee={Number(frozenQuote.transport_fee) || 0}
-      grandTotal={frozenQuote.grand_total} quotationId={frozenQuote.id} createdAt={frozenQuote.createdAt || frozenQuote.created_at} /></div>
+interface RevisionSnapshotProps { detail: RevisionDetail }
+export const RevisionSnapshot: React.FC<RevisionSnapshotProps> = ({ detail }) => {
+  const quotation = archivedQuotation(detail);
+  return <section className="min-w-0 space-y-3" aria-label={`Revision ${detail.revision}`}>
+    <div className="rounded-xl border bg-card p-3 sm:p-4"><div className="flex flex-wrap items-start justify-between gap-3">
+      <div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">Revision {detail.revision}</h2><StatusBadge status={quotation.status} />
+        <span className="flex items-center gap-1 text-xs text-muted-foreground"><LockKeyhole className="h-3 w-3" />Read only</span></div>
+        <p className="mt-1 text-xs text-muted-foreground">{revisionReason(detail.reason)} · {revisionDate(detail.createdAt)}</p></div>
+      <RevisionPreview quotation={quotation} revision={detail.revision} />
+    </div><div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-3"><span className="text-xs text-muted-foreground">{detail.reason === 'created' ? 'Created by' : 'Saved by'}</span>
+      <StaffIdentity user={detail.actor} userId={detail.actorId} fallback={detail.actorId == null ? 'System / baseline' : undefined} /></div></div>
+    <Tabs defaultValue="quotation" className="flex-col gap-3"><div className="max-w-full overflow-x-auto"><TabsList aria-label="Revision content" className="h-9 shrink-0"><TabsTrigger value="quotation"><FileText />Quotation</TabsTrigger><TabsTrigger value="costs"><Layers />Materials & costs</TabsTrigger></TabsList></div>
+      <TabsContent value="quotation" className="min-w-0 space-y-3"><QuotationItemsCard items={quotation.items} client={{ name: quotation.client_name, phone: quotation.client_phone, address: quotation.client_address }} />
+        <QuotationTotals subtotal={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} />
+        {quotation.notes && <div className="rounded-xl border p-3"><h3 className="mb-1 text-xs font-semibold text-muted-foreground">Quotation notes</h3><p className="whitespace-pre-wrap text-sm">{quotation.notes}</p></div>}
+      </TabsContent>
+      <TabsContent value="costs"><ArchivedMaterialCosts costing={detail.snapshot.costing} originalCostingText={detail.snapshot.originalCostingText} /></TabsContent>
+    </Tabs>
   </section>;
-}
+};
