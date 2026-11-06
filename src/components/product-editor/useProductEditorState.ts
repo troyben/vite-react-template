@@ -12,6 +12,7 @@ import type {
 import { useSegmentChain } from './useSegmentChain';
 import { normalizeToChain } from '@/components/product-editor/canvas/utils/chain-model';
 import { rotateLShape } from './shapeTransforms';
+import { materialSystemProduct, type MaterialSystem } from '@/services/materialSystems';
 
 export type ProductEditorTabKey = 'shape' | 'dimensions' | 'appearance' | 'openings' | 'panels';
 
@@ -60,6 +61,7 @@ export function useProductEditorState() {
 
   // Product state
   const [type, setType] = useState<'window' | 'door'>(DEFAULTS.type);
+  const [productFamily, setProductFamily] = useState<MaterialSystem | undefined>('window');
   const [doorType, setDoorType] = useState<'hinged' | 'sliding'>(DEFAULTS.doorType);
   const [windowType, setWindowType] = useState<'hinged' | 'sliding'>(DEFAULTS.windowType);
   const [width, setWidthState] = useState<number>(DEFAULTS.width);
@@ -136,8 +138,18 @@ export function useProductEditorState() {
   }, [setWidth, setHeight]);
 
   const handleTypeChange = useCallback((newType: 'window' | 'door') => {
+    setProductFamily(undefined);
     setType(newType);
     if (newType === 'door') setDoorType('hinged');
+  }, []);
+
+  const handleMaterialSystemChange = useCallback((family: MaterialSystem | undefined) => {
+    const product = materialSystemProduct(family);
+    setProductFamily(product?.productFamily);
+    if (product) {
+      setType(product.type);
+      if (product.doorType) setDoorType(product.doorType);
+    }
   }, []);
 
   const syncPanelWidths = useCallback((newWidths: number[], totalWidth: number) => {
@@ -198,6 +210,7 @@ export function useProductEditorState() {
     const chainFields = chainState.toProductData();
     return {
       type,
+      productFamily,
       doorType: type === 'door' ? doorType : undefined,
       windowType: type === 'window' ? windowType : undefined,
       height,
@@ -210,12 +223,13 @@ export function useProductEditorState() {
       ...chainFields,
     };
   }, [
-    type, doorType, windowType, height, frameColor, glassType, customGlassTint,
+    type, productFamily, doorType, windowType, height, frameColor, glassType, customGlassTint,
     unit, shape, render3D, chainState,
   ]);
 
   const populateFromData = useCallback((d: ProductData) => {
     setType(d.type || 'window');
+    setProductFamily(d.productFamily);
     setDoorType(d.doorType || 'hinged');
     setWindowType(d.windowType || 'hinged');
     setWidthState(d.width || 1000);
@@ -243,6 +257,7 @@ export function useProductEditorState() {
   const resetToDefaults = useCallback(() => {
     setShapeState(DEFAULTS.shape);
     setType(DEFAULTS.type);
+    setProductFamily('window');
     setDoorType(DEFAULTS.doorType);
     setWindowType(DEFAULTS.windowType);
     setWidthState(DEFAULTS.width);
@@ -271,6 +286,7 @@ export function useProductEditorState() {
     shape, setShape, setShapeType, updateShapeConfig, rotateShape,
     // Product state
     type, setType,
+    productFamily, setProductFamily, handleMaterialSystemChange,
     doorType, setDoorType,
     windowType, setWindowType,
     width, setWidth,

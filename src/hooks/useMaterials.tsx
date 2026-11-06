@@ -180,7 +180,7 @@ export function useMaterials() {
         <div className="flex items-center gap-3">
           {info.row.original.image ? <img src={info.row.original.image} alt="" className="h-12 w-12 shrink-0 rounded-md border object-contain bg-muted/20" />
             : <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border bg-muted/20 text-muted-foreground"><Package className="h-5 w-5" /></span>}
-          <div><div className="font-medium">{info.getValue()}</div>
+          <div><div className="font-medium">{info.getValue()} {info.row.original.properties?.provisional === true && <Badge variant="outline">Provisional</Badge>}</div>
             {info.row.original.description && <div className="max-w-[200px] truncate text-xs text-muted-foreground">{info.row.original.description}</div>}
           </div>
         </div>
@@ -212,7 +212,7 @@ export function useMaterials() {
         const symbol = CURRENCY_SYMBOLS[code] || code;
         const num = Number(info.getValue());
         const formatted = isNaN(num) ? '0.00' : num.toFixed(2);
-        return `${symbol} ${formatted}`;
+        return num === 0 ? 'Rate needed' : `${symbol} ${formatted}`;
       },
     },
     {
