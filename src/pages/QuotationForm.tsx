@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/PageHeader';
-import { AutomaticMaterialsPreview } from '@/components/quotations/AutomaticMaterialsPreview';
+import { MaterialCostAction } from '@/components/quotations/MaterialCostAction';
 import { useState, useEffect } from 'react';
 import { Plus, X, Image, Download, Phone, MapPin, Eye, ArrowLeft, LayoutTemplate, Loader2 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -441,6 +441,7 @@ const QuotationForm = () => {
           <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Quotation' : 'New Quotation'}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <MaterialCostAction items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} clientName={formData.client_name} />
           <Button variant="outline" size="sm" onClick={() => setShowPreviewModal(true)}>
             <Eye className="h-4 w-4 mr-1.5" />
             Preview
@@ -775,7 +776,6 @@ const QuotationForm = () => {
           </CardContent>
         </Card>
 
-        <AutomaticMaterialsPreview items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} />
         {/* Total + Actions */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-end md:gap-6 mt-4">
           <div className="flex flex-col items-stretch md:items-end gap-3 w-full md:w-auto md:min-w-[320px]">

@@ -1,0 +1,31 @@
+[data-material-cost-print-root] { display: none; }
+
+@media print {
+  html:has([data-material-cost-print-root]),
+  body:has([data-material-cost-print-root]) {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+  body:has([data-material-cost-print-root]) > :not([data-material-cost-print-root]) { display: none !important; }
+  [data-material-cost-print-root] {
+    display: block !important;
+    color: #000;
+    background: #fff;
+    padding: 8mm;
+    font-size: 10pt;
+    --muted-foreground: #444;
+    --muted: #f4f4f4;
+    --foreground: #000;
+    --border: #ccc;
+  }
+  [data-material-cost-print-root] section { overflow: visible; break-inside: auto; }
+  [data-material-cost-print-root] header { break-after: avoid; }
+  [data-material-cost-print-root] [data-slot="table-container"] { overflow: visible; }
+  [data-material-cost-print-root] table { font-size: 9pt; }
+  [data-material-cost-print-root] thead { display: table-header-group; }
+  [data-material-cost-print-root] tr,
+  [data-material-cost-print-root] footer { break-inside: avoid; }
+  [data-material-cost-print-root] th,
+  [data-material-cost-print-root] td { white-space: normal; }
+}
