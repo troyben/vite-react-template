@@ -2,16 +2,14 @@ import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAllTemplates, deleteTemplate, type SketchTemplate } from '../services/templateService';
 import { useAuth } from '@/contexts/AuthContext';
-import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
+import TemplateCard from '@/components/templates/TemplateCard';
 import TemplateDetailModal from '@/components/templates/TemplateDetailModal';
-import { extractShapeCanvasProps, formatTemplateDate } from '@/utils/templateSketchProps';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PaginationMeta } from '@/types/pagination';
 
 
@@ -114,7 +112,7 @@ const Templates = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-6">
+    <div className="flex min-w-0 flex-col p-4 md:p-6">
       <ScreenLoader isLoading={loading && templates.length === 0} />
 
       {/* Header -- compact row with title, pills, and search */}
@@ -126,6 +124,7 @@ const Templates = () => {
               <button
                 key={tab.key}
                 type="button"
+                aria-pressed={activeTab === tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   activeTab === tab.key
@@ -142,7 +141,8 @@ const Templates = () => {
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search..."
+            aria-label="Search templates"
+            placeholder="Search templates..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -155,9 +155,9 @@ const Templates = () => {
       )}
 
       {/* Template grid -- fills remaining space */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-w-0 p-px">
         {loading && templates.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 8 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -170,57 +170,16 @@ const Templates = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {templates.map((template) => (
-              <Card
+              <TemplateCard
                 key={template.id}
-                className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-ring/20"
-                onClick={() => handleCardClick(template)}
-              >
-                <CardContent className="p-3">
-                  {/* Sketch preview via ShapeCanvas */}
-                  <div className="rounded bg-muted/30 p-1 mb-2 h-[140px] flex items-center justify-center overflow-hidden">
-                    <ShapeCanvas
-                      {...extractShapeCanvasProps(template.sketchData)}
-                      svgStyle={{ width: '100%', height: '100%' }}
-                    />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="text-sm font-semibold truncate">{template.name}</h3>
-                        {template.isMaster && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                            Master
-                          </Badge>
-                        )}
-                      </div>
-                      {template.creator && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          by {template.creator.name}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatTemplateDate(template.createdAt)}
-                      </p>
-                    </div>
-
-                    {canDelete(template) && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={(e) => handleDelete(template.id, e)}
-                        className="text-muted-foreground hover:text-destructive shrink-0"
-                        disabled={deletingId === template.id}
-                      >
-                        {deletingId === template.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                template={template}
+                canDelete={canDelete(template)}
+                deleting={deletingId === template.id}
+                onOpen={() => handleCardClick(template)}
+                onDelete={(event) => handleDelete(template.id, event)}
+              />
             ))}
           </div>
         )}
@@ -231,6 +190,7 @@ const Templates = () => {
             <Button
               variant="outline"
               size="sm"
+              aria-label="Previous page"
               disabled={pagination.page <= 1}
               onClick={() => fetchTemplates(pagination.page - 1, searchTerm)}
             >
@@ -242,6 +202,7 @@ const Templates = () => {
             <Button
               variant="outline"
               size="sm"
+              aria-label="Next page"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchTemplates(pagination.page + 1, searchTerm)}
             >

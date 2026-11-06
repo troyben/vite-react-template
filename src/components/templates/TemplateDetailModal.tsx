@@ -76,10 +76,10 @@ export default function TemplateDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-5 pb-3 shrink-0">
+      <DialogContent className="flex max-h-[95dvh] w-[95vw] max-w-none flex-col gap-0 overflow-hidden p-0 sm:w-[85vw] sm:max-w-none">
+        <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12">
           <div className="flex items-center gap-2">
-            <DialogTitle>{template.name}</DialogTitle>
+            <DialogTitle className="min-w-0 break-words leading-snug">{template.name}</DialogTitle>
             {template.isMaster && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 Master
@@ -95,18 +95,17 @@ export default function TemplateDetailModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-2 min-h-0">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* Sketch preview -- takes 3 of 5 columns on desktop */}
-            <div className="lg:col-span-3 rounded-lg border bg-muted/20 p-3 flex items-center justify-center min-h-[260px]">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+            <div className="flex h-64 min-w-0 items-center justify-center rounded-lg border bg-muted/20 p-3 sm:h-80 lg:h-[400px]">
               <ShapeCanvas
                 {...canvasProps}
-                svgStyle={{ width: '100%', height: '100%', maxHeight: '400px' }}
+                svgStyle={{ width: '100%', height: '100%' }}
               />
             </div>
 
-            {/* Material breakdown -- takes 2 of 5 columns on desktop */}
-            <div className="lg:col-span-2 min-w-0">
+            <section aria-labelledby="template-materials-heading" className="min-w-0 space-y-3">
+              <h2 id="template-materials-heading" className="font-medium">Materials</h2>
               {costLoading && (
                 <div className="space-y-3">
                   <Skeleton className="h-5 w-32" />
@@ -120,13 +119,14 @@ export default function TemplateDetailModal({
                 </div>
               )}
               {costBreakdown && !costLoading && (
-                <MaterialBreakdownView breakdown={costBreakdown} />
+                <MaterialBreakdownView breakdown={costBreakdown} className="sm:grid-cols-1" />
               )}
-            </div>
+            </section>
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-3 border-t shrink-0">
+        <DialogFooter className="m-0 shrink-0 flex-row justify-end px-5 py-3">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Close</Button>
           <Button
             variant="outline"
             size="sm"
