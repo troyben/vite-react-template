@@ -1,3 +1,5 @@
+import { PageHeader } from '@/components/PageHeader';
+import { AutomaticMaterialsPreview } from '@/components/quotations/AutomaticMaterialsPreview';
 import { useState, useEffect } from 'react';
 import { Plus, X, Image, Download, Phone, MapPin, Eye, ArrowLeft, LayoutTemplate, Loader2 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -94,6 +96,7 @@ const QuotationForm = () => {
               : Number(quotationData.transport_fee ?? 0);
             setFormData({
               id: quotationData.id,
+              revision: quotationData.revision,
               clientId: quotationData.clientId,
               client_name: quotationData.client_name,
               client_email: quotationData.client_email || '',
@@ -305,6 +308,7 @@ const QuotationForm = () => {
     try {
       setSubmitting(true);
       const quotationData: Omit<QuotationFormData, 'id'> = {
+        revision: formData.revision,
         clientId: selectedClient.id,
         client_name: selectedClient.name,
         client_email: selectedClient.email || '',
@@ -319,13 +323,13 @@ const QuotationForm = () => {
         total_amount: calculateTotal(formData.items),
         vat_percent: Number(formData.vat_percent) || 0,
         transport_fee: Number(formData.transport_fee) || 0,
-        status: 'draft', notes: formData.notes || ''
+        status: formData.status, notes: formData.notes || ''
       };
-      if (isEditing && id) await updateQuotation(parseInt(id), quotationData);
+      if (formData.id) await updateQuotation(formData.id, quotationData);
       else await createQuotation(quotationData);
       navigate('/quotations');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save quotation.');
+      setError(err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Failed to save quotation.');
     } finally {
       setSubmitting(false);
     }
@@ -360,7 +364,7 @@ const QuotationForm = () => {
         if (response.data?.data?.id) {
           quotationId = response.data.data.id;
           createdAt = response.data.data.createdAt || createdAt;
-          setFormData(prev => ({ ...prev, id: quotationId }));
+          setFormData(prev => ({ ...prev, id: quotationId, revision: response.data.data.revision }));
           notify.success('Quotation saved');
         }
       }
@@ -370,7 +374,7 @@ const QuotationForm = () => {
       const transportForPdf = Number(formData.transport_fee) || 0;
       const { grandTotal: grandTotalForPdf } = computeTotals(subtotalForPdf, vatPercentForPdf, transportForPdf);
       const quotationData: Quotation = {
-        id: quotationId!, clientId: selectedClient.id,
+        id: quotationId!, revision: formData.revision ?? 1, clientId: selectedClient.id,
         client_name: selectedClient.name, client_email: selectedClient.email || '',
         client_phone: selectedClient.phone || undefined,
         client_address: selectedClient.address || '',
@@ -429,14 +433,14 @@ const QuotationForm = () => {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <PageHeader>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={() => navigate('/quotations')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Quotation' : 'New Quotation'}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowPreviewModal(true)}>
             <Eye className="h-4 w-4 mr-1.5" />
             Preview
@@ -445,14 +449,20 @@ const QuotationForm = () => {
             {pdfLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
             {pdfLoading ? 'Generating...' : 'PDF'}
           </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => navigate('/quotations')}>
+            Cancel
+          </Button>
+          <Button type="submit" form="quotation-form" size="sm" disabled={submitting}>
+            {submitting ? 'Saving...' : isEditing ? 'Update Quotation' : 'Save Quotation'}
+          </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {error && (
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form id="quotation-form" onSubmit={handleSubmit}>
         {/* Items Table */}
         <Card>
           <CardHeader className="py-3 px-4 space-y-2">
@@ -765,6 +775,7 @@ const QuotationForm = () => {
           </CardContent>
         </Card>
 
+        <AutomaticMaterialsPreview items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} />
         {/* Total + Actions */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-end md:gap-6 mt-4">
           <div className="flex flex-col items-stretch md:items-end gap-3 w-full md:w-auto md:min-w-[320px]">
@@ -848,14 +859,7 @@ const QuotationForm = () => {
                 </Card>
               );
             })()}
-            <div className="flex gap-2 self-end">
-              <Button type="button" variant="outline" onClick={() => navigate('/quotations')}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Saving...' : isEditing ? 'Update Quotation' : 'Save Quotation'}
-              </Button>
-            </div>
+
           </div>
         </div>
       </form>

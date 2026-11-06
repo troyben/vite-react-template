@@ -70,12 +70,12 @@ export function useQuotationDetail() {
       });
 
       if (response.data.success) {
-        setQuotation(prev => prev ? { ...prev, status: newStatus } : null);
+        setQuotation(prev => prev ? { ...prev, ...response.data.data, items: prev.items } : null);
         notify.success(`Quotation status updated to ${newStatus}`);
       }
     } catch (err) {
       console.error('Error updating status:', err);
-      notify.error('Failed to update status');
+      notify.error(err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Failed to update status');
     } finally {
       setLoading(false);
     }

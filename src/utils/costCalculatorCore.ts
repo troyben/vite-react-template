@@ -3,6 +3,7 @@ import { GABLE_RISE_RATIO, getShortSideHeight, getNShapeOpening } from '@/compon
 import type { Material, MaterialCategory } from '@/services/materialService';
 
 export interface CostLineItem {
+  materialId?: number;
   material: string;
   category: string;
   quantity: number;
@@ -90,6 +91,7 @@ export function calculateFrameItems(product: ProductData, materials: Material[])
     const perimeter = getOuterPerimeter(product);
     items.push({
       material: outerFrame.name,
+        materialId: outerFrame.id,
       category: 'Frame Profile',
       quantity: round(perimeter),
       unit: 'meters',
@@ -106,6 +108,7 @@ export function calculateFrameItems(product: ProductData, materials: Material[])
       const totalLength = mullionCount * hMeters;
       items.push({
         material: mullion.name,
+        materialId: mullion.id,
         category: 'Frame Profile',
         quantity: round(totalLength),
         unit: 'meters',
@@ -141,6 +144,7 @@ export function calculateFrameItems(product: ProductData, materials: Material[])
       if (totalTransomLength > 0) {
         items.push({
           material: transom.name,
+        materialId: transom.id,
           category: 'Frame Profile',
           quantity: round(totalTransomLength),
           unit: 'meters',
@@ -225,6 +229,7 @@ export function calculateGlassItems(product: ProductData, materials: Material[])
 
   items.push({
     material: glass.name,
+        materialId: glass.id,
     category: 'Glass',
     quantity: round(area),
     unit: 'm\u00B2',
@@ -282,6 +287,7 @@ export function calculateHardwareItems(product: ProductData, materials: Material
   if (handleMat) {
     items.push({
       material: handleMat.name,
+        materialId: handleMat.id,
       category: 'Hardware',
       quantity: totalOpenings,
       unit: 'pcs',
@@ -301,6 +307,7 @@ export function calculateHardwareItems(product: ProductData, materials: Material
       const qty = hingedCount * 2;
       items.push({
         material: hingeMat.name,
+        materialId: hingeMat.id,
         category: 'Hardware',
         quantity: qty,
         unit: 'pcs',
@@ -321,6 +328,7 @@ export function calculateHardwareItems(product: ProductData, materials: Material
       const qty = slidingCount * 2;
       items.push({
         material: rollerMat.name,
+        materialId: rollerMat.id,
         category: 'Hardware',
         quantity: qty,
         unit: 'pcs',
@@ -339,6 +347,7 @@ export function calculateHardwareItems(product: ProductData, materials: Material
     if (lockMat) {
       items.push({
         material: lockMat.name,
+        materialId: lockMat.id,
         category: 'Hardware',
         quantity: openingPanelCount,
         unit: 'pcs',
@@ -372,6 +381,7 @@ export function calculateAccessoryItems(product: ProductData, materials: Materia
       // Rubber seals, weatherstrips etc: quantity = perimeter
       items.push({
         material: mat.name,
+        materialId: mat.id,
         category: 'Accessory',
         quantity: round(perimeter),
         unit: 'meters',
@@ -382,6 +392,7 @@ export function calculateAccessoryItems(product: ProductData, materials: Materia
       // Fixed-quantity accessories: 1 per product
       items.push({
         material: mat.name,
+        materialId: mat.id,
         category: 'Accessory',
         quantity: 1,
         unit: 'pcs',

@@ -1,4 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/PageHeader';
+import { Card, CardContent } from '@/components/ui/card';
 import { useSettings } from '@/hooks/useSettings';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import ProfileForm from '@/components/settings/ProfileForm';
@@ -28,16 +30,14 @@ const Settings = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageHeader><h1 className="text-2xl font-semibold">Profile Settings</h1>
+        <Button type="submit" form="profile-settings" disabled={loading || submitting}>{submitting ? 'Saving...' : 'Save Changes'}</Button>
+      </PageHeader>
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-bold sm:text-xl">Profile Settings</CardTitle>
-        </CardHeader>
         <CardContent className="space-y-6">
           <ProfileForm
             profileData={profileData}
             avatarPreview={avatarPreview}
-            loading={loading}
-            submitting={submitting}
             success={success}
             onChange={handleChange}
             onAvatarChange={handleAvatarChange}

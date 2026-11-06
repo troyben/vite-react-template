@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Material, MaterialCategory, MaterialUnit, CreateMaterialData } from '@/services/materialService';
+import { MaterialUsageFields } from './MaterialUsageFields';
 import { CURRENCY_SYMBOLS } from '@/hooks/useMaterials';
 
 const CURRENCY_OPTIONS = [
@@ -101,7 +102,7 @@ export function MaterialFormDialog({
     const formData = new FormData(e.currentTarget);
 
     const data: CreateMaterialData = {
-      name: formData.get('name') as string,
+      name: (formData.get('name') as string).trim(),
       category,
       description: (formData.get('description') as string) || undefined,
       unit,
@@ -115,14 +116,14 @@ export function MaterialFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingMaterial ? 'Edit Material' : 'Add New Material'}
           </DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -136,8 +137,8 @@ export function MaterialFormDialog({
             <div className="grid gap-2">
               <Label htmlFor="category">Category *</Label>
               <Select value={category} onValueChange={(v) => { if (v !== null) handleCategoryChange(v); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
+                <SelectTrigger id="category" className="w-full">
+                  <SelectValue placeholder="Select category">{CATEGORY_OPTIONS.find(o => o.value === category)?.label}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORY_OPTIONS.map(opt => (
@@ -150,12 +151,12 @@ export function MaterialFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="unit">Unit *</Label>
               <Select value={unit} onValueChange={(v) => setUnit(v as MaterialUnit)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select unit" />
+                <SelectTrigger id="unit" className="w-full">
+                  <SelectValue placeholder="Select unit">{UNIT_OPTIONS.find(o => o.value === unit)?.label}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {UNIT_OPTIONS.map(opt => (
@@ -169,8 +170,8 @@ export function MaterialFormDialog({
             <div className="grid gap-2">
               <Label htmlFor="currency">Currency *</Label>
               <Select value={currency} onValueChange={(v) => { if (v !== null) setCurrency(v); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select currency" />
+                <SelectTrigger id="currency" className="w-full">
+                  <SelectValue placeholder="Select currency">{currency}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {CURRENCY_OPTIONS.map(opt => (
@@ -182,7 +183,7 @@ export function MaterialFormDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="costPrice">Cost Price ({CURRENCY_SYMBOLS[currency] || currency}) *</Label>
+              <Label htmlFor="costPrice">Cost per unit ({CURRENCY_SYMBOLS[currency] || currency}) *</Label>
               <Input
                 id="costPrice"
                 name="costPrice"
@@ -196,6 +197,7 @@ export function MaterialFormDialog({
             </div>
           </div>
 
+          <p className="text-xs text-muted-foreground">Enter the cost for one {unit === 'per_meter' ? 'metre' : unit === 'per_sqm' ? 'square metre' : unit === 'per_kg' ? 'kilogram' : 'piece'}, not the full pack or length. For example, a 6 m profile costing $30 is $5 per metre.</p>
           <div className="grid gap-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -213,6 +215,7 @@ export function MaterialFormDialog({
             onChange={setProperties}
           />
 
+          <MaterialUsageFields category={category} unit={unit} properties={properties} onChange={setProperties} />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
               Cancel
@@ -255,8 +258,8 @@ function CategoryProperties({
             value={properties.profileType || 'none'}
             onValueChange={(v) => update('profileType', v === 'none' ? undefined : v)}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select profile type" />
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select profile type">{({ outer_frame: 'Outer Frame', mullion: 'Mullion', transom: 'Transom' } as Record<string, string>)[properties.profileType] || "Select"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">— None —</SelectItem>
@@ -284,8 +287,8 @@ function CategoryProperties({
               value={properties.glassType || ''}
               onValueChange={(v) => update('glassType', v)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select glass type" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select glass type">{({ clear: 'Clear', frosted: 'Frosted', 'custom-tint': 'Custom Tint' } as Record<string, string>)[properties.glassType] || "Select"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="clear">Clear</SelectItem>
@@ -322,8 +325,8 @@ function CategoryProperties({
               value={properties.hardwareType || ''}
               onValueChange={(v) => update('hardwareType', v)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select type">{({ handle: 'Handle', lock: 'Lock', hinge: 'Hinge', roller: 'Roller' } as Record<string, string>)[properties.hardwareType] || "Select"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="handle">Handle</SelectItem>
@@ -333,55 +336,6 @@ function CategoryProperties({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="applicableTo">Applicable To</Label>
-            <Select
-              value={properties.applicableTo || ''}
-              onValueChange={(v) => update('applicableTo', v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="door">Door</SelectItem>
-                <SelectItem value="window">Window</SelectItem>
-                <SelectItem value="both">Both</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="defaultFor">Default For (optional)</Label>
-          <Input
-            id="defaultFor"
-            value={properties.defaultFor || ''}
-            onChange={(e) => update('defaultFor', e.target.value || undefined)}
-            placeholder="e.g. hinged_window, sliding_door"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (category === 'accessory') {
-    return (
-      <div className="rounded-md border p-3 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Accessory Properties</p>
-        <div className="grid gap-2">
-          <Label htmlFor="applicableTo">Applicable To</Label>
-          <Select
-            value={properties.applicableTo || ''}
-            onValueChange={(v) => update('applicableTo', v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="door">Door</SelectItem>
-              <SelectItem value="window">Window</SelectItem>
-              <SelectItem value="both">Both</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
     );

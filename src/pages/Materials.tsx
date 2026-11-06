@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { Plus, Package } from 'lucide-react';
 import BaseDataTable from '@/components/BaseDataTable';
 import { MaterialFormDialog } from '@/components/materials/MaterialFormDialog';
@@ -40,16 +41,16 @@ const Materials = () => {
     <div className="p-6 space-y-6">
       <ScreenLoader isLoading={loading} />
 
-      <div className="flex items-center justify-between">
+      <PageHeader>
         <div className="flex items-center gap-3">
           <Package className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold">Materials</h1>
+          <div><h1 className="text-2xl font-semibold">Materials</h1><p className="mt-1 text-sm text-muted-foreground">Set unit costs and default consumption for doors and windows. Quotations calculate material quantities and costs automatically.</p></div>
         </div>
         <Button onClick={openAddForm}>
           <Plus className="h-4 w-4" />
           Add Material
         </Button>
-      </div>
+      </PageHeader>
 
       <div className="flex items-center gap-2 flex-wrap">
         {CATEGORY_FILTERS.map((filter) => (

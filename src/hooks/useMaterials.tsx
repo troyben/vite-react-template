@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Star, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import * as materialApi from '@/services/materialService';
 import type { Material, MaterialCategory } from '@/services/materialService';
@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { usageSummary } from '@/services/materialUsageService';
 import { Badge } from '@/components/ui/badge';
 
 const CATEGORY_LABELS: Record<MaterialCategory, string> = {
@@ -171,32 +172,6 @@ export function useMaterials() {
     }
   }, [fetchMaterials, currentPage, searchTerm, categoryFilter]);
 
-  const handleToggleDefault = useCallback(async (material: Material) => {
-    const newValue = !material.isDefault;
-    // Optimistic update
-    setMaterials(prev => prev.map(m =>
-      m.id === material.id ? { ...m, isDefault: newValue } : m
-    ));
-    try {
-      const response = await materialApi.updateMaterial(material.id, { isDefault: newValue });
-      if (response.data.success) {
-        notify.success(newValue ? 'Set as default material' : 'Removed default status');
-      } else {
-        // Revert on failure
-        setMaterials(prev => prev.map(m =>
-          m.id === material.id ? { ...m, isDefault: material.isDefault } : m
-        ));
-        notify.error('Failed to update default status');
-      }
-    } catch {
-      // Revert on error
-      setMaterials(prev => prev.map(m =>
-        m.id === material.id ? { ...m, isDefault: material.isDefault } : m
-      ));
-      notify.error('Failed to update default status');
-    }
-  }, []);
-
   const columns = useMemo<ColumnDef<Material, any>[]>(() => [
     {
       accessorKey: 'name',
@@ -231,7 +206,7 @@ export function useMaterials() {
     },
     {
       accessorKey: 'costPrice',
-      header: 'Cost Price',
+      header: 'Cost per unit',
       cell: info => {
         const material = info.row.original;
         const code = material.currency || 'USD';
@@ -247,36 +222,17 @@ export function useMaterials() {
       cell: info => (info.getValue() as string) || 'USD',
     },
     {
-      id: 'isDefault',
-      header: 'Default',
+      id: 'automaticUsage',
+      header: 'Automatic usage',
       enableSorting: false,
-      cell: info => {
-        const material = info.row.original;
-        const isDefault = !!material.isDefault;
-        return (
-          <button
-            type="button"
-            onClick={() => handleToggleDefault(material)}
-            className="inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-muted"
-            title={isDefault ? 'Remove default' : 'Set as default'}
-          >
-            <Star
-              className={`h-4 w-4 transition-colors ${
-                isDefault
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-muted-foreground'
-              }`}
-            />
-          </button>
-        );
-      },
+      cell: info => <button type="button" className="text-left text-xs hover:text-primary hover:underline" onClick={() => openEditForm(info.row.original)}>{usageSummary(info.row.original)}</button>,
     },
     {
       id: 'actions',
       header: '',
       cell: info => (
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <DropdownMenuTrigger aria-label={`Actions for ${info.row.original.name}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -304,7 +260,7 @@ export function useMaterials() {
         </DropdownMenu>
       ),
     },
-  ], [openEditForm, handleDelete, handleToggleDefault, deletingId]);
+  ], [openEditForm, handleDelete, deletingId]);
 
   return {
     materials,
