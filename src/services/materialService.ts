@@ -17,6 +17,7 @@ export interface Material {
   name: string;
   category: MaterialCategory;
   description?: string;
+  image?: string | null;
   unit: MaterialUnit;
   costPrice: number;
   isDefault?: boolean;
