@@ -32,7 +32,7 @@ export function RecentQuotations({ quotations, clients }: RecentQuotationsProps)
                   <TableCell className="font-medium">
                     <Link to={`/quotations/${quotation.id}`} className="hover:underline">
                       <span className="text-muted-foreground">#</span>
-                      {quotation.id.toString().padStart(6, '0')}
+                      {quotation.id}
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
