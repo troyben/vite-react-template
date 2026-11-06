@@ -4,14 +4,14 @@ import type { MaterialCostReportLine } from '@/services/materialCostReportServic
 
 interface MaterialCostTableProps { lines: MaterialCostReportLine[]; currency: string }
 export const MaterialCostTable: React.FC<MaterialCostTableProps> = ({ lines, currency }) => (
-  <Table>
-    <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Usage incl. wastage</TableHead>
-      <TableHead className="text-right">Unit cost</TableHead><TableHead className="text-right">Material cost</TableHead></TableRow></TableHeader>
+  <Table className="text-xs">
+    <TableHeader><TableRow><TableHead className="h-7 px-1.5 text-xs">Material</TableHead><TableHead className="h-7 px-1.5 text-xs">Usage</TableHead>
+      <TableHead className="h-7 px-1.5 text-right text-xs">Unit cost</TableHead><TableHead className="h-7 px-1.5 text-right text-xs">Cost</TableHead></TableRow></TableHeader>
     <TableBody>{lines.map(line => <TableRow key={line.id}>
-      <TableCell className="whitespace-normal"><span className="font-medium">{line.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{line.category}</span></TableCell>
-      <TableCell>{line.quantity.toLocaleString('en-US', { maximumFractionDigits: 3 })} {line.unit}</TableCell>
-      <TableCell className="text-right">{costingMoney(line.unitCost, currency)}</TableCell>
-      <TableCell className="text-right font-medium">{costingMoney(line.total, currency)}</TableCell>
+      <TableCell className="px-1.5 py-1.5 whitespace-normal"><span title={line.category}>{line.name}</span></TableCell>
+      <TableCell className="px-1.5 py-1.5">{line.quantity.toLocaleString('en-US', { maximumFractionDigits: 3 })} {line.unit}</TableCell>
+      <TableCell className="px-1.5 py-1.5 text-right">{costingMoney(line.unitCost, currency)}</TableCell>
+      <TableCell className="px-1.5 py-1.5 text-right font-medium">{costingMoney(line.total, currency)}</TableCell>
     </TableRow>)}</TableBody>
   </Table>
 );
