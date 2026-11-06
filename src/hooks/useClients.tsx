@@ -96,7 +96,7 @@ export function useClients() {
       name,
       address,
       email: formData.get('email') as string || undefined,
-      phone: formData.get('phone') as string || undefined,
+      phone: (formData.get('phone') as string)?.trim() || null,
       company: formData.get('company') as string || undefined,
     };
 

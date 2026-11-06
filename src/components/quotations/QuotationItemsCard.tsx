@@ -7,7 +7,7 @@ import type { QuotationItemEditing } from './quotationItemEditing';
 import { QuotationItemMobile } from './QuotationItemMobile';
 import { QuotationItemRow } from './QuotationItemRow';
 
-interface QuotationItemsCardProps { items: QuotationItem[]; client?: { name: string; phone?: string; address?: string } | null; editing?: QuotationItemEditing; onSelectClient?: () => void }
+interface QuotationItemsCardProps { items: QuotationItem[]; client?: { name: string; phone?: string | null; address?: string } | null; editing?: QuotationItemEditing; onSelectClient?: () => void }
 export const QuotationItemsCard: React.FC<QuotationItemsCardProps> = ({ items, client, editing, onSelectClient }) => (
   <Card className="gap-0 py-0">
     <CardHeader className="flex flex-wrap items-center gap-2 border-b px-3 py-2"><CardTitle className="mr-2 text-sm">Line Items</CardTitle>

@@ -57,14 +57,14 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
   const handleNewClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!newClient.name || !newClient.phone || !newClient.address) {
-        throw new Error('Name, phone and address are required');
+      if (!newClient.name || !newClient.address) {
+        throw new Error('Name and address are required');
       }
 
       const clientData = {
         name: newClient.name,
         address: newClient.address,
-        phone: newClient.phone,
+        phone: newClient.phone?.trim() || null,
         email: newClient.email || undefined,
         company: newClient.company || undefined
       } as Omit<Client, 'id' | 'createdAt' | 'updatedAt'>;
@@ -161,14 +161,13 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone *</Label>
+                  <Label htmlFor="phone">Phone (optional)</Label>
                   <Input
                     type="tel"
                     id="phone"
                     name="phone"
-                    value={newClient.phone}
+                    value={newClient.phone ?? ''}
                     onChange={handleInputChange}
-                    required
                   />
                 </div>
               </div>
