@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { costingMoney } from '@/services/costingService';
+import { materialItemCostLabel, materialItemEmptyMessage } from '@/services/materialCostReportService';
 import type { MaterialCostReportData } from '@/services/materialCostReportService';
 import type { QuotationItem } from '@/services/quotationService';
 import { MaterialCostItemDetails } from './MaterialCostItemDetails';
@@ -19,10 +19,15 @@ export const MaterialCostItems: React.FC<MaterialCostItemsProps> = ({ report, it
         <TableCell className="px-2 py-2 align-top text-xs text-muted-foreground">{item.index + 1}</TableCell>
         <TableCell className="px-2 py-2 align-top"><MaterialCostItemDetails item={item} sketch={items[item.index]?.productSketch} /></TableCell>
         <TableCell className="px-2 py-1 align-top whitespace-normal">
+          {item.status === 'needs_review' && item.lines.length > 0 && <p className="py-1 text-xs text-amber-800 dark:text-amber-300">Needs review · partial calculation</p>}
           {item.lines.length > 0 ? <MaterialCostTable lines={item.lines} currency={report.currency} />
-            : <p className="py-2 text-xs text-muted-foreground">No automatic material costs. Review any material checks above.</p>}
+            : <p className="py-2 text-xs text-muted-foreground">{materialItemEmptyMessage(item)}</p>}
         </TableCell>
-        <TableCell className="px-2 py-3 text-right align-top text-sm font-semibold">{costingMoney(item.total, report.currency)}</TableCell>
+        <TableCell className="px-2 py-3 text-right align-top text-sm font-semibold">
+          <span className={item.status === 'not_configured' || (item.status === 'needs_review' && item.lines.length === 0) ? 'block whitespace-normal text-xs leading-4 text-amber-800 dark:text-amber-300' : undefined}>
+            {materialItemCostLabel(item, report.currency)}
+          </span>
+        </TableCell>
       </TableRow>)}</TableBody>
     </Table>
   </div>
