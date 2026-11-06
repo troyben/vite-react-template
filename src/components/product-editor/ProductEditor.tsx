@@ -26,6 +26,7 @@ import type { ProductData } from '@/components/product-editor/types';
 import { nudgeBend } from '@/components/product-editor/canvas/utils/chain-model';
 import { useProductEditorState, type ProductEditorTabKey } from './useProductEditorState';
 import { buildActiveSegmentView, buildShapeCanvasHandlers } from './productEditorHandlers';
+import { ProductMaterialSystem } from './ProductMaterialSystem';
 
 export type ProductEditorMode = 'page' | 'dialog';
 
@@ -189,6 +190,7 @@ const ProductEditor = forwardRef<ProductEditorHandle, ProductEditorProps>(functi
       <div className="flex flex-1 flex-col p-3 min-h-0 overflow-hidden">
         {/* Controls bar */}
         <div className="flex flex-wrap items-center gap-3 mb-2 shrink-0">
+          <ProductMaterialSystem state={state} />
           {/* Shape picker popover */}
           <Popover>
             <PopoverTrigger className="flex items-center gap-2 rounded-md border border-input bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors">

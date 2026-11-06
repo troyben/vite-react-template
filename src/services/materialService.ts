@@ -30,6 +30,11 @@ export interface Material {
 export type CreateMaterialData = Omit<Material, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateMaterialData = Partial<CreateMaterialData>;
 
+export async function installCommonMaterials(): Promise<{ created: number; existing: number; total: number }> {
+  try { return (await api.post('/materials/common-defaults')).data.data; }
+  catch (error) { return handleServiceError(error); }
+}
+
 type MaterialListParams = PaginationParams & { category?: MaterialCategory };
 
 /**

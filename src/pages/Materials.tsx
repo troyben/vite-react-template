@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Plus, Package } from 'lucide-react';
 import BaseDataTable from '@/components/BaseDataTable';
 import { MaterialFormDialog } from '@/components/materials/MaterialFormDialog';
+import { CommonMaterialsButton } from '@/components/materials/CommonMaterialsButton';
 import { useMaterials } from '@/hooks/useMaterials';
 import { ScreenLoader } from '@/components/ScreenLoader';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,8 @@ const Materials = () => {
           Add Material
         </Button>
       </PageHeader>
+
+      <CommonMaterialsButton onAdded={() => handlePageChange(1)} />
 
       <div className="flex items-center gap-2 flex-wrap">
         {CATEGORY_FILTERS.map((filter) => (
