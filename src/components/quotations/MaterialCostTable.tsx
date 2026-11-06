@@ -8,7 +8,7 @@ export const MaterialCostTable: React.FC<MaterialCostTableProps> = ({ lines, cur
     <TableHeader><TableRow><TableHead className="h-7 w-[40%] px-1.5 text-xs">Material</TableHead><TableHead className="h-7 px-1.5 text-xs">Usage</TableHead>
       <TableHead className="h-7 px-1.5 text-right text-xs">Unit cost</TableHead><TableHead className="h-7 px-1.5 text-right text-xs">Cost</TableHead></TableRow></TableHeader>
     <TableBody>{lines.map(line => <TableRow key={line.id}>
-      <TableCell className="px-1.5 py-1.5 whitespace-normal"><span title={line.category}>{line.name}</span></TableCell>
+      <TableCell className="px-1.5 py-1.5 whitespace-normal"><span title={line.category}>{line.name}</span>{line.manual && <span className="ml-1 text-[10px] text-muted-foreground">· Manual</span>}</TableCell>
       <TableCell className="px-1.5 py-1.5">{line.quantity.toLocaleString('en-US', { maximumFractionDigits: 3 })} {line.unit}</TableCell>
       <TableCell className="px-1.5 py-1.5 text-right">{costingMoney(line.unitCost, currency)}</TableCell>
       <TableCell className="px-1.5 py-1.5 text-right font-medium">{costingMoney(line.total, currency)}</TableCell>

@@ -1,3 +1,4 @@
+import type { CostingLine } from './costingTypes';
 import api from '../api';
 import type { ProductData } from '../components/product-editor/types';
 import { AxiosResponse } from 'axios';
@@ -12,6 +13,7 @@ interface ApiResponse<T> {
 export interface SketchData extends ProductData {}
 
 export interface QuotationItem {
+  id?: string;
   item: string;              // Required
   description?: string;      // Optional
   quantity: number;          // Required
@@ -22,6 +24,8 @@ export interface QuotationItem {
 }
 
 export interface QuotationFormData {
+  /** Private write-only costing draft; never returned by ordinary quotation endpoints. */
+  manualMaterials?: CostingLine[];
   id?: number;
   revision?: number;
   clientId: number;           // Required
@@ -82,7 +86,7 @@ export const getQuotationById = async (id: number): Promise<AxiosResponse<ApiRes
 
 export const updateQuotation = async (
   id: number,
-  quotation: Partial<Quotation>
+  quotation: Partial<Quotation> & { manualMaterials?: CostingLine[] }
 ): Promise<AxiosResponse<ApiResponse<Quotation>>> => {
   try {
     // grand_total is response-only; never send it back to the server

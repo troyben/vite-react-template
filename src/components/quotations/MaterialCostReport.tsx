@@ -9,7 +9,7 @@ interface MaterialCostReportProps { report: MaterialCostReportData; title: strin
 export const MaterialCostReport: React.FC<MaterialCostReportProps> = ({ report, title, items, showTotal = true }) => (
   <article className="material-cost-report space-y-3">
     <header className="hidden print:block"><h1 className="text-xl font-semibold">Material costs</h1><p>{title}</p><p className="text-sm">Internal material estimate · {report.currency}</p></header>
-    <p className="text-xs text-muted-foreground">Only configured material rules are included; full material coverage is not verified. Usage includes wastage and the quoted quantity, with purchasing costs shared across items.</p>
+    <p className="text-xs text-muted-foreground">Includes automatic rules and manually added materials; full material coverage is not verified. Automatic usage includes quoted quantity and wastage. Manual quantities are entered totals.</p>
     {report.warnings.length > 0 && <section className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
       <h2 className="font-semibold">Material checks to review</h2><ul className="mt-2 list-disc space-y-1 pl-5">{report.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
     </section>}

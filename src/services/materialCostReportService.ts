@@ -1,9 +1,10 @@
+import type { CostingLine } from './costingTypes';
 import api from '@/api';
 import { costingMoney } from './costingService';
 import type { QuotationItem } from './quotationService';
 
 export interface MaterialCostReportLine {
-  id: string; name: string; category: string; unit: string; quantity: number; unitCost: number; total: number;
+  manual?: boolean; id: string; name: string; category: string; unit: string; quantity: number; unitCost: number; total: number;
 }
 export type MaterialConfigurationStatus = 'calculated' | 'not_configured' | 'needs_review';
 export interface MaterialCostReportItem {
@@ -13,8 +14,8 @@ export interface MaterialCostReportData {
   currency: string; incomplete: boolean; items: MaterialCostReportItem[];
   additional: { lines: MaterialCostReportLine[]; total: number }; total: number; warnings: string[];
 }
-export async function previewMaterialCostReport(items: QuotationItem[], quotationId?: string): Promise<MaterialCostReportData> {
-  const response = await api.post('/quotations/costing-preview', { items, quotationId, includeItemCosts: true });
+export async function previewMaterialCostReport(items: QuotationItem[], quotationId?: string, manualMaterials?: CostingLine[]): Promise<MaterialCostReportData> {
+  const response = await api.post('/quotations/costing-preview', { items, quotationId, ...(manualMaterials === undefined ? {} : { manualMaterials }), includeItemCosts: true });
   if (!response.data.success || !response.data.data?.itemCosts) throw new Error('Unable to load material costs');
   return response.data.data.itemCosts;
 }
