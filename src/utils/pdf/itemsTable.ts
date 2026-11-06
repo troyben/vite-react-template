@@ -92,10 +92,14 @@ async function drawItemRow(
     doc.rect(m, y, CONTENT_WIDTH, rowHeight, 'F');
   }
 
-  // Bottom border
+  // Horizontal row borders and vertical column separators
   doc.setDrawColor(...COLORS.border);
   doc.setLineWidth(0.15);
+  doc.line(m, y, m + CONTENT_WIDTH, y);
   doc.line(m, y + rowHeight, m + CONTENT_WIDTH, y + rowHeight);
+  for (const x of [COL_X.name, COL_X.qty, COL_X.price, COL_X.total]) {
+    doc.line(x, y, x, y + rowHeight);
+  }
 
   // -- Sketch (vector via svg2pdf) --
   if (item.productSketch) {
