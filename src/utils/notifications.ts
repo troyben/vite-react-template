@@ -32,6 +32,7 @@ interface ConfirmOptions {
 }
 
 const defaultSwalConfig = {
+  customClass: { popup: 'shadow-[var(--modal-shadow)]' },
   confirmButtonColor: '#7C5DFA',
   cancelButtonColor: '#888EA8',
   reverseButtons: true,

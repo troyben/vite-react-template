@@ -89,7 +89,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="rounded-lg bg-card p-6 text-card-foreground">Loading clients...</div>
+        <div className="rounded-lg bg-card p-6 shadow-[var(--modal-shadow)] text-card-foreground">Loading clients...</div>
       </div>
     );
   }
@@ -97,14 +97,14 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onSelect, selectedClien
   if (error) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="rounded-lg bg-card p-6 text-destructive">{error}</div>
+        <div className="rounded-lg bg-card p-6 shadow-[var(--modal-shadow)] text-destructive">{error}</div>
       </div>
     );
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-lg">
+      <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-[var(--modal-shadow)]">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Select Client</h2>
           <Button variant="ghost" size="icon" onClick={onClose}>

@@ -720,7 +720,7 @@
 .preview-modal-content {
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 8px 32px rgba(44, 44, 84, 0.18);
+  box-shadow: var(--modal-shadow);
   width: 80vw;
   max-width: 1100px;
   min-width: 350px;
