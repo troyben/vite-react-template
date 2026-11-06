@@ -84,3 +84,21 @@ it('prints manual material labels, assigned costs and quote-wide additions witho
   expect(root.querySelector('footer')?.textContent).toContain('$36.00');
   expect(root.querySelectorAll('input,button').length).toBe(0);
 });
+
+it('puts add/edit/remove/approval controls inside products, leaves inner rows uniform and prints approved estimates cleanly', () => {
+  const manual = { id: 'manual', name: 'Extra hinge', category: 'Hardware', unit: 'pcs', quantity: 2, unitCost: 3, total: 6, manual: true };
+  const data = { ...report, incomplete: false, warnings: [], total: 12, items: [{ ...report.items[0], status: 'approved' as const, canApprove: true, approvalKey: 'a'.repeat(64), lines: [manual, { ...manual, id: 'manual-2' }], total: 12 }] };
+  const root = document.createElement('div');
+  const rows = [{ ...items[0], id: 'product' }];
+  const editing = { lines: [], materials: [], approvals: [], busy: false, error: '', retry: () => {}, onChange: () => {}, onApprove: () => {} };
+  root.innerHTML = renderToStaticMarkup(createElement(MaterialCostReport, { report: data, title: 'Quotation', items: rows, editing }));
+  const productCell = root.querySelector('.material-cost-items > tbody > tr > td:nth-child(3)')!;
+  expect(productCell.textContent).toContain('Add material'); expect(productCell.textContent).toContain('Approved');
+  expect(productCell.querySelector('[aria-label="Remove Extra hinge"]')).not.toBeNull();
+  expect(root.querySelector('[aria-label="Manual materials"]')).toBeNull();
+  expect([...productCell.querySelectorAll('tbody > tr')].every(row => row.className.includes('even:bg-transparent'))).toBe(true);
+  root.innerHTML = renderToStaticMarkup(createElement(MaterialCostReport, { report: data, title: 'Quotation', items: rows }));
+  expect(root.textContent).not.toContain('Material checks to review'); expect(root.textContent).not.toContain('Needs review');
+  expect(root.textContent).not.toContain('Incomplete'); expect(root.textContent).not.toContain('Calculated so far');
+  expect(root.querySelectorAll('button,input').length).toBe(0); expect(root.querySelector('footer')?.textContent).toContain('$12.00');
+});

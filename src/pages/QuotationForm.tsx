@@ -54,6 +54,7 @@ const QuotationForm = () => {
     client_address: '',
     items: withQuotationItemIds([{ ...emptyItem }]),
     manualMaterials: isEditing ? undefined : [],
+    itemApprovals: [],
     total_amount: 0,
     vat_percent: 0,
     transport_fee: 0,
@@ -109,6 +110,7 @@ const QuotationForm = () => {
               client_address: quotationData.client_address || '',
               items: withQuotationItemIds(parsedItems),
               manualMaterials: privateCosting.snapshot?.lines.filter(line => line.source !== 'automatic') ?? [],
+              itemApprovals: privateCosting.snapshot?.itemApprovals ?? [],
               total_amount: total,
               vat_percent: Number.isFinite(vatPercent) ? vatPercent : 0,
               transport_fee: Number.isFinite(transportFee) ? transportFee : 0,
@@ -167,7 +169,7 @@ const QuotationForm = () => {
   const handleRemoveItem = (index: number) => {
     if ((formData.items as QuotationItem[]).length <= 1) return;
     const updatedItems = (formData.items as QuotationItem[]).filter((_, i) => i !== index);
-    setFormData({ ...formData, items: updatedItems, manualMaterials: manualMaterialsWithoutItem(formData.manualMaterials, formData.items[index].id), total_amount: calculateTotal(updatedItems) });
+    setFormData({ ...formData, items: updatedItems, manualMaterials: manualMaterialsWithoutItem(formData.manualMaterials, formData.items[index].id), itemApprovals: formData.itemApprovals?.filter(approval => approval.quotationItemId !== formData.items[index].id), total_amount: calculateTotal(updatedItems) });
   };
 
   const handleSaveSketch = (productData: ProductData) => {
@@ -317,6 +319,7 @@ const QuotationForm = () => {
       const quotationData: Omit<QuotationFormData, 'id'> = {
         revision: formData.revision,
         manualMaterials: formData.manualMaterials,
+        itemApprovals: formData.itemApprovals,
         clientId: selectedClient.id,
         client_name: selectedClient.name,
         client_email: selectedClient.email || '',
@@ -368,6 +371,7 @@ const QuotationForm = () => {
           status: formData.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'paid',
           notes: formData.notes || '',
           manualMaterials: formData.manualMaterials,
+          itemApprovals: formData.itemApprovals,
         };
         const response = await createQuotation(saveData);
         if (response.data?.data?.id) {
@@ -450,7 +454,7 @@ const QuotationForm = () => {
           <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Quotation' : 'New Quotation'}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <MaterialCostAction items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} clientName={formData.client_name} manualMaterials={formData.manualMaterials} onManualMaterialsChange={lines => setFormData(previous => ({ ...previous, manualMaterials: lines }))} />
+          <MaterialCostAction items={formData.items} quotationId={formData.id ? String(formData.id) : undefined} clientName={formData.client_name} manualMaterials={formData.manualMaterials} onManualMaterialsChange={lines => setFormData(previous => ({ ...previous, manualMaterials: lines }))} itemApprovals={formData.itemApprovals} onItemApprovalsChange={itemApprovals => setFormData(previous => ({ ...previous, itemApprovals }))} />
           <Button variant="outline" size="sm" onClick={() => setShowPreviewModal(true)}>
             <Eye className="h-4 w-4 mr-1.5" />
             Preview

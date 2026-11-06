@@ -4,14 +4,14 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useMaterialCostReport } from './useMaterialCostReport';
 import { previewMaterialCostReport, type MaterialCostReportData } from '@/services/materialCostReportService';
-import type { CostingLine } from '@/services/costingTypes';
+import type { CostingLine, ItemMaterialApproval } from '@/services/costingTypes';
 import type { QuotationItem } from '@/services/quotationService';
 vi.mock('@/services/materialCostReportService', () => ({ previewMaterialCostReport: vi.fn() }));
 const items: QuotationItem[] = [{ item: 'Window', quantity: 1, price: 0, total: 0 }];
 const report: MaterialCostReportData = { currency: 'USD', incomplete: false, items: [], additional: { lines: [], total: 0 }, total: 4, warnings: [] };
 let state: ReturnType<typeof useMaterialCostReport>;
-const Harness = ({ rows, manual }: { rows: QuotationItem[]; manual?: CostingLine[] }) => {
-  const current = useMaterialCostReport(rows, undefined, manual);
+const Harness = ({ rows, manual, approvals }: { rows: QuotationItem[]; manual?: CostingLine[]; approvals?: ItemMaterialApproval[] }) => {
+  const current = useMaterialCostReport(rows, undefined, manual, approvals);
   useEffect(() => { state = current; }, [current]);
   return null;
 };
@@ -62,7 +62,20 @@ it('invalidates printable totals immediately when manual drafts change and sends
   await act(() => root.render(createElement(Harness, { rows: items, manual: changed })));
   expect(state.loading).toBe(true); expect(state.report).toBeUndefined();
   await act(() => vi.advanceTimersByTime(200));
-  expect(previewMaterialCostReport).toHaveBeenLastCalledWith(items, undefined, changed);
+  expect(previewMaterialCostReport).toHaveBeenLastCalledWith(items, undefined, changed, undefined);
   await act(() => { pending[1]({ ...report, total: 12 }); });
   expect(state.report?.total).toBe(12);
+});
+
+it('invalidates print when an approval is changed and keeps inline rows mounted while recalculating', async () => {
+  vi.mocked(previewMaterialCostReport).mockResolvedValue(report);
+  await act(() => root.render(createElement(Harness, { rows: items })));
+  await act(() => vi.advanceTimersByTime(200));
+  const approvals = [{ quotationItemId: 'one', signature: 'a'.repeat(64) }];
+  await act(() => root.render(createElement(Harness, { rows: items, approvals })));
+  expect(state.report).toBeUndefined(); expect(state.displayReport?.total).toBe(4);
+  expect(state.loading).toBe(true);
+  await act(() => vi.advanceTimersByTime(200));
+  expect(previewMaterialCostReport).toHaveBeenLastCalledWith(items, undefined, undefined, approvals);
+  expect(state.loading).toBe(false);
 });
