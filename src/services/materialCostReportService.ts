@@ -47,3 +47,10 @@ export function allMaterialApprovals(items: QuotationItem[], report: MaterialCos
   pending.forEach(approval => approvals.set(approval.quotationItemId, approval));
   return { count: pending.length, approvals: [...approvals.values()] };
 }
+
+/** Read a frozen saved estimate without previewing specifications or looking up current prices. */
+export async function savedMaterialCostReport(quotationId: string): Promise<MaterialCostReportData> {
+  const response = await api.get(`/quotations/${quotationId}/costing`, { params: { includeItemCosts: true } });
+  if (!response.data.success || !response.data.itemCosts) throw new Error('Unable to load saved material costs');
+  return response.data.itemCosts;
+}

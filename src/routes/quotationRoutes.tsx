@@ -1,16 +1,16 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
+import { LegacyCostingRedirect } from '@/components/quotations/LegacyCostingRedirect';
 import { PrivateRoute, RoleRoute } from './guards';
 
 const QuotationHistory = lazy(() => import('@/pages/QuotationHistory'));
 const QuotationList = lazy(() => import('@/pages/QuotationList'));
 const QuotationForm = lazy(() => import('@/pages/QuotationForm'));
-const QuotationCosting = lazy(() => import('@/pages/QuotationCosting'));
 const QuotationDetail = lazy(() => import('@/pages/QuotationDetail'));
 
 export const quotationRoutes: RouteObject[] = [
   { path: '/quotations/:id/history', element: <RoleRoute allowedRoles={['admin', 'user']}><QuotationHistory /></RoleRoute> },
-  { path: '/quotations/:id/costing', element: <RoleRoute allowedRoles={['admin', 'user']}><QuotationCosting /></RoleRoute> },
+  { path: '/quotations/:id/costing', element: <RoleRoute allowedRoles={['admin', 'user']}><LegacyCostingRedirect /></RoleRoute> },
   {
     path: '/quotations',
     element: <PrivateRoute><QuotationList /></PrivateRoute>,

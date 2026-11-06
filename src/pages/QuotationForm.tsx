@@ -1,9 +1,11 @@
+import { QuotationItemsCard } from '@/components/quotations/QuotationItemsCard';
+import { QuotationTotals } from '@/components/quotations/QuotationTotals';
 import { loadCosting } from '@/services/costingService';
 import { withQuotationItemIds, manualMaterialsWithoutItem } from '@/services/manualMaterialService';
 import { PageHeader } from '@/components/PageHeader';
 import { MaterialCostAction } from '@/components/quotations/MaterialCostAction';
 import { useState, useEffect } from 'react';
-import { Plus, X, Image, Download, Phone, MapPin, Eye, ArrowLeft, LayoutTemplate, Loader2 } from 'lucide-react';
+import { Download, Eye, ArrowLeft, Loader2 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuotationById, createQuotation, updateQuotation } from '../services/quotationService';
 import { getAllClients } from '../services/clientService';
@@ -12,8 +14,6 @@ import type { Client } from '../services/clientService';
 import type { QuotationItem, QuotationFormData, Quotation } from '../services/quotationService';
 import type { ProductData } from '@/components/product-editor/types';
 import ProductEditorDialog from '@/components/ProductEditorDialog';
-import ShapeCanvas from '@/components/product-editor/canvas/ShapeCanvas';
-import { extractShapeCanvasProps } from '@/utils/templateSketchProps';
 import ClientSelector from '@/components/ClientSelector';
 import TemplatePicker from '@/components/TemplatePicker';
 import QuotationPreviewModal from '@/components/QuotationPreviewModal';
@@ -21,12 +21,7 @@ import QuotationPDFPreview from '@/components/QuotationPDFPreview';
 import { createTemplate } from '@/services/templateService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { formatCurrency } from '@/config/currency';
 import { notify } from '@/utils/notifications';
 import { useSystemSettingsStore } from '@/stores/systemSettingsStore';
 import { buildSketchDescription } from '@/utils/productDescription';
@@ -419,8 +414,6 @@ const QuotationForm = () => {
     setFormData({ ...formData, items: updatedItems, total_amount: calculateTotal(updatedItems) });
   };
 
-  const formatAmount = formatCurrency;
-
   const buildNameFromSketch = (data: ProductData): string => {
     const openingType = data.type === 'door'
       ? (data.doorType || 'hinged')
@@ -430,16 +423,6 @@ const QuotationForm = () => {
   };
 
   const buildDescriptionFromSketch = buildSketchDescription;
-
-  const renderSketchDetails = (sketchData: ProductData) => (
-    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-      <span className="font-medium text-foreground">
-        {sketchData.type === 'door' ? `${sketchData.doorType} Door` : 'Window'}
-      </span>
-      <span>{sketchData.width} × {sketchData.height} {sketchData.unit}</span>
-      <span>{sketchData.panels}P • {sketchData.openingPanels?.length || 0} opening</span>
-    </div>
-  );
 
   if (loading) return <div className="p-6">Loading quotation data...</div>;
 
@@ -477,387 +460,13 @@ const QuotationForm = () => {
       )}
 
       <form id="quotation-form" onSubmit={handleSubmit}>
-        {/* Items Table */}
-        <Card className="gap-0 py-0">
-          <CardHeader className="flex flex-wrap items-center gap-2 border-b-[1px] px-3 py-2">
-            <CardTitle className="mr-2 text-sm">Line Items</CardTitle>
-            <div className="order-3 flex min-w-0 flex-1 basis-full items-center gap-2 sm:order-none sm:basis-auto">
-              <span className="shrink-0 text-xs text-muted-foreground">Client:</span>
-              {selectedClient ? <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
-                <span className="truncate text-xs font-semibold">{selectedClient.name}</span>
-                {selectedClient.phone && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="h-3 w-3" />{selectedClient.phone}</span>}
-                {selectedClient.address && <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" />{selectedClient.address}</span>}
-              </div> : <span className="min-w-0 flex-1 text-xs italic text-muted-foreground">No client selected</span>}
-              <Button type="button" variant="outline" size="sm" className="h-7 shrink-0 text-xs" onClick={() => setShowClientSelector(true)}>
-                {selectedClient ? 'Change' : 'Select Client'}
-              </Button>
-            </div>
-            <Button type="button" variant="outline" size="sm" className="ml-auto h-7 text-xs sm:ml-0" onClick={handleAddItem}>
-              <Plus className="h-3.5 w-3.5" />Add Item
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            {/* Mobile cards */}
-            <div className="@container md:hidden space-y-2 p-2">
-              {(formData.items as QuotationItem[]).map((item, index) => (
-                <div key={index} className="rounded-lg border bg-card p-2 space-y-2 relative">
-                  {/* Header: # + remove */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-muted-foreground">{index + 1}</span>
-                    <button type="button" onClick={() => handleRemoveItem(index)}
-                      disabled={(formData.items as QuotationItem[]).length <= 1}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Sketch + Item name row */}
-                  <div className="flex gap-2">
-                    {/* Sketch thumbnail */}
-                    <div className="w-[100px] shrink-0">
-                      {item.productSketch ? (
-                        <div className="flex flex-col gap-1">
-                          <div className="rounded border bg-muted/30 p-1 cursor-pointer hover:bg-muted/50 transition-colors w-[100px] h-[70px]"
-                               onClick={() => handleOpenSketch(index)}>
-                            <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
-                          </div>
-                          {renderSketchDetails(item.productSketch)}
-                          <div className="flex flex-wrap gap-1">
-                            <button type="button" onClick={() => handleOpenSketch(index)}
-                              className="text-[10px] text-primary hover:underline">Edit</button>
-                            <span className="text-muted-foreground text-[10px]">·</span>
-                            <button type="button" onClick={() => handleRemoveSketch(index)}
-                              className="text-[10px] text-destructive hover:underline">Remove</button>
-                            <span className="text-muted-foreground text-[10px]">·</span>
-                            <button type="button" onClick={() => { setSaveTemplateData(item.productSketch!); setShowSaveTemplateDialog(true); }}
-                              className="text-[10px] text-primary hover:underline">Save Template</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          <button type="button" onClick={() => handleOpenSketch(index)}
-                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-2 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                            <Image className="h-3 w-3" />
-                            Sketch
-                          </button>
-                          <button type="button" onClick={() => { setTemplateTargetIndex(index); setShowTemplatePicker(true); }}
-                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-2 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                            <LayoutTemplate className="h-3 w-3" />
-                            Template
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Item name + description */}
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <Input value={item.item} onChange={(e) => handleItemChange(index, 'item', e.target.value)}
-                        placeholder="Item name" className="h-7 text-xs" required />
-                      <Textarea value={item.description ?? ''} onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        placeholder="Description" className="field-sizing-fixed h-16 min-h-0 resize-y text-xs leading-4" rows={2} />
-                    </div>
-                  </div>
-
-                  {/* Compact numeric fields */}
-                  <div className="grid grid-cols-2 gap-2 @min-[280px]:grid-cols-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Qty</Label>
-                      <Input type="number" value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                        className="h-7 text-xs" required />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Rate</Label>
-                      <Input type="number" min="0" step="0.01" value={item.rate ?? ''}
-                        onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
-                        placeholder="—" className="h-7 text-xs" />
-                      {item.productSketch && item.rate && (
-                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
-                          {(() => {
-                            const { width, height, unit } = item.productSketch;
-                            const w = toMeters(Number(width), unit);
-                            const h = toMeters(Number(height), unit);
-                            return !isNaN(w) && !isNaN(h) ? `${(w * h).toFixed(2)} m²` : '';
-                          })()}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Price</Label>
-                      <Input type="number" min="0" step="0.01" value={item.price}
-                        onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
-                        className="h-7 text-xs" required
-                        readOnly={!!(item.rate !== undefined && item.productSketch)}
-                        disabled={!!(item.rate !== undefined && item.productSketch)} />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Total</Label>
-                      <div className="h-8 flex items-center text-sm font-medium">
-                        {formatAmount(item.total)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Mobile add item button */}
-            <div className="md:hidden pt-2 px-3 pb-3">
-              <button type="button" onClick={handleAddItem}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors py-1">
-                <Plus className="h-3.5 w-3.5" />
-                Add another item
-              </button>
-            </div>
-
-            {/* Desktop table */}
-            <div className="hidden md:block">
-            <Table className="[&_th]:h-8 [&_th]:text-xs">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">#</TableHead>
-                  <TableHead className="w-[172px]">Sketch</TableHead>
-                  <TableHead className="w-[23%]">Item</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-16">Qty</TableHead>
-                  <TableHead className="w-24">Rate</TableHead>
-                  <TableHead className="w-24">Price</TableHead>
-                  <TableHead className="w-24 text-right">Total</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(formData.items as QuotationItem[]).map((item, index) => (
-                  <TableRow key={index} className="align-top">
-                    {/* Row number */}
-                    <TableCell className="py-1.5 text-xs text-muted-foreground font-medium">
-                      {index + 1}
-                    </TableCell>
-
-                    {/* Sketch thumbnail */}
-                    <TableCell className="py-1.5">
-                      {item.productSketch ? (
-                        <div className="flex flex-col gap-0.5">
-                          <div className="cursor-pointer w-[144px] h-[80px]" onClick={() => handleOpenSketch(index)}>
-                            <ShapeCanvas {...extractShapeCanvasProps(item.productSketch)} svgStyle={{ width: '100%', height: '100%' }} />
-                          </div>
-                          <div className="flex gap-1 justify-center leading-3.5">
-                            <button type="button" onClick={() => handleOpenSketch(index)}
-                              className="text-[10px] text-primary hover:underline">Edit</button>
-                            <span className="text-muted-foreground text-[10px]">·</span>
-                            <button type="button" onClick={() => handleRemoveSketch(index)}
-                              className="text-[10px] text-destructive hover:underline">Remove</button>
-                            <span className="text-muted-foreground text-[10px]">·</span>
-                            <button type="button" onClick={() => { setSaveTemplateData(item.productSketch!); setShowSaveTemplateDialog(true); }}
-                              className="text-[10px] text-primary hover:underline">Save Template</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-1">
-                          <button type="button" onClick={() => handleOpenSketch(index)}
-                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-1.5 py-1 text-[10px] text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                            <Image className="h-3 w-3" />
-                            Sketch
-                          </button>
-                          <button type="button" onClick={() => { setTemplateTargetIndex(index); setShowTemplatePicker(true); }}
-                            className="flex items-center gap-1 rounded border border-dashed border-muted-foreground/30 px-1.5 py-1 text-[10px] text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                            <LayoutTemplate className="h-3 w-3" />
-                            Template
-                          </button>
-                        </div>
-                      )}
-                    </TableCell>
-
-                    {/* Item name */}
-                    <TableCell className="py-1.5">
-                      <Input
-                        value={item.item}
-                        onChange={(e) => handleItemChange(index, 'item', e.target.value)}
-                        placeholder="Item name"
-                        className="h-7 text-xs"
-                        required
-                      />
-                    </TableCell>
-
-                    {/* Description */}
-                    <TableCell className="py-1.5">
-                      <Textarea
-                        value={item.description ?? ''}
-                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        placeholder="Add description..."
-                        className="field-sizing-fixed h-20 min-h-0 resize-y px-2 py-1 text-xs leading-4"
-                        rows={4}
-                      />
-                    </TableCell>
-
-                    {/* Qty */}
-                    <TableCell className="py-1.5">
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                        className="h-7 text-xs w-16"
-                        required
-                      />
-                    </TableCell>
-
-                    {/* Rate */}
-                    <TableCell className="py-1.5">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.rate ?? ''}
-                        onChange={e => handleItemChange(index, 'rate', parseFloat(e.target.value))}
-                        placeholder="—"
-                        className="h-7 text-xs w-24"
-                      />
-                      {item.productSketch && item.rate && (
-                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
-                          {(() => {
-                            const { width, height, unit } = item.productSketch;
-                            const w = toMeters(Number(width), unit);
-                            const h = toMeters(Number(height), unit);
-                            return !isNaN(w) && !isNaN(h) ? `${(w * h).toFixed(2)} m²` : '';
-                          })()}
-                        </span>
-                      )}
-                    </TableCell>
-
-                    {/* Price */}
-                    <TableCell className="py-1.5">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.price}
-                        onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value))}
-                        className="h-7 text-xs w-24"
-                        required
-                        readOnly={!!(item.rate !== undefined && item.productSketch)}
-                        disabled={!!(item.rate !== undefined && item.productSketch)}
-                      />
-                    </TableCell>
-
-                    {/* Total */}
-                    <TableCell className="py-1.5 text-right text-sm font-medium">
-                      {formatAmount(item.total)}
-                    </TableCell>
-
-                    {/* Remove */}
-                    <TableCell className="py-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        disabled={(formData.items as QuotationItem[]).length <= 1}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            {/* Add item row */}
-            <div className="border-t px-3 py-1">
-              <button type="button" onClick={handleAddItem}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
-                <Plus className="h-3.5 w-3.5" />
-                Add another item
-              </button>
-            </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total + Actions */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-end md:gap-6 mt-4">
-          <div className="flex flex-col items-stretch md:items-end gap-3 w-full md:w-auto md:min-w-[320px]">
-            {(() => {
-              const subtotal = formData.total_amount;
-              const vatPercent = Number(formData.vat_percent) || 0;
-              const transportFee = Number(formData.transport_fee) || 0;
-              const { vatAmount, grandTotal } = computeTotals(subtotal, vatPercent, transportFee);
-              return (
-                <Card className="w-full gap-0 py-0">
-                  <CardContent className="p-3 space-y-2">
-                    {/* VAT + Transport inputs */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <Label htmlFor="vat_percent" className="text-xs text-muted-foreground">VAT (%)</Label>
-                        <Input
-                          id="vat_percent"
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={formData.vat_percent === 0 ? '' : formData.vat_percent}
-                          onFocus={(e) => e.currentTarget.select()}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (v === '') {
-                              setFormData({ ...formData, vat_percent: 0 });
-                              return;
-                            }
-                            const raw = parseFloat(v);
-                            const next = Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0;
-                            setFormData({ ...formData, vat_percent: next });
-                          }}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="transport_fee" className="text-xs text-muted-foreground">Transport fee</Label>
-                        <Input
-                          id="transport_fee"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.transport_fee === 0 ? '' : formData.transport_fee}
-                          onFocus={(e) => e.currentTarget.select()}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (v === '') {
-                              setFormData({ ...formData, transport_fee: 0 });
-                              return;
-                            }
-                            const raw = parseFloat(v);
-                            const next = Number.isFinite(raw) ? Math.max(0, raw) : 0;
-                            setFormData({ ...formData, transport_fee: next });
-                          }}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Totals breakdown */}
-                    <div className="border-t pt-2 space-y-1 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-medium tabular-nums">{formatAmount(subtotal)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">VAT ({vatPercent}%)</span>
-                        <span className="font-medium tabular-nums">{formatAmount(vatAmount)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Transport</span>
-                        <span className="font-medium tabular-nums">{formatAmount(transportFee)}</span>
-                      </div>
-                      <div className="flex items-center justify-between border-t pt-1.5 mt-1">
-                        <span className="text-sm font-semibold">Grand Total</span>
-                        <span className="text-xl font-bold tabular-nums">{formatAmount(grandTotal)}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
-
-          </div>
-        </div>
+        <QuotationItemsCard items={formData.items} client={selectedClient} onSelectClient={() => setShowClientSelector(true)} editing={{
+          onChange: handleItemChange, onAdd: handleAddItem, onRemove: handleRemoveItem, onSketch: handleOpenSketch,
+          onRemoveSketch: handleRemoveSketch, onTemplate: index => { setTemplateTargetIndex(index); setShowTemplatePicker(true); },
+          onSaveTemplate: product => { setSaveTemplateData(product); setShowSaveTemplateDialog(true); },
+        }} />
+        <QuotationTotals subtotal={formData.total_amount} vatPercent={Number(formData.vat_percent) || 0} transportFee={Number(formData.transport_fee) || 0}
+          onChange={values => setFormData(previous => ({ ...previous, ...values }))} />
       </form>
 
       {/* Modals */}
