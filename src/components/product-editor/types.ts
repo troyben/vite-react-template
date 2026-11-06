@@ -59,6 +59,7 @@ export interface Connector {
 
 export interface ProductData {
   type: 'window' | 'door';
+  productFamily?: import('@/services/materialSystems').MaterialSystem;
   doorType?: 'hinged' | 'sliding';
   windowType?: 'hinged' | 'sliding'; // <-- Add this line
   width: number;

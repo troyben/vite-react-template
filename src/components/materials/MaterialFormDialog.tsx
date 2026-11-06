@@ -6,6 +6,7 @@ import { MaterialDetailsFields } from './MaterialDetailsFields';
 import { MaterialCategoryFields } from './MaterialCategoryFields';
 import { MaterialUsageFields } from './MaterialUsageFields';
 import { MaterialImageField } from './MaterialImageField';
+import { MaterialSystemFields } from './MaterialSystemFields';
 
 interface MaterialFormDialogProps {
   open: boolean; onOpenChange: (open: boolean) => void; editingMaterial: Material | null;
@@ -34,6 +35,7 @@ function MaterialForm({ editingMaterial, onSubmit, onCancel, submitting }: Mater
           <MaterialDetailsFields material={editingMaterial} category={category} unit={unit} currency={currency}
             onCategory={form.changeCategory} unitOptions={form.policy?.units} onUnit={form.changeUnit} onCurrency={form.setCurrency} />
           <MaterialCategoryFields category={category} properties={properties} onChange={form.changeCategoryProperties} />
+          <MaterialSystemFields properties={properties} onChange={form.setProperties} />
         </div>
         <div className="min-w-0 space-y-6">
           <MaterialImageField image={photo.image} processing={photo.processing} error={photo.error}

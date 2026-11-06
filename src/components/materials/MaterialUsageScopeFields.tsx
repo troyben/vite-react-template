@@ -13,7 +13,7 @@ export function MaterialUsageScopeFields({ properties, onChange, policy }: {
     <div className="space-y-2"><Label htmlFor="usage-applies">Applies to</Label><Select value={scope} onValueChange={value => {
       if (value && value !== scope) onChange(clearUsageQuantity({ ...properties, applicableTo: value as MaterialUsageProperties['applicableTo'] }));
     }}><SelectTrigger id="usage-applies" className="w-full"><SelectValue>{scopes[scope]}</SelectValue></SelectTrigger>
-      <SelectContent>{Object.entries(scopes).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
+      <SelectContent>{Object.entries(scopes).filter(([value]) => !properties.productFamily || value === (properties.productFamily === 'window' ? 'window' : 'door')).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label htmlFor="usage-operation">Product opening type</Label>
       {policy.forcedOperation ? <p id="usage-operation" className="rounded-md border bg-muted/30 px-3 py-2 text-sm">{policy.operations[0]?.label}</p>
         : <Select value={operation} onValueChange={value => {

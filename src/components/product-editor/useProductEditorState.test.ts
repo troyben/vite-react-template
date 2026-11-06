@@ -15,6 +15,27 @@ function Harness() {
   return null;
 }
 
+describe('Material system selection', () => {
+  it('selects the matching product type and operation and round-trips the family', async () => {
+    for (const family of ['patio', 'galaxy', 'folding'] as const) {
+      await act(() => state.handleMaterialSystemChange(family));
+      const saved = state.buildProductData();
+      expect(saved).toMatchObject({ type: 'door', doorType: 'sliding', productFamily: family });
+      await act(() => state.populateFromData(JSON.parse(JSON.stringify(saved))));
+      expect(state.buildProductData().productFamily).toBe(family);
+    }
+    await act(() => state.handleMaterialSystemChange('window'));
+    expect(state.buildProductData()).toMatchObject({ type: 'window', productFamily: 'window' });
+  });
+  it('keeps legacy drawings without a family and clears stale families on type changes', async () => {
+    await act(() => state.populateFromData({ type: 'door', doorType: 'hinged', width: 900, height: 2100, unit: 'mm', panels: 1 }));
+    expect(state.buildProductData().productFamily).toBeUndefined();
+    await act(() => state.handleMaterialSystemChange('patio'));
+    await act(() => state.handleTypeChange('window'));
+    expect(state.buildProductData().productFamily).toBeUndefined();
+  });
+});
+
 beforeEach(async () => {
   container = document.createElement('div');
   document.body.appendChild(container);
