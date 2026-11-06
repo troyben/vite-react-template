@@ -32,19 +32,20 @@ function MaterialForm({ editingMaterial, onSubmit, onCancel, submitting }: Mater
       <fieldset disabled={submitting} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,1fr)]">
         <div className="min-w-0 space-y-6">
           <MaterialDetailsFields material={editingMaterial} category={category} unit={unit} currency={currency}
-            onCategory={form.changeCategory} onUnit={form.setUnit} onCurrency={form.setCurrency} />
-          <MaterialCategoryFields category={category} properties={properties} onChange={form.setProperties} />
+            onCategory={form.changeCategory} unitOptions={form.policy?.units} onUnit={form.changeUnit} onCurrency={form.setCurrency} />
+          <MaterialCategoryFields category={category} properties={properties} onChange={form.changeCategoryProperties} />
         </div>
         <div className="min-w-0 space-y-6">
           <MaterialImageField image={photo.image} processing={photo.processing} error={photo.error}
             onSelect={photo.select} onRemove={photo.remove} disabled={submitting} />
-          <MaterialUsageFields category={category} unit={unit} properties={properties} onChange={form.setProperties} />
+          <MaterialUsageFields category={category} properties={properties} onChange={form.setProperties}
+            policy={form.policy} error={form.usageError} />
         </div>
       </fieldset>
     </div>
     <DialogFooter className="m-0 shrink-0 px-6">
       <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-      <Button type="submit" disabled={submitting || photo.processing}>
+      <Button type="submit" disabled={submitting || photo.processing || !!form.usageError}>
         {submitting ? 'Saving…' : photo.processing ? 'Preparing image…' : editingMaterial ? 'Save Changes' : 'Add Material'}
       </Button>
     </DialogFooter>
