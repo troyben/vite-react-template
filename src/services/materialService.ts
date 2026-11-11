@@ -10,7 +10,8 @@ interface ApiResponse<T> {
 }
 
 export type MaterialCategory = 'frame_profile' | 'glass' | 'hardware' | 'accessory';
-export type MaterialUnit = 'per_meter' | 'per_sqm' | 'per_piece' | 'per_kg';
+import type { MaterialUnit } from './materialUnits';
+export type { MaterialUnit } from './materialUnits';
 
 export interface Material {
   id: number;

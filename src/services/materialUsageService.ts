@@ -1,3 +1,4 @@
+import { MATERIAL_UNIT_SYMBOLS } from './materialUnits';
 import type { Material, MaterialCategory, MaterialUnit } from './materialService';
 export interface UsageRule {
   enabled: boolean;
@@ -26,7 +27,7 @@ export const USAGE_OPTIONS = [
 export function defaultUsage(category: MaterialCategory): UsageRule {
   return { enabled: false, basis: category === 'glass' ? 'area' : category === 'frame_profile' ? 'perimeter' : 'per_product', quantity: 1, wastagePercent: 0 };
 }
-export function usageUnit(unit: MaterialUnit) { return { per_meter: 'm', per_sqm: 'm²', per_piece: 'pieces', per_kg: 'kg' }[unit]; }
+export function usageUnit(unit: MaterialUnit) { return unit === 'per_piece' ? 'pieces' : MATERIAL_UNIT_SYMBOLS[unit]; }
 export function usageSummary(material: Material): string {
   const rule = material.properties?.usageRule as UsageRule | undefined;
   if (!rule?.enabled) return 'Not included automatically';

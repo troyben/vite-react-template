@@ -16,7 +16,9 @@ interface QuotationPDFPreviewProps {
   vatPercent?: number;
   /** >= 0. Defaults to 0 (no Transport row rendered when 0). */
   transportFee?: number;
-  /** Optional precomputed grand total; if absent, computed from the three above. */
+  /** Fixed currency discount, deducted after VAT and transport. */
+  discountAmount?: number;
+  /** Optional precomputed grand total; if absent, computed from the amounts above. */
   grandTotal?: number;
   quotationId?: number;
   createdAt?: string;
@@ -42,6 +44,7 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
   totalAmount,
   vatPercent = 0,
   transportFee = 0,
+  discountAmount = 0,
   grandTotal,
   quotationId,
   createdAt,
@@ -50,7 +53,7 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
   const totalItemsAmount = items.reduce((sum, it) => sum + it.total, 0);
   // Subtotal precedence: explicit totalAmount prop, falling back to summed items.
   const subtotal = Number.isFinite(totalAmount) ? totalAmount : totalItemsAmount;
-  const totals = computeTotals(subtotal, vatPercent, transportFee);
+  const totals = computeTotals(subtotal, vatPercent, transportFee, discountAmount);
   const grand = typeof grandTotal === 'number' ? grandTotal : totals.grandTotal;
   const showVatRow = true;
   const showTransportRow = true;
@@ -248,6 +251,12 @@ const QuotationPDFPreview: React.FC<QuotationPDFPreviewProps> = ({
               <div className="flex justify-between text-[9pt] mb-[3mm]" style={{ color: 'rgb(33, 33, 33)' }}>
                 <span>Transport:</span>
                 <span>{formatCurrency(transportFee)}</span>
+              </div>
+            )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-[9pt] mb-[3mm]" style={{ color: 'rgb(33, 33, 33)' }}>
+                <span>Discount:</span>
+                <span>−{formatCurrency(discountAmount)}</span>
               </div>
             )}
             <div style={{ borderTop: '0.3mm solid rgb(215, 220, 235)' }} className="mb-[4mm]" />

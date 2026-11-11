@@ -1,3 +1,4 @@
+import { isWholeCostingUnit } from './materialUnits';
 import type { ProductData } from '@/components/product-editor/types';
 import type { CostBreakdown } from '@/utils/costCalculator';
 import api from '@/api';
@@ -20,7 +21,7 @@ export function materialLine(material: Material): CostingLine {
 }
 export function lineQuantity(line: CostingLine): number {
   const quantity = line.quantity * (1 + line.wastagePercent / 100);
-  return line.unit === 'pcs' ? Math.ceil(quantity) : round(quantity, 3);
+  return isWholeCostingUnit(line.unit) ? Math.ceil(quantity) : round(quantity, 3);
 }
 export function lineTotal(line: CostingLine): number {
   return round(lineQuantity(line) * line.unitCost);
