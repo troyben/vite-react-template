@@ -1,3 +1,4 @@
+import { MATERIAL_UNIT_SYMBOLS } from '@/services/materialUnits';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MoreHorizontal, Pencil, Trash2, Loader2, Package } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -24,12 +25,7 @@ const CATEGORY_LABELS: Record<MaterialCategory, string> = {
   accessory: 'Accessory',
 };
 
-const UNIT_LABELS: Record<string, string> = {
-  per_meter: '/m',
-  per_sqm: '/m\u00B2',
-  per_piece: '/pc',
-  per_kg: '/kg',
-};
+const UNIT_LABELS: Record<string, string> = Object.fromEntries(Object.entries(MATERIAL_UNIT_SYMBOLS).map(([unit, symbol]) => [unit, `/${unit === 'per_piece' ? 'pc' : symbol}`]));
 
 const CATEGORY_COLORS: Record<MaterialCategory, string> = {
   frame_profile: 'bg-blue-100 text-blue-800 hover:bg-blue-100',

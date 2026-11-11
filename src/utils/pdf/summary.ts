@@ -11,13 +11,15 @@ export interface SummaryTotals {
   vatPercent: number;
   /** >= 0. */
   transportFee: number;
+  /** Fixed currency discount, >= 0. */
+  discountAmount?: number;
   /** Optional precomputed grand total (from server). If absent, computed locally. */
   grandTotal?: number;
 }
 
 /**
- * Draw the summary block: Total Pieces, Subtotal, VAT, Transport, Grand Total.
- * VAT and Transport rows render only when their value is > 0.
+ * Draw the summary block: Total Pieces, Subtotal, VAT, Transport, Discount, Grand Total.
+ * Discount renders only when its value is > 0.
  * Grand total gets a rounded accent background for visual emphasis.
  */
 export function drawSummary(
@@ -26,12 +28,12 @@ export function drawSummary(
   totals: SummaryTotals,
   startY: number,
 ): number {
-  const { subtotal, vatPercent, transportFee } = totals;
-  const computed = computeTotals(subtotal, vatPercent, transportFee);
+  const { subtotal, vatPercent, transportFee, discountAmount = 0 } = totals;
+  const computed = computeTotals(subtotal, vatPercent, transportFee, discountAmount);
   const grandTotal = typeof totals.grandTotal === 'number' ? totals.grandTotal : computed.grandTotal;
 
-  // Reserve enough vertical space for max possible rows (pieces + subtotal + vat + transport + grand)
-  let y = checkPageBreak(doc, startY, 50);
+  // Reserve enough vertical space for all rows, including the optional discount
+  let y = checkPageBreak(doc, startY, discountAmount > 0 ? 58 : 50);
   y += SPACING.section;
 
   const right = PAGE.width - PAGE.margin;
@@ -58,6 +60,12 @@ export function drawSummary(
   doc.text('Transport:', labelX, y, { align: 'right' });
   doc.text(`$${transportFee.toFixed(2)}`, right, y, { align: 'right' });
   y += SPACING.md;
+
+  if (discountAmount > 0) {
+    doc.text('Discount:', labelX, y, { align: 'right' });
+    doc.text(`-$${discountAmount.toFixed(2)}`, right, y, { align: 'right' });
+    y += SPACING.md;
+  }
 
   y += SPACING.sm - SPACING.md; // tighten spacing before divider
 

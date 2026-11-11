@@ -21,7 +21,7 @@ export const RevisionSnapshot: React.FC<RevisionSnapshotProps> = ({ detail }) =>
       <StaffIdentity user={detail.actor} userId={detail.actorId} fallback={detail.actorId == null ? 'System / baseline' : undefined} /></div></div>
     <Tabs defaultValue="quotation" className="flex-col gap-3"><div className="max-w-full overflow-x-auto"><TabsList aria-label="Revision content" className="h-9 shrink-0"><TabsTrigger value="quotation"><FileText />Quotation</TabsTrigger><TabsTrigger value="costs"><Layers />Materials & costs</TabsTrigger></TabsList></div>
       <TabsContent value="quotation" className="min-w-0 space-y-3"><QuotationItemsCard items={quotation.items} client={{ name: quotation.client_name, phone: quotation.client_phone, address: quotation.client_address }} />
-        <QuotationTotals subtotal={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} />
+        <QuotationTotals subtotal={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} discountAmount={Number(quotation.discount_amount) || 0} />
         {quotation.notes && <div className="rounded-xl border p-3"><h3 className="mb-1 text-xs font-semibold text-muted-foreground">Quotation notes</h3><p className="whitespace-pre-wrap text-sm">{quotation.notes}</p></div>}
       </TabsContent>
       <TabsContent value="costs"><ArchivedMaterialCosts costing={detail.snapshot.costing} originalCostingText={detail.snapshot.originalCostingText} /></TabsContent>

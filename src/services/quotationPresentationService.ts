@@ -11,6 +11,9 @@ export function boundedQuotationNumber(value: string, max = Infinity) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(max, Math.max(0, number)) : 0;
 }
+export function fixedQuotationDiscount(value: string) {
+  return Number(boundedQuotationNumber(value, 9999999999.99).toFixed(2));
+}
 export function canAccessQuotationCosts(user: { id: number; role: string } | null | undefined, quotation: Pick<Quotation, 'createdBy'>) {
   return !!user && (user.role === 'admin' || user.role === 'user' && quotation.createdBy === user.id);
 }

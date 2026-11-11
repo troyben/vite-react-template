@@ -37,6 +37,7 @@ export async function exportQuotationToPDF(quotation: Quotation): Promise<void> 
       subtotal,
       vatPercent,
       transportFee,
+      discountAmount: Number(quotation.discount_amount) || 0,
       grandTotal: Number.isFinite(grandTotal) ? grandTotal : undefined,
     }, y);
 

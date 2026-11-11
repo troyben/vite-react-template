@@ -1,3 +1,4 @@
+import { MATERIAL_UNIT_SYMBOLS } from '@/services/materialUnits';
 import { useState } from 'react';
 import type { CostingLine } from '@/services/costingTypes';
 import type { Material } from '@/services/materialService';
@@ -26,5 +27,5 @@ export function useInlineMaterial(materials: Material[], currency: string, itemI
     return { ...line!, id: existing?.id ?? line!.id, quotationItemId: itemId, quantity: Number(quantity), wastagePercent: Number(wastage), unitCost: Number(unitCost) };
   };
   return { selected, select, quantity, setQuantity, wastage, setWastage, unitCost, setUnitCost, options, canSave, build,
-    unit: captured ? existing.unit : material ? { per_meter: 'm', per_sqm: 'm²', per_piece: 'pcs', per_kg: 'kg' }[material.unit] : '' };
+    unit: captured ? existing.unit : material ? MATERIAL_UNIT_SYMBOLS[material.unit] : '' };
 }
