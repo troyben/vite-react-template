@@ -32,5 +32,5 @@ export interface CostingSnapshot {
   warnings: string[];
 }
 export const COSTING_CURRENCIES = ['USD', 'ZAR', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'CNY'];
-export const COSTING_UNITS = { per_meter: 'm', per_sqm: 'm²', per_piece: 'pcs', per_kg: 'kg' };
+export { MATERIAL_UNIT_SYMBOLS as COSTING_UNITS } from './materialUnits';
 export const COSTING_CATEGORIES = { frame_profile: 'Frame Profile', glass: 'Glass', hardware: 'Hardware', accessory: 'Accessory' };

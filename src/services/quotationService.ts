@@ -39,6 +39,7 @@ export interface QuotationFormData {
   total_amount: number;       // Required — SUBTOTAL (sum of line items)
   vat_percent: number;        // Required — 0..100, default 0
   transport_fee: number;      // Required — >= 0, default 0
+  discount_amount?: number;   // Fixed currency discount, >= 0, default 0
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'paid'; // Required
   notes?: string;            // Optional
   created_at?: string;       // Will be set by backend
@@ -58,7 +59,8 @@ export interface Quotation {
   total_amount: number;       // SUBTOTAL (sum of line items)
   vat_percent: number;        // 0..100
   transport_fee: number;      // >= 0
-  grand_total?: number;       // RESPONSE-ONLY: total_amount + VAT + transport_fee
+  discount_amount?: number;  // Fixed currency discount, >= 0, default 0
+  grand_total?: number;       // RESPONSE-ONLY: max(0, total_amount + VAT + transport_fee - discount_amount)
   rate?: number;
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'paid';
   notes?: string;
@@ -161,6 +163,7 @@ export const createQuotation = async (
     client_email: quotationData.client_email || '',
     vat_percent: typeof quotationData.vat_percent === 'number' ? quotationData.vat_percent : 0,
     transport_fee: typeof quotationData.transport_fee === 'number' ? quotationData.transport_fee : 0,
+    discount_amount: typeof quotationData.discount_amount === 'number' ? quotationData.discount_amount : 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };

@@ -53,6 +53,7 @@ const QuotationForm = () => {
     total_amount: 0,
     vat_percent: 0,
     transport_fee: 0,
+    discount_amount: 0,
     status: 'draft',
     notes: ''
   }));
@@ -109,6 +110,7 @@ const QuotationForm = () => {
               total_amount: total,
               vat_percent: Number.isFinite(vatPercent) ? vatPercent : 0,
               transport_fee: Number.isFinite(transportFee) ? transportFee : 0,
+              discount_amount: Number(quotationData.discount_amount) || 0,
               status: quotationData.status,
               notes: quotationData.notes || ''
             });
@@ -329,6 +331,7 @@ const QuotationForm = () => {
         total_amount: calculateTotal(formData.items),
         vat_percent: Number(formData.vat_percent) || 0,
         transport_fee: Number(formData.transport_fee) || 0,
+        discount_amount: Number(formData.discount_amount) || 0,
         status: formData.status, notes: formData.notes || ''
       };
       if (formData.id) await updateQuotation(formData.id, quotationData);
@@ -363,6 +366,7 @@ const QuotationForm = () => {
           total_amount: calculateTotal(formData.items),
           vat_percent: Number(formData.vat_percent) || 0,
           transport_fee: Number(formData.transport_fee) || 0,
+          discount_amount: Number(formData.discount_amount) || 0,
           status: formData.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'paid',
           notes: formData.notes || '',
           manualMaterials: formData.manualMaterials,
@@ -380,7 +384,7 @@ const QuotationForm = () => {
       const subtotalForPdf = calculateTotal(formData.items);
       const vatPercentForPdf = Number(formData.vat_percent) || 0;
       const transportForPdf = Number(formData.transport_fee) || 0;
-      const { grandTotal: grandTotalForPdf } = computeTotals(subtotalForPdf, vatPercentForPdf, transportForPdf);
+      const { grandTotal: grandTotalForPdf } = computeTotals(subtotalForPdf, vatPercentForPdf, transportForPdf, Number(formData.discount_amount) || 0);
       const quotationData: Quotation = {
         id: quotationId!, revision: formData.revision ?? 1, clientId: selectedClient.id,
         client_name: selectedClient.name, client_email: selectedClient.email || '',
@@ -390,6 +394,7 @@ const QuotationForm = () => {
         total_amount: subtotalForPdf,
         vat_percent: vatPercentForPdf,
         transport_fee: transportForPdf,
+        discount_amount: Number(formData.discount_amount) || 0,
         grand_total: grandTotalForPdf,
         status: formData.status,
         notes: formData.notes || '',
@@ -465,7 +470,7 @@ const QuotationForm = () => {
           onRemoveSketch: handleRemoveSketch, onTemplate: index => { setTemplateTargetIndex(index); setShowTemplatePicker(true); },
           onSaveTemplate: product => { setSaveTemplateData(product); setShowSaveTemplateDialog(true); },
         }} />
-        <QuotationTotals subtotal={formData.total_amount} vatPercent={Number(formData.vat_percent) || 0} transportFee={Number(formData.transport_fee) || 0}
+        <QuotationTotals subtotal={formData.total_amount} vatPercent={Number(formData.vat_percent) || 0} transportFee={Number(formData.transport_fee) || 0} discountAmount={Number(formData.discount_amount) || 0}
           onChange={values => setFormData(previous => ({ ...previous, ...values }))} />
       </form>
 
@@ -478,7 +483,7 @@ const QuotationForm = () => {
             items={formData.items.map(item => ({ ...item, total: item.quantity * item.price }))}
             totalAmount={calculateTotal(formData.items)}
             vatPercent={Number(formData.vat_percent) || 0}
-            transportFee={Number(formData.transport_fee) || 0}
+            transportFee={Number(formData.transport_fee) || 0} discountAmount={Number(formData.discount_amount) || 0}
             quotationId={formData.id}
             createdAt={formData.created_at}
           />

@@ -33,10 +33,10 @@ const QuotationDetail = () => {
         <Link to={`/quotations/edit/${id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil className="h-4 w-4" />Edit</Link></>}
     </div></PageHeader>
     <QuotationItemsCard items={quotation.items} client={{ name: quotation.client_name, phone: quotation.client_phone, address: quotation.client_address }} />
-    <QuotationTotals subtotal={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} />
+    <QuotationTotals subtotal={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} discountAmount={Number(quotation.discount_amount) || 0} />
     <QuotationPreviewModal open={preview} onClose={() => setPreview(false)}>
       <QuotationPDFPreview clientName={quotation.client_name} clientPhone={quotation.client_phone} clientAddress={quotation.client_address}
-        items={quotation.items} totalAmount={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0}
+        items={quotation.items} totalAmount={Number(quotation.total_amount) || 0} vatPercent={Number(quotation.vat_percent) || 0} transportFee={Number(quotation.transport_fee) || 0} discountAmount={Number(quotation.discount_amount) || 0}
         grandTotal={Number(quotation.grand_total) || undefined} quotationId={quotation.id} createdAt={quotation.createdAt || quotation.created_at} />
     </QuotationPreviewModal>
   </div>;
